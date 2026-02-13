@@ -1,0 +1,1320 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.3.6 Chrome/140.0.7339.249 Electron/38.8.0 Safari/537.36" version="29.3.6" pages="11">
+  <diagram id="Chat-Protocol-Templates" name="Chat-Protocol-Templates">
+    <mxGraphModel dx="693" dy="1938" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="ex_title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" value="&lt;h2&gt;Пример: Проектирование модуля &#39;Проекты&#39;&lt;/h2&gt;" vertex="1">
+          <mxGeometry height="40" width="600" x="510" y="-60" as="geometry" />
+        </mxCell>
+        <mxCell id="entity_group" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="265" width="240" x="710" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_bg" parent="entity_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d9e8ff;strokeColor=#2b6cb0;" value="" vertex="1">
+          <mxGeometry height="160" width="240" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_head" parent="entity_group" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" value="&lt;b&gt;Entity: Project&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="240" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_body" parent="entity_group" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;spacing=10;" value="id: int&lt;br&gt;name: string&lt;br&gt;deadline: date&lt;br&gt;status: enum" vertex="1">
+          <mxGeometry height="130" width="240" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_block" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e9d8ff;strokeColor=#6b46c1;" value="&lt;b&gt;UI: Список проектов&lt;/b&gt;&lt;br&gt;(Table, Filter, Modal)" vertex="1">
+          <mxGeometry height="100" width="200" x="1060" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="backend_block" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe8d6;strokeColor=#c05621;" value="&lt;b&gt;Service: ProjectManager&lt;/b&gt;&lt;br&gt;Business Logic" vertex="1">
+          <mxGeometry height="80" width="200" x="1060" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="api_block" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dfffe0;strokeColor=#2f855a;" value="&lt;b&gt;API: /projects&lt;/b&gt;&lt;br&gt;GET, POST, PUT" vertex="1">
+          <mxGeometry height="80" width="180" x="1360" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="doc_block" parent="1" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#ffffff;strokeColor=#000000;" value="&lt;b&gt;spec.md&lt;/b&gt;&lt;br&gt;Техническое задание" vertex="1">
+          <mxGeometry height="80" width="140" x="1360" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="note1" parent="1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#fff2cc;strokeColor=#6d5100;size=15;align=left;spacing=10;shadow=1;" value="Совет: Сначала опиши данные (Entity), потом API, и только потом UI." vertex="1">
+          <mxGeometry height="80" width="240" x="710" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="ui_block" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="backend_block" value="1. Запрашивает">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="backend_block" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="ent_bg" value="2. Читает/Пишет">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="backend_block" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=1;" target="api_block" value="3. Реализует">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="api_block" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.9;entryDx=0;entryDy=0;dashed=1;strokeColor=#999999;" target="doc_block" value="Описано в">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="prompt_group" parent="1" style="group" value="Шаблон Промпта (Instruction)" vertex="1">
+          <mxGeometry height="200" width="910" x="520" y="580" as="geometry" />
+        </mxCell>
+        <mxCell id="p_bg" parent="prompt_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;dashed=1;" value="" vertex="1">
+          <mxGeometry height="200" width="910" as="geometry" />
+        </mxCell>
+        <mxCell id="p_step1" parent="prompt_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;align=left;spacing=5;" value="&lt;b&gt;1. Context&lt;/b&gt;&lt;br&gt;Role: Senior Developer&lt;br&gt;Stack: React, Node.js&lt;br&gt;Goal: Create Project module" vertex="1">
+          <mxGeometry height="140" width="200" x="20" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="p_step2" parent="prompt_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;align=left;spacing=5;" value="&lt;b&gt;2. Task&lt;/b&gt;&lt;br&gt;- Create DB Schema&lt;br&gt;- Create API endpoints&lt;br&gt;- Validate inputs" vertex="1">
+          <mxGeometry height="140" width="200" x="250" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="p_step3" parent="prompt_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;align=left;spacing=5;" value="&lt;b&gt;3. Format&lt;/b&gt;&lt;br&gt;- SQL code block&lt;br&gt;- OpenAPI JSON&lt;br&gt;- No explanatory text" vertex="1">
+          <mxGeometry height="140" width="200" x="480" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="p_arrow1" edge="1" parent="prompt_group" source="p_step1" style="shape=flexArrow;endArrow=classic;html=1;fillColor=#666666;" target="p_step2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p_arrow2" edge="1" parent="prompt_group" source="p_step2" style="shape=flexArrow;endArrow=classic;html=1;fillColor=#666666;" target="p_step3" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p_title" parent="prompt_group" style="text;html=1;strokeColor=none;fillColor=none;align=left;" value="&lt;b&gt;Конструктор промпта (слева направо)&lt;/b&gt;" vertex="1">
+          <mxGeometry height="20" width="300" x="20" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="rules_block_customer" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffd7d7;strokeColor=#9b1c1c;align=left;spacing=10;verticalAlign=top;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="&lt;b&gt;Правила для заказчика&lt;/b&gt;&lt;hr&gt;&lt;ol&gt;&lt;li&gt;&lt;b&gt;Контекст&lt;/b&gt; — кто ты, что уже есть&lt;/li&gt;&lt;li&gt;&lt;b&gt;Задача&lt;/b&gt; — что нужно сделать (чётко)&lt;/li&gt;&lt;li&gt;&lt;b&gt;Формат&lt;/b&gt; — как должен выглядеть ответ&lt;/li&gt;&lt;li&gt;&lt;b&gt;Пример&lt;/b&gt; — вход → ожидаемый выход&lt;/li&gt;&lt;/ol&gt;&lt;hr&gt;&lt;i&gt;Избегай:&lt;/i&gt;&lt;br&gt;&lt;ul&gt;&lt;li&gt;Размытых формулировок&lt;/li&gt;&lt;li&gt;Нескольких задач в одном запросе&lt;/li&gt;&lt;li&gt;Отсутствия примеров&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="240" width="300" x="30" y="530" as="geometry" />
+        </mxCell>
+        <mxCell id="rules_block_ai" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffd7d7;strokeColor=#9b1c1c;align=left;spacing=10;verticalAlign=top;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="&lt;b&gt;Правила для ИИ&lt;/b&gt;&lt;hr&gt;&lt;ol&gt;&lt;li&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;ЭТОТ ФАЙЛ ВСЕГДА ГЛАВНАЯ ИСТИНА ПРОЕКТА, ЛЮБЫЕ ИЗМЕНЕНИЯ ДОЛЖНЫ БЫТЬ ПОНЯТНО ЧЕЛОВЕКУ ОТРАЖЕНЫ В НЁМ&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Всегда думай перед тем как начать действовать&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;После оценивай свой ответ по 100 бальной шкале, если оценка ниже 85 исправь пока не будет больше или равно 85&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Все твои ответы должны быть маскимально сжатыми, но без потери смысла!&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Общайся со мной на русском.&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;b&gt;CHANGELOG:&lt;/b&gt; При выполнении действий в agent mode — добавляй запись на страницу Changelog. Формат: 1 чат = 1 блок. Каждый шаг внутри блока с точным временем (HH:MM).&lt;/span&gt;&lt;/li&gt;&lt;/ol&gt;" vertex="1">
+          <mxGeometry height="370" width="310" x="30" y="790" as="geometry" />
+        </mxCell>
+        <mxCell id="6sX4b36BNhpodxIihluI-5" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Text" vertex="1">
+          <mxGeometry height="30" width="60" x="870" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="6sX4b36BNhpodxIihluI-6" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Text" vertex="1">
+          <mxGeometry height="30" width="60" x="870" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="6sX4b36BNhpodxIihluI-7" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Text" vertex="1">
+          <mxGeometry height="30" width="60" x="870" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="6sX4b36BNhpodxIihluI-9" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Text" vertex="1">
+          <mxGeometry height="30" width="60" x="870" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="6sX4b36BNhpodxIihluI-16" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="470" width="570" x="40" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_group" parent="6sX4b36BNhpodxIihluI-16" style="group;rounded=1;strokeColor=#999999;fillColor=#ffffff;verticalAlign=top;fontStyle=1;container=0;" value="Легенда и Типы узлов" vertex="1">
+          <mxGeometry height="470" width="570" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_desc" parent="6sX4b36BNhpodxIihluI-16" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#6d5100;align=left;spacingLeft=10;" value="&lt;b&gt;Контекст&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="240" x="20" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_data" parent="6sX4b36BNhpodxIihluI-16" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d9e8ff;strokeColor=#2b6cb0;align=left;spacingLeft=10;" value="&lt;b&gt;Данные / Модели (DB)&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="240" x="20" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_ui" parent="6sX4b36BNhpodxIihluI-16" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e9d8ff;strokeColor=#6b46c1;align=left;spacingLeft=10;" value="&lt;b&gt;UI / Экраны&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="240" x="20" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_backend" parent="6sX4b36BNhpodxIihluI-16" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe8d6;strokeColor=#c05621;align=left;spacingLeft=10;" value="&lt;b&gt;Backend / Логика&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="240" x="20" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_api" parent="6sX4b36BNhpodxIihluI-16" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dfffe0;strokeColor=#2f855a;align=left;spacingLeft=10;" value="&lt;b&gt;API / Endpoints&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="240" x="20" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_doc" parent="6sX4b36BNhpodxIihluI-16" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#ffffff;strokeColor=#000000;size=0.2;align=left;spacingLeft=10;" value="&lt;b&gt;Документы (MD/JSON)&lt;/b&gt;" vertex="1">
+          <mxGeometry height="40" width="240" x="20" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_rules" parent="6sX4b36BNhpodxIihluI-16" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffd7d7;strokeColor=#9b1c1c;align=left;spacingLeft=10;" value="&lt;b&gt;Правила / Инструкции&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="240" x="20" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_note" parent="6sX4b36BNhpodxIihluI-16" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#6d5100;size=10;align=left;spacingLeft=10;shadow=1;" value="&lt;b&gt;Заметка (Note)&lt;/b&gt;" vertex="1">
+          <mxGeometry height="40" width="240" x="20" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="QZwpzhdDHKP2NlLnrqQv-2" parent="6sX4b36BNhpodxIihluI-16" style="shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;size=10;position=0.75;base=20;position2=0.75;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;align=left;collapsible=0;" value="&lt;b style=&quot;color: rgb(0, 0, 0);&quot;&gt;Комментарий / сомнения&lt;br&gt;&lt;/b&gt;" vertex="1">
+          <mxGeometry height="50" width="230" x="20" y="390" as="geometry">
+            <mxRectangle height="60" width="660" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6sX4b36BNhpodxIihluI-4" edge="1" parent="6sX4b36BNhpodxIihluI-16" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#999999;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+            <mxPoint x="450" y="234.41000000000003" as="sourcePoint" />
+            <mxPoint x="350" y="234.41000000000003" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6sX4b36BNhpodxIihluI-10" parent="6sX4b36BNhpodxIihluI-16" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontStyle=1" value="Стрелки" vertex="1">
+          <mxGeometry height="30" width="60" x="370" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="6sX4b36BNhpodxIihluI-11" edge="1" parent="6sX4b36BNhpodxIihluI-16" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#330000;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+            <mxPoint x="450" y="113.82" as="sourcePoint" />
+            <mxPoint x="350" y="113.82" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6sX4b36BNhpodxIihluI-12" parent="6sX4b36BNhpodxIihluI-16" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="основной поток / действие" vertex="1">
+          <mxGeometry height="30" width="150" x="330" y="75" as="geometry" />
+        </mxCell>
+        <mxCell id="6sX4b36BNhpodxIihluI-13" edge="1" parent="6sX4b36BNhpodxIihluI-16" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#330000;dashed=1;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+            <mxPoint x="450" y="178.82" as="sourcePoint" />
+            <mxPoint x="350" y="178.82" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6sX4b36BNhpodxIihluI-14" parent="6sX4b36BNhpodxIihluI-16" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="документация / абстракция" vertex="1">
+          <mxGeometry height="30" width="170" x="320" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="6sX4b36BNhpodxIihluI-15" parent="6sX4b36BNhpodxIihluI-16" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="связь с комментарием" vertex="1">
+          <mxGeometry height="30" width="170" x="315" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="6sX4b36BNhpodxIihluI-17" parent="1" style="shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;size=10;position=0.75;base=20;position2=0.75;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;align=left;collapsible=0;" value="&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;&lt;b&gt;Комментарий / сомнения&lt;/b&gt;&lt;br&gt;&lt;br&gt;Пока не понимаю, что это такое. Зачем здесь конструктор промпта?&lt;br&gt;Также не разбираюсь в терминологии программистов, нужны #комментарии.&lt;/span&gt;" vertex="1">
+          <mxGeometry height="170" width="380" x="740" y="810" as="geometry">
+            <mxRectangle height="60" width="660" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6sX4b36BNhpodxIihluI-18" edge="1" parent="1" source="6sX4b36BNhpodxIihluI-17" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#999999;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="prompt_group" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+            <mxPoint x="910" y="950" as="sourcePoint" />
+            <mxPoint x="810" y="950" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="Manual-Rebuild-Plan" name="Rebuild Plan (Manual)">
+    <mxGraphModel dx="3320" dy="2618" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="plan_title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" value="&lt;h1&gt;План ручного переписывания TATO&lt;/h1&gt;" vertex="1">
+          <mxGeometry height="60" width="600" x="40" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="phase0" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;align=left;spacing=10;verticalAlign=top;" value="&lt;b&gt;Фаза 0: Подготовка&lt;/b&gt;&lt;hr&gt;• Инструменты (Node.js, Git)&lt;br&gt;• Инициализация Vite + React + TS - done&lt;br&gt;• Настройка Tailwind &amp;amp; shadcn/ui&lt;br&gt;• Первый коммит в Git" vertex="1">
+          <mxGeometry height="160" width="280" x="40" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="phase1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e9d8ff;strokeColor=#6b46c1;align=left;spacing=10;verticalAlign=top;" value="&lt;b&gt;Фаза 1: Frontend-муляж&lt;/b&gt;&lt;hr&gt;• Layout (Sidebar + Content)&lt;br&gt;• Таблица всех задач (Mock данные)&lt;br&gt;• Диалог TaskDialog (UI только)&lt;br&gt;• Timeline (визуальные полоски)&lt;br&gt;• Справочник ресурсов" vertex="1">
+          <mxGeometry height="140" width="280" x="360" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="phase2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d9e8ff;strokeColor=#2b6cb0;align=left;spacing=10;verticalAlign=top;" value="&lt;b&gt;Фаза 2: Типы и Состояние&lt;/b&gt;&lt;hr&gt;• Определение types.ts&lt;br&gt;• useState CRUD логика&lt;br&gt;• Интерактивность без БД&lt;br&gt;• Валидация форм" vertex="1">
+          <mxGeometry height="140" width="280" x="680" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="phase3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dfffe0;strokeColor=#2f855a;align=left;spacing=10;verticalAlign=top;" value="&lt;b&gt;Фаза 3: Backend &amp; Persistence&lt;/b&gt;&lt;hr&gt;• Fastify сервер&lt;br&gt;• Prisma + SQLite схема&lt;br&gt;• API маршруты (CRUD)&lt;br&gt;• Связка fetch() во frontend" vertex="1">
+          <mxGeometry height="140" width="280" x="1000" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="6qv6Sc08JSoc7U2IQshc-1" edge="1" parent="1" source="phase4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="phase5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="phase4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe8d6;strokeColor=#c05621;align=left;spacing=10;verticalAlign=top;" value="&lt;b&gt;Фаза 4: Electron - Desktop&lt;/b&gt;&lt;hr&gt;• Electron main.js (child process)&lt;br&gt;• Preload &amp; IPC Bridge&lt;br&gt;• Сборка инсталлера (.exe)&lt;br&gt;• Работа с файловой системой" vertex="1">
+          <mxGeometry height="140" width="280" x="1320" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="phase5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffd7d7;strokeColor=#9b1c1c;align=left;spacing=10;verticalAlign=top;" value="&lt;b&gt;Фаза 5: Полировка&lt;/b&gt;&lt;hr&gt;• Backup / Import (JSON)&lt;br&gt;• Расширенные фильтры&lt;br&gt;• Drag &amp; Drop на Timeline&lt;br&gt;• Горячие клавиши" vertex="1">
+          <mxGeometry height="140" width="280" x="1650" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="phase0" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="phase1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="phase1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="phase2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="phase2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="phase3" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="phase3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="phase4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6qv6Sc08JSoc7U2IQshc-7" edge="1" parent="1" source="note_rebuild" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="6qv6Sc08JSoc7U2IQshc-6" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="note_rebuild" parent="1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#6d5100;align=left;spacing=10;shadow=1;" value="&lt;b&gt;Памятка для работы с ИИ:&lt;/b&gt;&lt;br&gt;1. Один промпт = одна задача.&lt;br&gt;2. Используй формулу Context-Task-Format-Example.&lt;br&gt;3. Читай код перед вставкой!&lt;br&gt;4. Старый проект - твой справочник." vertex="1">
+          <mxGeometry height="190" width="310" x="40" y="-190" as="geometry" />
+        </mxCell>
+        <mxCell id="9Y9rPvxiBYmgitxC0sm--2" edge="1" parent="1" source="protocol_20260208_1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="9Y9rPvxiBYmgitxC0sm--1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="protocol_20260208_1" parent="1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacing=10;shadow=1;verticalAlign=top;" value="&lt;b&gt;📜 Протокол старта проекта: TATO Rebuild (v2)&lt;/b&gt;&lt;hr&gt;&lt;b&gt;Дата:&lt;/b&gt; 08.02.2026&lt;br&gt;&lt;b&gt;Статус:&lt;/b&gt; Фаза 0 (Подготовка) — в процессе.&lt;br&gt;&lt;br&gt;&lt;b&gt;1. Достигнутые результаты:&lt;/b&gt;&lt;br&gt;• Инициализация фундамента (Vite + React + TS)&lt;br&gt;• Проект запущен на localhost:5173&lt;br&gt;• План переписывания зафиксирован в draw.io&lt;br&gt;&lt;br&gt;&lt;b&gt;2. Решенные проблемы:&lt;/b&gt;&lt;br&gt;• Исправлены опечатки в npm командах&lt;br&gt;• Выбран стабильный Vite вместо Rolldown&lt;br&gt;&lt;br&gt;&lt;b&gt;3. Архитектурная цель:&lt;/b&gt;&lt;br&gt;• UI-First: Создание автономного Frontend-муляжа" vertex="1">
+          <mxGeometry height="290" width="365" x="-45" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="6qv6Sc08JSoc7U2IQshc-5" edge="1" parent="1" source="phase0" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0;entryDx=167.5;entryDy=0;entryPerimeter=0;" target="protocol_20260208_1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6qv6Sc08JSoc7U2IQshc-6" parent="1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#6d5100;align=left;spacing=10;shadow=1;" value="&lt;p dir=&quot;ltr&quot;&gt;💡 Мини-промпт для фиксации протокола&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Используй его, когда хочешь подвести черту под этапом:&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;&amp;gt; «Сделай краткий протокол текущего прогресса: Достижения, Решенные проблемы, Архитектурный итог. Кратко.»&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Точность: Все факты старта отражены.&lt;/span&gt;&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Соответствие правилам: Ответ сжат, на русском языке, соблюдена логика протокола.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Краткость: Ничего лишнего, лишнего слова.&lt;/p&gt;" vertex="1">
+          <mxGeometry height="360" width="290" x="40" y="-630" as="geometry" />
+        </mxCell>
+        <mxCell id="9Y9rPvxiBYmgitxC0sm--1" parent="1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacing=10;shadow=1;verticalAlign=top;" value="&lt;p dir=&quot;ltr&quot;&gt;Протокол прогресса (Старт проекта)&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Достижения:&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Развернут фронтенд на стеке: Vite 7 + React 19 + TypeScript + Tailwind CSS v4.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Очищена структура от шаблонного кода Vite (App.css, лишние импорты).&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Настроены Alias (@/) для путей через vite.config.ts.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Решенные проблемы:&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Tailwind v4 Integration: Исправлена ошибка PostCSS путем установки @tailwindcss/postcss и перехода на @import &quot;tailwindcss&quot;.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Config Fix: Исправлены ошибки резолвинга в tsconfig.node.json и tsconfig.app.json (moduleResolution: &quot;bundler&quot;).&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Runtime Errors: Устранена ошибка ReferenceError: path is not defined в конфиге Vite.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Архитектурный итог:&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Проект готов к модульной разработке.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Используется актуальный стандарт Tailwind v4 (без tailwind.config.js).&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Конфигурация TS разделена на app и node слои для чистоты типизации.&lt;/p&gt;" vertex="1">
+          <mxGeometry height="510" width="365" x="-45" y="720" as="geometry" />
+        </mxCell>
+        <mxCell id="0P4oe1_-fTLU1_6qerOd-2" edge="1" parent="1" source="nA7Eip2R9nRVCwSER6Wz-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="0P4oe1_-fTLU1_6qerOd-1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="nA7Eip2R9nRVCwSER6Wz-1" parent="1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacing=10;shadow=1;verticalAlign=top;" value="&lt;p dir=&quot;ltr&quot;&gt;📜 Протокол прогресса: Фаза 1&lt;br&gt;&lt;br&gt;&lt;/p&gt;&lt;hr&gt;&lt;p dir=&quot;ltr&quot;&gt;&lt;b&gt;Дата:&lt;/b&gt;&amp;nbsp;09.02.2026&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Достижения:&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Стиль: Интегрирована палитра из assets/colors и шрифт Inter Tight.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Решенные проблемы:&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Дизайн: Устранены несоответствия стандартных цветов Tailwind; настроено использование кастомных hex-кодов через CSS-переменные v4.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Шрифты: Базовый font-sans переопределен глобально через @theme.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Архитектурный итог:&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;UI-First: Подготовлен визуальный фундамент. Проект готов к реализации Layout (Sidebar + Content) и разделению на функциональные компоненты.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Оценка: 100/100 (Сжато, по фактам, согласно правилам проекта).&lt;/p&gt;" vertex="1">
+          <mxGeometry height="430" width="360" x="400" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="nA7Eip2R9nRVCwSER6Wz-3" edge="1" parent="1" source="phase1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="nA7Eip2R9nRVCwSER6Wz-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="yyma6jDwB4iMJeFmGaYm-2" edge="1" parent="1" source="0P4oe1_-fTLU1_6qerOd-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="yyma6jDwB4iMJeFmGaYm-1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="0P4oe1_-fTLU1_6qerOd-1" parent="1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacing=10;shadow=1;verticalAlign=top;" value="&lt;p dir=&quot;ltr&quot;&gt;📜 Протокол прогресса: Фаза 1 (UI Foundation)&lt;br&gt;&lt;br&gt;&lt;/p&gt;&lt;hr&gt;&lt;p dir=&quot;ltr&quot;&gt;&lt;b&gt;Дата:&lt;/b&gt;&amp;nbsp;09.02.2026&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Достижения:&lt;/span&gt;&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Темизация: Внедрена семантическая палитра и шрифт Inter Tight через @theme Tailwind v4.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Компоненты: Создан типизированный Sidebar с логикой сворачивания и индикацией активных состояний.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Layout: Реализована базовая архитектура страницы (Sidebar + Content Area) в App.tsx.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Решенные проблемы:&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Style Debt: Устранена жесткая привязка hex-кодов; стили переведены на централизованные переменные.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Workflow: Исправлен процесс синхронизации с Git (добавлен пропущенный этап commit).&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Архитектурный итог:&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Проект переведен на рельсы Theme-First и готов к модульному наполнению.&lt;/p&gt;" vertex="1">
+          <mxGeometry height="530" width="360" x="400" y="830" as="geometry" />
+        </mxCell>
+        <mxCell id="Cp2M5OQ8qZQWZcYogWQ5-2" edge="1" parent="1" source="yyma6jDwB4iMJeFmGaYm-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Cp2M5OQ8qZQWZcYogWQ5-1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="yyma6jDwB4iMJeFmGaYm-1" parent="1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacing=10;shadow=1;verticalAlign=top;" value="&lt;p dir=&quot;ltr&quot;&gt;📜 Протокол прогресса: Фаза 1 (UI Foundation)&lt;br&gt;&lt;br&gt;&lt;/p&gt;&lt;hr&gt;&lt;p dir=&quot;ltr&quot;&gt;&lt;b&gt;Дата:&lt;/b&gt;&amp;nbsp;12.02.2026&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Протокол текущего прогресса: Sidebar&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Достижения:&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Адаптивность: Реализована плавная смена ширины панели (64px / 256px) с сохранением функционала.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Интерактивность: Настроены активные состояния пунктов меню и всплывающие подсказки (tooltips) для свернутого режима.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Header UX: Создан эффект последовательного появления: сначала иконка календаря, затем с задержкой текст «Time Line».&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Решенные проблемы:&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Центрирование: Исправлено смещение иконок в узком режиме путем корректировки отступов (p-2) и добавления justify-center.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Стабильность верстки: Устранен перенос заголовка на две строки при анимации с помощью whitespace-nowrap, что стабилизировало высоту хедера.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Структура кода: Исправлены критические ошибки синтаксиса (битые импорты, хуки вне компонента, незакрытые теги JSX).&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Архитектурный итог:&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Стек: React (Functional Components, Hooks) + Tailwind CSS + Lucide Icons.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Логика: Данные навигации отделены от рендеринга (массив MENU_ITEMS), компонент полностью типизирован и готов к интеграции с роутингом.&lt;/p&gt;" vertex="1">
+          <mxGeometry height="680" width="310" x="410" y="1370" as="geometry" />
+        </mxCell>
+        <mxCell id="3-KVAfUF0WkZqljtTbog-2" edge="1" parent="1" source="Cp2M5OQ8qZQWZcYogWQ5-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="3-KVAfUF0WkZqljtTbog-1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Cp2M5OQ8qZQWZcYogWQ5-1" parent="1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacing=10;shadow=1;verticalAlign=top;" value="&lt;p dir=&quot;ltr&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;📜 Протокол прогресса: Timeline (MVP Layout)&lt;/span&gt;&lt;/p&gt;&lt;hr&gt;&lt;p dir=&quot;ltr&quot;&gt;Дата: &lt;b&gt;13.02.2026&lt;/b&gt;&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Статус: Фаза 1 (Frontend-муляж) — Завершено ядро Timeline.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Достижения:&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Layout: Реализована структура «Окно таймлайна» с зафиксированным левым столбиком параметров.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Header: Создана трехстрочная динамическая шапка (Месяцы, Недели W1-Wn, Дни).&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Grid: Отрисована автоматическая сетка дней с использованием CSS color-mix и градиентов.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;UX: Внедрен фиксированный горизонтальный скролл, всегда доступный в нижней части экрана.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Решенные проблемы:&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Синхронизация: Реализована программная связь прокрутки (React Refs) между списком ресурсов и полем задач.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Визуальный дрейф: Устранены расхождения высот строк путем перехода на строгий min-h-[28px] и sticky позиционирование.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Стиль: Удалены лишние фоны и тени; настроены отступы шрифтов для максимальной компактности.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Архитектурный итог:&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Стек: React + Tailwind v4 + CSS Variables.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Логика: Верстка готова к внедрению динамического Zoom и рендерингу реальных задач (Task Bars).&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Оценка: 100/100. Подготовлен надежный фундамент для интерактивного планировщика.&lt;/p&gt;" vertex="1">
+          <mxGeometry height="680" width="310" x="400" y="2200" as="geometry" />
+        </mxCell>
+        <mxCell id="3-KVAfUF0WkZqljtTbog-1" parent="1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacing=10;shadow=1;verticalAlign=top;" value="&lt;p dir=&quot;ltr&quot;&gt;📜 **Протокол прогресса: Timeline MVP (Final Layout)**&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;&lt;br&gt;&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;**Дата:** 13.02.2026&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;**Статус:** Фаза 1 (Frontend-муляж) — Верстка Timeline завершена на 100%.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;&lt;br&gt;&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;**Достижения:**&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;- **Layout:** Создана стабильная структура с синхронизированным скроллом и липким заголовком &quot;График Timeline&quot;.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;- **Header:** Скорректированы высоты шапок (72px) и строк (24px) с жесткой фиксацией в пикселях.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;- **Grid:** Вертикальные линии сетки идеально выровнены по границам хедера (смещение 1px устранено).&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;&lt;br&gt;&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;**Решенные проблемы:**&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;- **Конец списка:** Исправлено смещение строк при максимальной прокрутке вниз через внедрение 16px компенсатора скроллбара.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;- **Синтаксис:** Устранены критические ошибки в JSX-структуре и тегах `div`.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;- **Z-Index:** Выстроена иерархия слоев: Заголовок (50) &amp;gt; Угол (40) &amp;gt; Шапка времени (30).&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;&lt;br&gt;&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;**Архитектурный итог:**&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;- **Стандарт:** Финализирована и зафиксирована в правилах проекта механика «Window View» для табличных интерфейсов.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;- **Готовность:** Фундамент полностью подготовлен к отрисовке полосок задач (Task Bars) и внедрению логики Zoom.&lt;/p&gt;" vertex="1">
+          <mxGeometry height="790" width="310" x="400" y="2960" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="TATO Architecture" id="TATO_STRUCT_1">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="tato_root" />
+        <mxCell id="tato_layer" parent="tato_root" />
+        <mxCell id="doc_passport" value="&lt;b&gt;passport.md&lt;/b&gt;&lt;br&gt;Цели и паспорт" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#ffffff;strokeColor=#000000;" parent="tato_layer" vertex="1">
+          <mxGeometry x="50" y="680" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="doc_backlog" value="&lt;b&gt;backlog.md&lt;/b&gt;&lt;br&gt;Задачи" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#ffffff;strokeColor=#000000;" parent="tato_layer" vertex="1">
+          <mxGeometry x="50" y="760" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="doc_log" value="&lt;b&gt;log.md&lt;/b&gt;&lt;br&gt;Журнал изменений" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#ffffff;strokeColor=#000000;" parent="tato_layer" vertex="1">
+          <mxGeometry x="210" y="760" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_group" value="UI: Frontend" style="group" parent="tato_layer" vertex="1">
+          <mxGeometry x="410" y="600" width="260" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e9d8ff;strokeColor=#6b46c1;" parent="ui_group" vertex="1">
+          <mxGeometry width="260" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_main" value="&lt;b&gt;App / Timeline&lt;/b&gt;&lt;br&gt;Main View" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6b46c1;" parent="ui_group" vertex="1">
+          <mxGeometry x="20" y="20" width="220" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_comps" value="Components:&lt;br&gt;- Sidebar (Tree Nav)&lt;br&gt;- AddValueControl&lt;br&gt;- TimelineChart" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6b46c1;align=left;spacing=5;" parent="ui_group" vertex="1">
+          <mxGeometry x="20" y="70" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_lib" value="Lib:&lt;br&gt;- api.ts (Fetch)&lt;br&gt;- timeline.ts&lt;br&gt;- task-dates.ts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6b46c1;align=left;spacing=5;" parent="ui_group" vertex="1">
+          <mxGeometry x="20" y="160" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="api_group" value="API" style="group" parent="tato_layer" vertex="1">
+          <mxGeometry x="760" y="600" width="240" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="api_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dfffe0;strokeColor=#2f855a;" parent="api_group" vertex="1">
+          <mxGeometry width="240" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="api_routes" value="&lt;b&gt;Endpoints&lt;/b&gt;&lt;br&gt;GET /cards&lt;br&gt;GET /cards/:id&lt;br&gt;POST /cards&lt;br&gt;PATCH /cards/:id&lt;br&gt;DELETE /cards/:id&lt;br&gt;&lt;hr&gt;GET /backup/export&lt;br&gt;POST /backup/import" style="text;html=1;strokeColor=none;fillColor=none;align=left;spacing=5;" parent="api_group" vertex="1">
+          <mxGeometry x="10" y="10" width="220" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="be_group" value="Backend" style="group" parent="tato_layer" vertex="1">
+          <mxGeometry x="760" y="840" width="240" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="be_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe8d6;strokeColor=#c05621;" parent="be_group" vertex="1">
+          <mxGeometry width="240" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="be_logic" value="&lt;b&gt;Server (Fastify)&lt;/b&gt;&lt;br&gt;- buildTree()&lt;br&gt;- serializeCard()&lt;br&gt;- parseDates()" style="text;html=1;strokeColor=none;fillColor=none;align=left;spacing=5;" parent="be_group" vertex="1">
+          <mxGeometry x="10" y="10" width="220" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="db_group" value="Data" style="group" parent="tato_layer" vertex="1">
+          <mxGeometry x="1090" y="840" width="240" height="350" as="geometry" />
+        </mxCell>
+        <mxCell id="db_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d9e8ff;strokeColor=#2b6cb0;" parent="db_group" vertex="1">
+          <mxGeometry width="240" height="350" as="geometry" />
+        </mxCell>
+        <mxCell id="db_entity" value="&lt;b&gt;Entity: Card&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;" parent="db_group" vertex="1">
+          <mxGeometry width="240" height="52.5" as="geometry" />
+        </mxCell>
+        <mxCell id="db_fields" value="id: String (cuid)&lt;br&gt;title: String&lt;br&gt;body: String&lt;br&gt;createdAt: DateTime&lt;br&gt;plannedStart: DateTime?&lt;br&gt;plannedEnd: DateTime?&lt;br&gt;parentId: String?&lt;br&gt;&lt;br&gt;relations:&lt;br&gt;- parent (Card?)&lt;br&gt;- children (Card[])" style="text;html=1;strokeColor=none;fillColor=none;align=left;spacing=10;verticalAlign=top;" parent="db_group" vertex="1">
+          <mxGeometry y="52.5" width="240" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="note_db_desc" value="Data: Prisma + SQLite, модель Card с полями текста, дат и самоссылкой на родителя/детей." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#6d5100;align=left;spacing=8;" parent="db_group" vertex="1">
+          <mxGeometry x="-40" y="290" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="conn_ui_api" value="Fetch" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="tato_layer" source="ui_group" target="api_group" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn_api_be" value="Handle" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="tato_layer" source="api_group" target="be_group" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn_be_db" value="Prisma Client" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="tato_layer" source="be_group" target="db_group" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link_doc_ui" value="Specs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;dashed=1;html=1;strokeColor=#999999;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="tato_layer" source="doc_passport" target="ui_group" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="note_ui_desc" value="UI: Таймлайн и боковая панель отображают дерево карточек, позволяют создавать и фильтровать заметки." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#6d5100;align=left;spacing=8;" parent="tato_layer" vertex="1">
+          <mxGeometry x="410" y="900" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="note_api_desc" value="API: Fastify и маршруты `/cards` + `/backup` выполняют CRUD и импорт/экспорт." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#6d5100;align=left;spacing=8;" parent="tato_layer" vertex="1">
+          <mxGeometry x="890" y="700" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="note_be_desc" value="Backend: Fastify управляет деревом карточек, сериализует даты и проверяет входные данные." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#6d5100;align=left;spacing=8;" parent="tato_layer" vertex="1">
+          <mxGeometry x="760" y="1020" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="note_docs_desc" value="Docs: `passport.md` описывает цели, `backlog.md` — задачи, `log.md` — журнал изменений." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#6d5100;align=left;spacing=8;" parent="tato_layer" vertex="1">
+          <mxGeometry x="50" y="840" width="320" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="plan_mvp_then_telegram" value="&lt;b&gt;План внедрения&lt;/b&gt;&lt;br&gt;1. Завершить MVP Core (frontend + Fastify + Prisma/SQLite).&lt;br&gt;2. После стабильного ядра добавить Telegram miniapp для авторизации и уведомлений.&lt;br&gt;3. Не привязывать базу к Telegram ID — оставить расширяемую модель пользователей." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fef3c7;strokeColor=#d97706;align=left;spacing=8;" parent="tato_layer" vertex="1">
+          <mxGeometry x="50" y="960" width="320" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="tato_icons_note" value="&lt;b&gt;Иконки и графика&lt;/b&gt;&lt;br&gt;Все иконки и визуальные элементы интерфейса выполнены в векторном виде: масштабируются без потерь и сохраняют единство стиля." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#6d5100;align=left;spacing=8;" vertex="1" parent="tato_layer">
+          <mxGeometry x="410" y="1020" width="320" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="WpjMDoBRn4soB2OPBH4J-2" value="" style="group;verticalAlign=top;" parent="tato_layer" connectable="0" vertex="1">
+          <mxGeometry x="40" y="200" width="290" height="320" as="geometry" />
+        </mxCell>
+        <mxCell id="ytnl2a5pISkpEWJPn1mt-1" value="&lt;b style=&quot;color: rgb(0, 0, 0);&quot;&gt;Комментарий / сомнения&lt;br&gt;&lt;/b&gt;&lt;br style=&quot;color: rgb(0, 0, 0);&quot;&gt;⚠️Этот набор исходил из устного промпта, заказчик возможно не достаточно точно описал свою идею в словестном промпте.&lt;br&gt;&lt;br&gt;⚠️ В данном draw io файле планируется описать проект более структурированно для максимального понимания ИИ и точного взаимодействия с ним (постановки задач), возможно это повлияет на выбор структуры &quot;stack&quot;&lt;br&gt;&lt;br&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;size=10;position=0.75;base=20;position2=0.75;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;align=left;collapsible=0;" parent="WpjMDoBRn4soB2OPBH4J-2" vertex="1">
+          <mxGeometry width="290" height="320" as="geometry">
+            <mxRectangle width="660" height="60" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Lql8dZFhvu60tSnzJwbY-2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#999999;exitX=0.5;exitY=0;entryX=0.5;entryY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryDx=0;entryDy=0;" parent="tato_layer" source="Lql8dZFhvu60tSnzJwbY-3" target="PSlEEN7ubotG9zXmJzJB-0" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="520" y="290" as="sourcePoint" />
+            <mxPoint x="520" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Lql8dZFhvu60tSnzJwbY-3" value="&lt;b style=&quot;color: rgb(0, 0, 0);&quot;&gt;Комментарий / сомнения&lt;br&gt;&lt;/b&gt;&lt;br style=&quot;color: rgb(0, 0, 0);&quot;&gt;&lt;font color=&quot;#000000&quot;&gt;Думаю упростить программу, до простого планировщика, ура! Возможно вернуться к первому варианту.&lt;br&gt;&lt;br&gt;30-11-2025 - заметка для основной идеи. Нужно сформулировать вероятно быстрый перенос основных данных. Построение Timeline. Справочник с ресурсами, проектами, базы данных номенклатуры, gant chart&amp;nbsp;&lt;/font&gt;" style="shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;size=10;position=0.75;base=20;position2=0.75;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;align=left;collapsible=0;verticalAlign=top;" parent="tato_layer" vertex="1">
+          <mxGeometry x="340" y="30" width="270" height="220" as="geometry">
+            <mxRectangle width="660" height="60" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="zKWAozv44GheHOB_2YLh-0" value="&lt;b style=&quot;&quot;&gt;Project: TATO&lt;/b&gt;&lt;br style=&quot;&quot;&gt;&lt;span style=&quot;&quot;&gt;Thought and Task Organizer&lt;/span&gt;&lt;br style=&quot;&quot;&gt;&lt;br style=&quot;&quot;&gt;&lt;span style=&quot;&quot;&gt;Stack:&lt;/span&gt;&lt;br style=&quot;&quot;&gt;&lt;span style=&quot;&quot;&gt;- React # UI-библиотека для компонентных интерфейсов&lt;/span&gt;&lt;br style=&quot;&quot;&gt;&lt;span style=&quot;&quot;&gt;- Vite # быстрый dev-сервер и сборщик&lt;/span&gt;&lt;br style=&quot;&quot;&gt;&lt;span style=&quot;&quot;&gt;- Tailwind # утилитарный CSS без кастомных стилей&lt;/span&gt;&lt;br style=&quot;&quot;&gt;&lt;span style=&quot;&quot;&gt;- Shadcn UI # набор компонентов на Radix + Tailwind&lt;/span&gt;&lt;br style=&quot;&quot;&gt;&lt;span style=&quot;&quot;&gt;- Node.js # серверная среда JavaScript&lt;/span&gt;&lt;br style=&quot;&quot;&gt;&lt;span style=&quot;&quot;&gt;- Fastify # высокопроизводительный HTTP-фреймворк&lt;/span&gt;&lt;br style=&quot;&quot;&gt;&lt;span style=&quot;&quot;&gt;- Prisma # типобезопасная ORM для БД&lt;/span&gt;&lt;br style=&quot;&quot;&gt;&lt;span style=&quot;&quot;&gt;- SQLite # компактная файловая реляционная БД&lt;/span&gt;&lt;br style=&quot;&quot;&gt;&lt;br style=&quot;&quot;&gt;&lt;b&gt;Требование:&lt;/b&gt; архитектура MVP прорабатывается прямо сейчас, экскурс в исключения помечается как «задел на будущее» (не обязательно MVP).&lt;br&gt;&lt;br&gt;&lt;b&gt;Разработка:&lt;/b&gt; основной код — как web/кроссплатформенное приложение; Telegram — обёртка: для авторизации по Telegram ID и пуш-уведомлений." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;arcSize=3;" parent="tato_layer" vertex="1">
+          <mxGeometry x="40" y="-220" width="290" height="390" as="geometry" />
+        </mxCell>
+        <mxCell id="PSlEEN7ubotG9zXmJzJB-0" value="&lt;b&gt;Основная идея&lt;br&gt;&lt;/b&gt;&lt;br&gt;Дашборды для организации задач&lt;br&gt;&lt;br&gt;Визуальные планирование задач, например ресурса на timeline в одну строчку на временном поле с разными масштабами времени от недели до полугодия.&lt;br&gt;&lt;br&gt;&lt;div&gt;Универсальная разметка задачи позволяет записывать разные параметры и делать по ним графики типа Gantt и timeline.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;arcSize=3;" parent="tato_layer" vertex="1">
+          <mxGeometry x="340" y="-220" width="270" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="tato_ctx_comment_edge" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#999999;exitX=0.5;exitY=0;entryX=0.5;entryY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryDx=0;entryDy=0;" parent="tato_layer" source="ytnl2a5pISkpEWJPn1mt-1" target="zKWAozv44GheHOB_2YLh-0" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="190" y="350" as="sourcePoint" />
+            <mxPoint x="730" y="120" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RQW4sGx7eJ2I4EVSOI_v-1" value="&lt;b&gt;Ключевые функции - сущности&lt;br&gt;&lt;/b&gt;&lt;br&gt;Каждая функция - сущность будет описана отдельным блоком.&lt;br&gt;&lt;br&gt;&lt;b&gt;Задача&lt;br&gt;&lt;br&gt;All task - таблица со всеми задачами и фильтрами&lt;br&gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;Timeline&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div&gt;&lt;b&gt;Справочники&lt;br&gt;&lt;br&gt;Gantt*&lt;br&gt;&lt;br&gt;Связи*&lt;br&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;* - не MVP&lt;/b&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;arcSize=3;" parent="tato_layer" vertex="1">
+          <mxGeometry x="620" y="-220" width="270" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="2c8AkvLm0rxidQ3I2Q56-0" value="Приложение для &lt;b&gt;Telegram miniapp&lt;/b&gt;&lt;div&gt;&lt;br&gt;&lt;div&gt;Почему miniapp? Для того чтобы использовать telegram id для многопользовательского использования&lt;/div&gt;&lt;/div&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#6d5100;align=left;spacing=8;size=10;textShadow=1;shadow=1;" parent="tato_layer" vertex="1">
+          <mxGeometry x="40" y="-390" width="240" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="iOmcYe_P0G6aCq8odAFc-0" value="&lt;span style=&quot;color: rgb(51, 51, 51);&quot;&gt;⚠️&amp;nbsp;&lt;/span&gt;Изучить оказание влияния на проект обновлённого контекста!" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#6d5100;align=left;spacing=8;size=10;textShadow=1;shadow=1;" parent="tato_layer" vertex="1">
+          <mxGeometry x="290" y="-390" width="240" height="130" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="task_breakdown_new" name="task">
+    <mxGraphModel dx="2220" dy="1624" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1200" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="taskbd_main" value="&lt;b&gt;Задача — единая сущность&lt;/b&gt;&lt;br&gt;Сейчас она описывает Add/Edit Task Dialog, таблицу All Task, Timeline и экспорт/импорт через один источник данных." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;spacing=10;" parent="1" vertex="1">
+          <mxGeometry x="440" y="40" width="320" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="taskbd_fields" value="&lt;b&gt;Поля &amp;amp; настройки (MVP)&lt;/b&gt;&lt;br&gt;- taskId (cuid/UUID) (создаётся автоматически)&lt;br&gt;- title / description - (обязательные)&lt;br&gt;- startDate / endDate - (обязательные)&lt;br&gt;-&amp;nbsp;duration (горит серым и расчитывается автоматически, если зажата кнопка &quot;fix&quot; рассчитывает автоматически &quot;endDate&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&quot;, поле &quot;&lt;/span&gt;endDate&quot; отключается и горит серым&amp;nbsp;&lt;div&gt;&lt;div&gt;- checkbox &quot;fix&quot; для принудительного полного date&lt;br&gt;- priority (blocker, critical, medium, low) (обязательное)&lt;br&gt;- status (open, in progress, done) (по умолчанию open, но можно поменять)&lt;br&gt;- executors + проценты&lt;br&gt;- resources (selectedResources: type/percent)&lt;br&gt;- customFields (таблица, автокомплит)&lt;br&gt;- parentId + relations (parent/children)&lt;/div&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d9e8ff;strokeColor=#2b6cb0;align=left;verticalAlign=top;spacing=5;" parent="1" vertex="1">
+          <mxGeometry x="440" y="220" width="320" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="taskbd_ui" value="&lt;b&gt;UI: Add Task Dialog&lt;/b&gt;&lt;br&gt;Header с названием + статус&lt;br&gt;Grid: 2 колонки (лево — id/name/status/dates, право — duration+fix, исполнители, ресурсы)&lt;br&gt;Нижний блок: custom fields, описание, доп. детали&lt;br&gt;Footer: кнопки Cancel / Fix / Save" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e9d8ff;strokeColor=#6b46c1;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="500" width="320" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="taskbd_process" value="&lt;b&gt;Процесс ADD / EDIT Task&lt;/b&gt;&lt;br&gt;1. Открыть диалог + выбрать шаблон / тип задачи&lt;br&gt;2. Заполнить поля и отметить Fix, если нужно пересчитать конец&lt;br&gt;3. Запустить валидацию (durationFixed, обязательные поля, custom fields)&lt;br&gt;4. Отправить API на Fastify → Prisma + SQLite&lt;br&gt;5. UI обновляет Timeline/Table, пересылает event Notifications" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dfffe0;strokeColor=#2f855a;align=left;verticalAlign=top;spacing=5;" parent="1" vertex="1">
+          <mxGeometry x="440" y="500" width="320" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="taskbd_db" value="&lt;b&gt;База данных и единственный источник&lt;/b&gt;&lt;br&gt;Prisma + SQLite, table Task&lt;br&gt;Fastify оборачивает API&lt;br&gt;Timeline / All task / Export / Import читают одну и ту же запись без дублирования" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe8d6;strokeColor=#c05621;align=left;verticalAlign=top;spacing=5;" parent="1" vertex="1">
+          <mxGeometry x="840" y="500" width="320" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="taskbd_ui_layout" value="Add Task UI Mockup" style="group;container=1;" parent="1" connectable="0" vertex="1">
+          <mxGeometry x="40" y="800" width="320" height="590" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_window" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;shadow=1;arcSize=5;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry width="320" height="590" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_title" value="Create New Task" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=14;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="20" y="10" width="200" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_lbl_name" value="Task Name*" style="text;html=1;fontSize=10;fontColor=#666666;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="20" y="45" width="100" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_inp_name" value="Enter task name" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;align=left;spacingLeft=5;fontColor=#999999;fontSize=11;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="20" y="65" width="280" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_lbl_prio" value="Priority" style="text;html=1;fontSize=10;fontColor=#666666;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="20" y="260" width="135" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_inp_prio" value="Medium ▼" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;align=left;spacingLeft=5;fontSize=11;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="20" y="280" width="135" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_lbl_link" value="Link" style="text;html=1;fontSize=10;fontColor=#666666;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="20" y="95" width="75" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_lbl_start" value="Start Time*" style="text;html=1;fontSize=10;fontColor=#666666;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="20" y="145" width="135" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_inp_start" value="📅 01-12-2025" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;align=left;spacingLeft=5;fontSize=11;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="20" y="165" width="135" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_lbl_end" value="End Time*" style="text;html=1;fontSize=10;fontColor=#666666;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="165" y="145" width="135" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_inp_end" value="📅 05-12-2025" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;align=left;spacingLeft=5;fontSize=11;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="165" y="165" width="135" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_lbl_dur" value="Duration (h)" style="text;html=1;fontSize=10;fontColor=#666666;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="20" y="195" width="135" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_inp_dur" value="40" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;align=left;spacingLeft=5;fontSize=11;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="20" y="215" width="180" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_chk_fix" value="Fix" style="text;html=1;fontSize=11;align=left;verticalAlign=middle;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="230" y="210" width="40" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_box_fix" value="☑" style="text;html=1;fontSize=14;align=center;verticalAlign=middle;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="210" y="210" width="20" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_lbl_exec" value="Executors &amp; Resources" style="text;html=1;fontSize=10;fontColor=#666666;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="20" y="320" width="280" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_inp_exec" value="Ivan I. (100%) ▼" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;align=left;spacingLeft=5;fontSize=11;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="20" y="345" width="280" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_grp_details" value="► Details (Project, Part, Ticket)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cccccc;align=left;spacingLeft=5;fontSize=10;fontColor=#666666;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="20" y="390" width="280" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_lbl_desc" value="Description" style="text;html=1;fontSize=10;fontColor=#666666;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="20" y="415" width="280" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_inp_desc" value="Type here..." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;align=left;spacingLeft=5;spacingTop=5;fontSize=11;fontColor=#999999;verticalAlign=top;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="20" y="440" width="280" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_inp_cust" value="+ Add Custom Field" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cccccc;align=center;fontSize=10;fontColor=#666666;dashed=1;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="20" y="500" width="280" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_btn_cancel" value="Cancel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;fontColor=#000000;fontSize=11;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="150" y="540" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_btn_save" value="Create Task" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=#000000;fontColor=#ffffff;fontSize=11;fontStyle=1;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="230" y="540" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="y5CjM4LoXr0aSJl_nrlD-1" value="Status" style="text;html=1;fontSize=10;fontColor=#666666;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="165" y="260" width="135" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="y5CjM4LoXr0aSJl_nrlD-2" value="Done ▼" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;align=left;spacingLeft=5;fontSize=11;" parent="taskbd_ui_layout" vertex="1">
+          <mxGeometry x="165" y="280" width="135" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="taskbd_validation" value="&lt;b&gt;Валидация и логика&lt;/b&gt;&lt;br&gt;- durationFixed / errors&lt;br&gt;- Fix пересчитывает endDate, duration зависит от start/end&lt;br&gt;- Не допускается дублирование данных&lt;br&gt;- Список ошибок возвращается клиенту для подсветки полей" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe8d6;strokeColor=#c05621;align=left;verticalAlign=top;spacing=5;" parent="1" vertex="1">
+          <mxGeometry x="440" y="760" width="320" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="taskbd_edge1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="taskbd_main" target="taskbd_fields" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="taskbd_edge2" value="описанные поля" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="taskbd_fields" target="taskbd_process" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="taskbd_edge3" value="запуск диалога" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="taskbd_ui" target="taskbd_process" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="taskbd_edge4" value="persist" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="taskbd_process" target="taskbd_db" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="taskbd_edge5" value="одна таблица" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" parent="1" source="taskbd_db" target="taskbd_relations" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="taskbd_edge6" value="совместно" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" parent="1" source="taskbd_validation" target="taskbd_process" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="taskbd_edge7" value="детали макета" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" parent="1" source="taskbd_ui_layout" target="taskbd_ui" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eAGD_ql3Z3iKs3OrGZQj-1" value="&lt;b&gt;Для Edit task меняется только кнопка. Все поля заполнены опираясь на базу данных задачи&lt;/b&gt;" style="shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;size=10;position=0.75;base=20;position2=0.75;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;align=left;collapsible=0;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="340" y="1420" width="270" height="80" as="geometry">
+            <mxRectangle width="660" height="60" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eAGD_ql3Z3iKs3OrGZQj-2" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="eAGD_ql3Z3iKs3OrGZQj-1" target="ui_btn_save" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+            <mxPoint x="-52" y="1640" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="taskbd_relations" value="&lt;b&gt;Справочники и связи&lt;/b&gt;&lt;br&gt;- проект&lt;br&gt;- детали (reference, название)&lt;br&gt;- ресурсы: основные исполнители и кастомные рабочие центры/станки&lt;br&gt;- timeline / gantt / таблицы читают одну и ту же таблицу задач&lt;br&gt;- экспорт/импорт (xml) передаёт полный набор полей" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d9e8ff;strokeColor=#2b6cb0;align=left;verticalAlign=top;spacing=5;" parent="1" vertex="1">
+          <mxGeometry x="840" y="270" width="320" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_inp_link" value="https://..." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;align=left;spacingLeft=5;fontSize=11;fontColor=#999999;" parent="1" vertex="1">
+          <mxGeometry x="60" y="915" width="280" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="SmXzpiQtm0Hv_fjCkn3c-3" value="" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;startSize=8;endSize=8;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="SmXzpiQtm0Hv_fjCkn3c-1" target="ui_inp_start" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="SmXzpiQtm0Hv_fjCkn3c-1" value="&lt;b&gt;Создать единое окно календаря&lt;/b&gt;&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;Добавить часы&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;Подумать, как добавить график, очередной справочник&lt;/b&gt;&lt;/div&gt;" style="shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;size=10;position=0.75;base=20;position2=0.75;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;align=left;collapsible=0;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="-270" y="1070" width="270" height="110" as="geometry">
+            <mxRectangle width="660" height="60" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="05lAXv7i6afHRXfwhXOM-2" value="" style="group" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="-1370" y="-1040" width="1240" height="1240" as="geometry" />
+        </mxCell>
+        <mxCell id="2KUkns2rX6Fv3LlexUwP-2" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" parent="05lAXv7i6afHRXfwhXOM-2" vertex="1">
+          <mxGeometry width="1240" height="1240" as="geometry" />
+        </mxCell>
+        <mxCell id="2KUkns2rX6Fv3LlexUwP-3" value="" style="group" parent="05lAXv7i6afHRXfwhXOM-2" vertex="1" connectable="0">
+          <mxGeometry x="80" y="80" width="1070" height="1060" as="geometry" />
+        </mxCell>
+        <mxCell id="2KUkns2rX6Fv3LlexUwP-4" value="&lt;font&gt;&lt;b style=&quot;&quot;&gt;Пересмотреть версю задачи по умолчанию&lt;/b&gt;&lt;/font&gt;&lt;div&gt;&lt;font&gt;&lt;b style=&quot;&quot;&gt;&lt;br&gt;&lt;/b&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;b style=&quot;&quot;&gt;Id задачи&lt;/b&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;b&gt;Название&lt;/b&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;b&gt;Описание (комментарий)&lt;/b&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;b&gt;Дата начала, дата конца&lt;/b&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;b&gt;Расчетное время выполнения,&lt;/b&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;b&gt;При нажатии кнопки fix, рассчитывается время окончания&lt;/b&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;b style=&quot;&quot;&gt;Приоритет: блокер, критичный, средний, низкий - *понять как правильно хранить отдельнл такой маленткий список?&lt;br&gt;link - ссылка&lt;/b&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;Статус: открыт, в работе, закрыт&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Поле ресурсов&lt;/div&gt;&lt;div&gt;Основные исполнитель -executor&lt;/div&gt;&lt;div&gt;Дополнительные, кастомные - рабочие центры (станки, участки)&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Спрятанные з&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(51, 51, 51), rgb(193, 193, 193));&quot;&gt;а вкладками из справочников:&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(51, 51, 51), rgb(193, 193, 193));&quot;&gt;- проект&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(51, 51, 51), rgb(193, 193, 193));&quot;&gt;- детали (номер, референс, ревизия, название)&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Добавление кастомных параметров.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Если новый параметр добавлен, он отражается везде,&amp;nbsp;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;*или в будующем добавить создание кастомной формы? (не MVP)&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;*В будующем справочников (не MVP)&lt;/div&gt;" style="shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;size=10;position=0.75;base=20;position2=0.75;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;align=left;collapsible=0;verticalAlign=top;" parent="2KUkns2rX6Fv3LlexUwP-3" vertex="1">
+          <mxGeometry x="353.7903225806452" width="232.98387096774195" height="453.06451612903226" as="geometry">
+            <mxRectangle width="660" height="60" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="2KUkns2rX6Fv3LlexUwP-5" value="&lt;b&gt;Задача&lt;br&gt;&lt;br&gt;&lt;/b&gt;Размеченная сущность, отражающая структуру формы AddTaskDialog:&lt;br&gt;- taskName (название)&lt;br&gt;- taskNumber/priority/platform/ticket/partId/rev/partName&lt;br&gt;- даты (startTime, endTime, duration) + фиксированное длительность/автоматический расчёт&lt;br&gt;- исполнители (executors, процент) и ресурсы (selectedResources, тип/процент)&lt;br&gt;- customFields (словари, автокомплит)&lt;br&gt;- статусы: editingTaskId, durationFixed, ошибки валидации&lt;br&gt;- UI: диалог Add/New Task, поле duration + фикс (checkbox)&lt;br&gt;Структура нужна для точного протоколирования изменений и чтобы я понимал изменения, когда ты редактируешь форму." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;arcSize=3;autosize=1;" parent="2KUkns2rX6Fv3LlexUwP-3" vertex="1">
+          <mxGeometry y="487.258064516129" width="267.5" height="307.741935483871" as="geometry" />
+        </mxCell>
+        <mxCell id="2KUkns2rX6Fv3LlexUwP-6" value="&lt;b&gt;Структура новая&lt;br&gt;&lt;br&gt;&lt;/b&gt;Размеченная сущность, отражающая структуру формы AddTaskDialog:&lt;br&gt;- taskName (название)&lt;br&gt;- taskid/priority/platform/ticket/partId/rev/partName&lt;br&gt;- даты (startTime, endTime, duration) + фиксированное длительность/автоматический расчёт&lt;br&gt;- исполнители (executors, процент) и ресурсы (selectedResources, тип/процент)&lt;br&gt;- customFields (словари, автокомплит)&lt;br&gt;- статусы: editingTaskId, durationFixed, ошибки валидации&lt;br&gt;- UI: диалог Add/New Task, поле duration + фикс (checkbox)&lt;br&gt;Структура нужна для точного протоколирования изменений и чтобы я понимал изменения, когда ты редактируешь форму." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;arcSize=3;autosize=1;" parent="2KUkns2rX6Fv3LlexUwP-3" vertex="1">
+          <mxGeometry x="276.1290322580645" y="512.9032258064516" width="612.6612903225806" height="145.32258064516128" as="geometry" />
+        </mxCell>
+        <mxCell id="2KUkns2rX6Fv3LlexUwP-7" value="" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;startSize=8;endSize=8;" parent="2KUkns2rX6Fv3LlexUwP-3" source="2KUkns2rX6Fv3LlexUwP-9" target="2KUkns2rX6Fv3LlexUwP-10" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="2KUkns2rX6Fv3LlexUwP-8" value="" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;startSize=8;endSize=8;" parent="2KUkns2rX6Fv3LlexUwP-3" source="2KUkns2rX6Fv3LlexUwP-9" target="2KUkns2rX6Fv3LlexUwP-6" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="2KUkns2rX6Fv3LlexUwP-9" value="&lt;font&gt;UI&lt;/font&gt;&lt;div&gt;&lt;font&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;Для создания задачи используется отдельная форма - окно&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;br&gt;&lt;/font&gt;&lt;div&gt;&lt;font&gt;+Add task - открывается меню для создания задачи&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;Edit task - идентичное меню, за исключением некоторых кнопок вконце, вместо создать там должно быть принять изменение.&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#6d5100;align=left;spacing=8;size=10;textShadow=0;shadow=1;fontColor=light-dark(#000000,#F7F7F7);" parent="2KUkns2rX6Fv3LlexUwP-3" vertex="1">
+          <mxGeometry x="276.1290322580645" y="700.9677419354839" width="207.09677419354838" height="213.70967741935485" as="geometry" />
+        </mxCell>
+        <mxCell id="2KUkns2rX6Fv3LlexUwP-10" value="&lt;div&gt;&lt;div&gt;Обращение к базе данных&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Сущность задача должна храниться в базе банных.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Предварительно обсуждали, что в табличной системе.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;⚠️ Для создания timeline, gantt кастомных таблиц всегда используется один источник данных задачи.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;⚠️ Не допускается дублирование данных&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#6d5100;align=left;spacing=8;size=10;textShadow=0;shadow=1;fontColor=light-dark(#000000,#F7F7F7);" parent="2KUkns2rX6Fv3LlexUwP-3" vertex="1">
+          <mxGeometry x="500.48387096774195" y="700.9677419354839" width="207.09677419354838" height="213.70967741935485" as="geometry" />
+        </mxCell>
+        <mxCell id="2KUkns2rX6Fv3LlexUwP-11" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.25;entryY=0;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;" parent="2KUkns2rX6Fv3LlexUwP-3" source="2KUkns2rX6Fv3LlexUwP-4" target="2KUkns2rX6Fv3LlexUwP-6" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="2KUkns2rX6Fv3LlexUwP-12" value="&lt;b&gt;Имеет ли смысл делать имитацию UI здесь?&lt;/b&gt;" style="shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;size=10;position=0.75;base=20;position2=0.75;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;align=left;collapsible=0;verticalAlign=top;" parent="2KUkns2rX6Fv3LlexUwP-3" vertex="1">
+          <mxGeometry x="250.24193548387098" y="991.6129032258065" width="207.09677419354838" height="59.83870967741936" as="geometry">
+            <mxRectangle width="660" height="60" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="2KUkns2rX6Fv3LlexUwP-13" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;fontSize=12;startSize=8;endSize=8;" parent="2KUkns2rX6Fv3LlexUwP-3" source="2KUkns2rX6Fv3LlexUwP-12" target="2KUkns2rX6Fv3LlexUwP-9" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="05lAXv7i6afHRXfwhXOM-1" value="&lt;div&gt;⚠️ ARCHIVE / ЧЕРНОВИК&lt;/div&gt;&lt;div&gt;Эта вкладка содержит старые заметки.&lt;/div&gt;&lt;div&gt;Актуальный контекст: task&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" parent="05lAXv7i6afHRXfwhXOM-2" vertex="1">
+          <mxGeometry width="230" height="180" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="36yd8Fl-N3Qyt-qiKYCF" name="All task menu">
+    <mxGraphModel dx="1842" dy="1426" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1200" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="alltask_main" value="&lt;b&gt;All Tasks — Таблица всех задач&lt;/b&gt;&lt;br&gt;Динамическая таблица с настраиваемыми колонками и фильтрами.&lt;br&gt;Единый источник данных: table Task (Prisma).&lt;br&gt;&lt;br&gt;*создание кастомных таблиц (не MVP)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;spacing=10;" parent="1" vertex="1">
+          <mxGeometry x="40" y="40" width="340" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_columns" value="&lt;b&gt;Колонки по умолчанию (MVP)&lt;/b&gt;&lt;br&gt;- title (название)&lt;br&gt;- status (статус)&lt;br&gt;- priority (приоритет)&lt;br&gt;- startDate / endDate&lt;br&gt;- executor (исполнитель)&lt;br&gt;&lt;br&gt;Пользователь может показать/скрыть колонки." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d9e8ff;strokeColor=#2b6cb0;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="180" width="340" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_filters" value="&lt;b&gt;Фильтры (MVP)&lt;/b&gt;&lt;br&gt;Фильтрация по всем параметрам:&lt;br&gt;- status (Open / InProgress / Done)&lt;br&gt;- priority (Blocker / Critical / Medium / Low)&lt;br&gt;- executor (выбор из списка)&lt;br&gt;- startDate / endDate (диапазон дат)&lt;br&gt;- customFields (если заданы)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dfffe0;strokeColor=#2f855a;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="360" width="340" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_actions" value="&lt;b&gt;Действия&lt;/b&gt;&lt;br&gt;- ПКМ на строке → контекстное меню → Edit Task&lt;br&gt;- При выборе Edit → открывается Edit Task Dialog&lt;br&gt;- Двойной клик → Edit Task Dialog" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe8d6;strokeColor=#c05621;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="520" width="340" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_group" value="UI Mockup: All Tasks Table" style="group;container=1;" parent="1" connectable="0" vertex="1">
+          <mxGeometry x="420" y="40" width="560" height="380" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;shadow=1;arcSize=3;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry width="560" height="380" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_title" value="All Tasks" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontStyle=1;fontSize=14;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="20" y="10" width="200" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_filter_bar" value="Filter: Status ▼  Priority ▼  Executor ▼  Date Range 📅" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cccccc;fontSize=10;fontColor=#666666;align=left;spacingLeft=10;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="20" y="45" width="520" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_header" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#e2e8f0;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="20" y="80" width="520" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_h1" value="Title" style="text;html=1;fontSize=10;fontStyle=1;fontColor=#64748b;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="25" y="85" width="140" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_h2" value="Status" style="text;html=1;fontSize=10;fontStyle=1;fontColor=#64748b;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="170" y="85" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_h3" value="Priority" style="text;html=1;fontSize=10;fontStyle=1;fontColor=#64748b;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="245" y="85" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_h4" value="Start" style="text;html=1;fontSize=10;fontStyle=1;fontColor=#64748b;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="320" y="85" width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_h5" value="End" style="text;html=1;fontSize=10;fontStyle=1;fontColor=#64748b;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="385" y="85" width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_h6" value="Executor" style="text;html=1;fontSize=10;fontStyle=1;fontColor=#64748b;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="450" y="85" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_row1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#e2e8f0;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="20" y="110" width="520" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r1c1" value="Design homepage" style="text;html=1;fontSize=10;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="25" y="117" width="140" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r1c2" value="In Progress" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b;fontSize=9;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="170" y="117" width="65" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r1c3" value="Medium" style="text;html=1;fontSize=10;fontColor=#666666;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="245" y="117" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r1c4" value="01-12" style="text;html=1;fontSize=10;fontColor=#666666;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="320" y="117" width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r1c5" value="05-12" style="text;html=1;fontSize=10;fontColor=#666666;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="385" y="117" width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r1c6" value="Ivan I." style="text;html=1;fontSize=10;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="450" y="117" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_row2" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#e2e8f0;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="20" y="145" width="520" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r2c1" value="Fix login bug" style="text;html=1;fontSize=10;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="25" y="152" width="140" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r2c2" value="Open" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#3b82f6;fontSize=9;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="170" y="152" width="65" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r2c3" value="Blocker" style="text;html=1;fontSize=10;fontColor=#dc2626;fontStyle=1;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="245" y="152" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r2c4" value="02-12" style="text;html=1;fontSize=10;fontColor=#666666;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="320" y="152" width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r2c5" value="03-12" style="text;html=1;fontSize=10;fontColor=#666666;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="385" y="152" width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r2c6" value="Petr P." style="text;html=1;fontSize=10;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="450" y="152" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_row3" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#e2e8f0;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="20" y="180" width="520" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r3c1" value="Write documentation" style="text;html=1;fontSize=10;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="25" y="187" width="140" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r3c2" value="Done" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#22c55e;fontSize=9;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="170" y="187" width="65" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r3c3" value="Low" style="text;html=1;fontSize=10;fontColor=#666666;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="245" y="187" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r3c4" value="28-11" style="text;html=1;fontSize=10;fontColor=#666666;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="320" y="187" width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r3c5" value="30-11" style="text;html=1;fontSize=10;fontColor=#666666;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="385" y="187" width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_r3c6" value="Ivan I." style="text;html=1;fontSize=10;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="450" y="187" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_context" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;shadow=1;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="350" y="230" width="100" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_ctx_edit" value="✏️ Edit Task" style="text;html=1;fontSize=10;fontStyle=1;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="355" y="238" width="90" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_ctx_del" value="🗑️ Delete" style="text;html=1;fontSize=10;fontColor=#dc2626;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="355" y="260" width="90" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_ctx_label" value="← ПКМ контекстное меню" style="text;html=1;fontSize=9;fontColor=#999999;fontStyle=2;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="350" y="295" width="140" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="alltask_mock_add_btn" value="+ Add Task" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=#000000;fontColor=#ffffff;fontSize=11;fontStyle=1;" parent="alltask_mock_group" vertex="1">
+          <mxGeometry x="450" y="10" width="90" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="Dh2HLFkZNHueBIhYqHzM-1" value="&lt;div style=&quot;text-align: center;&quot;&gt;⚠️ ARCHIVE / ЧЕРНОВИК&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;b&gt;&lt;br&gt;Динамическая таблица со всеми задачами и их параметрами.&lt;/b&gt;&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;Отражаются колонки только выбраных параметров&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;Добавление фильтров: параметр далее фильтр по одному из значений параметров&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;*создание кастомных таблиц (не MVP)&lt;/b&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eeeeee;strokeColor=#36393d;align=left;verticalAlign=top;arcSize=3;autosize=1;" vertex="1" parent="1">
+          <mxGeometry x="-440" y="-590" width="570" height="200" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="rY16w9hZwUF2eGGctUmJ" name="Export/Import">
+    <mxGraphModel grid="1" page="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1200" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="export_main" value="&lt;b&gt;Export / Import&lt;/b&gt;&lt;br&gt;Полный экспорт и импорт проекта для резервного копирования и переноса данных." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="340" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="export_format" value="&lt;b&gt;Формат: JSON&lt;/b&gt;&lt;br&gt;&lt;hr&gt;Почему JSON:&lt;br&gt;- Структурированный, читаемый&lt;br&gt;- Все LLM понимают нативно&lt;br&gt;- Легко парсить и валидировать&lt;br&gt;- Поддержка вложенных структур" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d9e8ff;strokeColor=#2b6cb0;align=left;verticalAlign=top;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="140" width="340" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="export_content" value="&lt;b&gt;Что экспортируется (весь проект)&lt;/b&gt;&lt;br&gt;&lt;hr&gt;- Tasks (все задачи с полями)&lt;br&gt;- Resources (справочник ресурсов)&lt;br&gt;- Assignments (связи Task↔Resource)&lt;br&gt;- Settings (настройки проекта)&lt;br&gt;- CustomFields definitions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dfffe0;strokeColor=#2f855a;align=left;verticalAlign=top;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="300" width="340" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="export_ui" value="&lt;b&gt;UI&lt;/b&gt;&lt;br&gt;&lt;hr&gt;- Кнопка &quot;Export&quot; в меню/sidebar&lt;br&gt;- Скачивается файл project.json&lt;br&gt;- Кнопка &quot;Import&quot; → выбор файла&lt;br&gt;- Валидация перед импортом&lt;br&gt;- Предупреждение о перезаписи данных" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e9d8ff;strokeColor=#6b46c1;align=left;verticalAlign=top;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="460" width="340" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="export_api" value="&lt;b&gt;API Endpoints&lt;/b&gt;&lt;br&gt;&lt;hr&gt;GET /backup/export → возвращает JSON&lt;br&gt;POST /backup/import → принимает JSON" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe8d6;strokeColor=#c05621;align=left;verticalAlign=top;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="420" y="40" width="300" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="export_archive" value="&lt;div style=&quot;text-align: center;&quot;&gt;⚠️ ARCHIVE / ЧЕРНОВИК&lt;/div&gt;&lt;hr&gt;&lt;b&gt;Экспорт и импорт данных, как в draw io - xml файл?&lt;/b&gt;&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;В любом случае нужен сервер для запуска при многопользовательском режиме&lt;/b&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eeeeee;strokeColor=#36393d;align=left;verticalAlign=top;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="420" y="180" width="300" height="140" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="jUbTZz5Whg4C8_CCHA3o" name="Time line.">
+    <mxGraphModel dx="2546" dy="2346" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="tl_root" />
+        <mxCell id="tl_layer" parent="tl_root" />
+        <mxCell id="tl_title" parent="tl_layer" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;fontSize=16;fontStyle=1" value="Module: Timeline Visualization" vertex="1">
+          <mxGeometry height="40" width="400" x="40" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_concept" parent="tl_layer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;spacing=10;" value="&lt;b&gt;Цель&lt;/b&gt;&lt;br&gt;Визуальное представление задач на временном графике (Gantt-like), но в одну линию. Ключевой модуль проекта." vertex="1">
+          <mxGeometry height="60" width="340" x="40" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_mvp_scope" parent="tl_layer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffd7d7;strokeColor=#9b1c1c;align=left;verticalAlign=top;spacing=8;" value="&lt;b&gt;MVP Scope&lt;/b&gt;&lt;hr&gt;✅ Zoom: 1M (Month) — старт с месячного вида&lt;br&gt;✅ Drag &amp;amp; Drop — перемещение задач&lt;br&gt;✅ Растяжение — изменение duration за край&lt;br&gt;✅ Overlaps — расширение строки при наложении&lt;br&gt;✅ Capacity bar — загрузка ресурсов слева&lt;br&gt;✅ Справочник выходных&lt;br&gt;&lt;hr&gt;❌ Post-MVP:&lt;br&gt;- Цвет проекта&lt;br&gt;- Дополнительные zoom levels (1w, 2w, 3w, 1Q, 1/2Y)" vertex="1">
+          <mxGeometry height="200" width="340" x="430" y="-60" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_ui_group" parent="tl_layer" style="group" value="" vertex="1">
+          <mxGeometry height="380" width="340" x="40" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_ui_bg" parent="tl_ui_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e9d8ff;strokeColor=#6b46c1;" value="" vertex="1">
+          <mxGeometry height="380" width="340" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_ui_content" parent="tl_ui_group" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacing=10;" value="&lt;b&gt;UI: Масштаб и Визуализация&lt;/b&gt;&lt;br&gt;&lt;hr&gt;&lt;b&gt;&amp;nbsp;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;/b&gt;&lt;b&gt;Масштабирование (Zoom):&lt;/b&gt;&lt;br&gt;- 1w (1 неделя + часы)&lt;br&gt;- 2w, 3w (недели)&lt;br&gt;- 1M (Месяц), 1Q (Квартал)&lt;br&gt;- 1/2Y (Полгода)&lt;br&gt;&lt;br&gt;&lt;b&gt;Сетка (Grid):&lt;/b&gt;&lt;br&gt;- Диапазон: минимум 6 месяцев&lt;br&gt;- Отражение текущего дня (highlight)&lt;br&gt;- Выходные дни (иконка/цвет)&lt;br&gt;&lt;br&gt;&lt;b&gt;Task Bar (Вид задачи):&lt;/b&gt;&lt;br&gt;- Спокойные тона, прозрачные заливки&lt;br&gt;- Blocker: Красный цвет&lt;br&gt;- Done: Зеленый цвет&lt;br&gt;- Может иметь цвет проекта* не MVP" vertex="1">
+          <mxGeometry height="360" width="320" x="10" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_logic_group" parent="tl_layer" style="group" value="" vertex="1">
+          <mxGeometry height="380" width="340" x="420" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_logic_bg" parent="tl_logic_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dfffe0;strokeColor=#2f855a;" value="" vertex="1">
+          <mxGeometry height="380" width="340" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_logic_content" parent="tl_logic_group" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacing=10;" value="&lt;b&gt;Logic: Взаимодействие&lt;/b&gt;&lt;br&gt;&lt;hr&gt;&lt;b&gt;Перемещение (Drag&amp;amp;Drop):&lt;/b&gt;&lt;br&gt;- Bar перетаскивается -&amp;gt; меняются Start/End&lt;br&gt;- Растяжение края -&amp;gt; меняется End/Duration&lt;br&gt;&lt;br&gt;&lt;b&gt;Ограничения:&lt;/b&gt;&lt;br&gt;- &lt;i&gt;fix=true&lt;/i&gt;: растяжение запрещено&lt;br&gt;- Выходные: иконка при переходе через них&lt;br&gt;&lt;br&gt;&lt;b&gt;Наложение (Overlaps):&lt;/b&gt;&lt;br&gt;- Если задачи накладываются по времени в одном&lt;br&gt;ресурсе -&amp;gt; строка ресурса расширяется по высоте&lt;br&gt;&lt;br&gt;&lt;b&gt;Навигация:&lt;/b&gt;&lt;br&gt;- Быстрый переход к &quot;Сегодня&quot; (избегать долгого &lt;br&gt;скролла)" vertex="1">
+          <mxGeometry height="360" width="320" x="10" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_data_group" parent="tl_layer" style="group" value="" vertex="1">
+          <mxGeometry height="220" width="340" x="800" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_data_bg" parent="tl_data_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d9e8ff;strokeColor=#2b6cb0;" value="" vertex="1">
+          <mxGeometry height="220" width="340" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_data_content" parent="tl_data_group" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacing=10;" value="&lt;b&gt;Data: Оси и Справочники&lt;/b&gt;&lt;br&gt;&lt;hr&gt;&lt;b&gt;Оси координат:&lt;/b&gt;&lt;br&gt;- X: Время (Start ... End) по дням / неделям&lt;br&gt;- Y: Ресурс (основной) или альтернативно Проект/Деталь&lt;br&gt;&lt;br&gt;&lt;b&gt;Источники:&lt;/b&gt;&lt;br&gt;- Единая таблица задач (без дублей) с датами и duration&lt;br&gt;- Справочник выходных дней&lt;br&gt;- Таблицы Resources, Assignments, Schedules" vertex="1">
+          <mxGeometry height="200" width="320" x="10" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_note_warn" parent="tl_layer" style="shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;size=10;position=0.75;base=20;position2=0.75;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;align=left;verticalAlign=top;spacing=10;" value="&lt;b&gt;⚠️ Комментарий / Риски&lt;/b&gt;&lt;br&gt;- Изучить наработки предыдущей версии (баг с таймлайном).&lt;br&gt;- Навигация по времени: минимизировать ручной скролл (кнопки зума, выбор дат).&lt;br&gt;- Синхронизировать dayWidth и zoom между Timeline.tsx и TimelineChart.tsx." vertex="1">
+          <mxGeometry height="160" width="380" x="800" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_conn_1" edge="1" parent="tl_layer" source="tl_ui_group" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="tl_logic_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_conn_2" edge="1" parent="tl_layer" source="tl_logic_group" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="tl_data_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_impl_ui_grid" parent="tl_layer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e9d8ff;strokeColor=#6b46c1;align=left;verticalAlign=top;spacing=10;" value="&lt;b&gt;UI: Заголовки и масштабирование&lt;/b&gt;&lt;br&gt;&lt;hr&gt;- Три строки заголовков: год / месяц / неделя или месяц / недельный диапазон / дни&lt;br&gt;- В режимах Quarter и HalfYear используется недельная сетка (Wxx + диапазон дат).&lt;br&gt;- В остальных режимах — дневная сетка с подсветкой &quot;сегодня&quot; и выходных.&lt;br&gt;- &lt;i&gt;dayWidth&lt;/i&gt; пересчитывается при ресайзе контейнера и смене &quot;zoom&quot;, общий код с Timeline.tsx и TimelineChart.tsx (FIT_DAYS/FIT_WEEKS, getClampedDayWidth).&lt;br&gt;- Левый столбец ресурсов фиксирован при горизонтальном скролле." vertex="1">
+          <mxGeometry height="220" width="520" x="40" y="580" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_impl_capacity" parent="tl_layer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d9e8ff;strokeColor=#2b6cb0;align=left;verticalAlign=top;spacing=10;" value="&lt;b&gt;Data: Загрузка и ёмкость ресурсов&lt;/b&gt;&lt;br&gt;&lt;hr&gt;- &lt;i&gt;getTaskHoursWithinMonth&lt;/i&gt;: часы задачи внутри выбранного диапазона дат, с обрезкой по границам и учётом duration.&lt;br&gt;- &lt;i&gt;getResourceMonthlyCapacity&lt;/i&gt;: часы ресурса = дни * часы_в_день * &quot;work/rest&quot; (шаблон 5/2) * availability%.&lt;br&gt;- &lt;i&gt;getResourceMonthlyLoad&lt;/i&gt;: сумма часов задач по Assignment с учётом allocationPct.&lt;br&gt;- Полоса загрузки (0–125%+): цвет от зелёного к красному, выводится в левой колонке у ресурса.&lt;br&gt;- Все расчёты используют один источник данных задач + справочники Resources/Assignments/Schedules (без дублирования записей)." vertex="1">
+          <mxGeometry height="220" width="600" x="580" y="580" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_conn_3" edge="1" parent="tl_layer" source="tl_logic_group" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#999999;exitX=0.5;exitY=1;entryX=0.0;entryY=0.5;" target="tl_impl_capacity">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_conn_4" edge="1" parent="tl_layer" source="tl_ui_group" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#999999;exitX=0.5;exitY=1;entryX=0.0;entryY=0.5;" target="tl_impl_ui_grid">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3Jxh3l-aDrZahD6chgNH-0" parent="tl_layer" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#6d5100;align=left;spacing=8;size=10;textShadow=1;shadow=1;" value="&lt;font color=&quot;#333333&quot;&gt;Слева на Timeline неподвижная колонка с ресурсами. Размер равен размеру горизонтальной линии, если ширина линии увеличивает из-за наложения задач, ширина ресурса (или другого параметра) увеличивается равно&lt;/font&gt;" vertex="1">
+          <mxGeometry height="150" width="390" x="40" y="1160" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_zoom_bg" parent="tl_layer" style="rounded=1;fillColor=#f4f1ff;strokeColor=#6b46c1;arcSize=6;" value="" vertex="1">
+          <mxGeometry height="280" width="1360" x="40" y="840" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_zoom_title" parent="tl_layer" style="text;html=1;strokeColor=none;fillColor=none;fontStyle=1;align=left;" value="1w Zoom" vertex="1">
+          <mxGeometry height="20" width="180" x="50" y="850" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_zoom_1w" parent="tl_layer" style="text;html=1;strokeColor=none;fillColor=none;align=left;spacing=4;" value="Название: 1w&lt;br&gt;Заголовок: годы/месяцы/недели/дни (3 строки)&lt;br&gt;Видно: 7 дней + часы (24)&lt;br&gt;Отображение: день&lt;br&gt;Перемещение: шаг часа (dayWidth / 24)&lt;br&gt;Дополнительно: &lt;i&gt;dayWidth&lt;/i&gt; пересчитывается по FIT_DAYS, фиксируется «Сегодня»" vertex="1">
+          <mxGeometry height="120" width="200" x="50" y="880" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_zoom_2w" parent="tl_layer" style="text;html=1;strokeColor=none;fillColor=none;align=left;spacing=4;" value="Название: 2w&lt;br&gt;Заголовок: месяцы/недели/дни&lt;br&gt;Видно: 14 дней&lt;br&gt;Отображение: день&lt;br&gt;Перемещение: шаг часа&lt;br&gt;Примечание: простой недельный рост, без погружения в часы" vertex="1">
+          <mxGeometry height="120" width="190" x="550" y="870" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_zoom_3w" parent="tl_layer" style="text;html=1;strokeColor=none;fillColor=none;align=left;spacing=4;" value="Название: 3w&lt;br&gt;Заголовок: месяцы/недели/дни&lt;br&gt;Видно: 21 день&lt;br&gt;Отображение: день&lt;br&gt;Перемещение: шаг часа&lt;br&gt;Появляется малый лаг при скролле, нужно smooth scroll" vertex="1">
+          <mxGeometry height="120" width="200" x="50" y="1000" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_zoom_month" parent="tl_layer" style="text;html=1;strokeColor=none;fillColor=none;align=left;spacing=4;" value="Название: 1M&lt;br&gt;Заголовок: месяцы + недельные диапазоны&lt;br&gt;Видно: приблизительно 30-31 день&lt;br&gt;Отображение: день&lt;br&gt;Перемещение: шаг часа (задачи растягиваются в днях)&lt;br&gt;Доп.: snap точно по дням, минимальная длина 1 день" vertex="1">
+          <mxGeometry height="120" width="190" x="550" y="1000" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_zoom_quarter" parent="tl_layer" style="text;html=1;strokeColor=none;fillColor=none;align=left;spacing=4;" value="Название: 1Q&lt;br&gt;Заголовок: месяцы / недели / номер недели&lt;br&gt;Видно: ~90 дней (12-13 недель)&lt;br&gt;Отображение: неделя&lt;br&gt;Перемещение: шаг недели (7 дней)&lt;br&gt;Доп.: week labels (Wxx + диапазон дат) + snap по неделям" vertex="1">
+          <mxGeometry height="120" width="200" x="1010" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="tl_zoom_half" parent="tl_layer" style="text;html=1;strokeColor=none;fillColor=none;align=left;spacing=4;" value="Название: 1/2Y&lt;br&gt;Заголовок: год/месяц/недели&lt;br&gt;Видно: ~180 дней (26 недель)&lt;br&gt;Отображение: неделя&lt;br&gt;Перемещение: шаг недели&lt;br&gt;Доп.: для zoom=HalfYear &lt;br&gt;добавляется pad до 27 недель&lt;br&gt;&amp;nbsp;и dayWidth вычисляется как weekWidth/7" vertex="1">
+          <mxGeometry height="120" width="200" x="1010" y="990" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_group" parent="tl_layer" style="group" value="UI Mockup (Imitation)" vertex="1">
+          <mxGeometry height="405" width="740" x="1200" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_bg" parent="ui_mock_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;shadow=1;arcSize=2;" value="" vertex="1">
+          <mxGeometry height="400" width="740" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_head" parent="ui_mock_group" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontStyle=1;fontSize=14;" value="Timeline name" vertex="1">
+          <mxGeometry height="20" width="148" x="14.8" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_tools" parent="ui_mock_group" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=none;align=left;" value="" vertex="1">
+          <mxGeometry height="30" width="710.4" x="14.8" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_dates" parent="ui_mock_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;fontSize=10;fontColor=#666666;" value="📅 Dec 01" vertex="1">
+          <mxGeometry height="20" width="85.2" x="14.8" y="45" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_zoom" parent="ui_mock_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cccccc;fontSize=10;fontColor=#666666;" value="Zoom: 1w 2w [M] Q" vertex="1">
+          <mxGeometry height="20" width="177.6" x="547.5999999999999" y="45" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_sb" parent="ui_mock_group" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#e2e8f0;" value="" vertex="1">
+          <mxGeometry height="300" width="207.2" x="14.8" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_sb_h" parent="ui_mock_group" style="text;html=1;fontSize=10;fontStyle=1;fontColor=#94a3b8;" value="Resource" vertex="1">
+          <mxGeometry height="15" width="148" x="22.2" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_res1" parent="ui_mock_group" style="text;html=1;fontSize=11;fontStyle=1;" value="Ivan I." vertex="1">
+          <mxGeometry height="15" width="148" x="59.2" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_av1" parent="ui_mock_group" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e0e7ff;strokeColor=none;fontSize=10;fontColor=#4f46e5;align=center;" value="I" vertex="1">
+          <mxGeometry height="20" width="29.6" x="22.2" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_load1" parent="ui_mock_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bbf7d0;strokeColor=none;" value="" vertex="1">
+          <mxGeometry height="4" width="118.4" x="59.2" y="122" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_grid" parent="ui_mock_group" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#e2e8f0;" value="" vertex="1">
+          <mxGeometry height="300" width="503.2" x="222" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_th1" parent="ui_mock_group" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#e2e8f0;fontSize=10;align=center;" value="December" vertex="1">
+          <mxGeometry height="20" width="503.2" x="222" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_th2" parent="ui_mock_group" style="text;html=1;fontSize=9;fontColor=#64748b;align=left;spacingLeft=5;" value="01 02 03 04 05 06 07 ..." vertex="1">
+          <mxGeometry height="15" width="503.2" x="222" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_t1" parent="ui_mock_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bfdbfe;strokeColor=#3b82f6;fontSize=10;fontColor=#1e3a8a;" value="Task A" vertex="1">
+          <mxGeometry height="24" width="148" x="236.8" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_t2" parent="ui_mock_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Fix" vertex="1">
+          <mxGeometry height="24" width="88.8" x="384.8" y="187" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_res2" parent="ui_mock_group" style="text;html=1;fontSize=11;fontStyle=1;" value="Petr P." vertex="1">
+          <mxGeometry height="15" width="148" x="59.2" y="189.5" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_av2" parent="ui_mock_group" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e0e7ff;strokeColor=none;fontSize=10;fontColor=#4f46e5;align=center;" value="P" vertex="1">
+          <mxGeometry height="20" width="29.6" x="22.2" y="189.5" as="geometry" />
+        </mxCell>
+        <mxCell id="ui_mock_load2" parent="ui_mock_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fecaca;strokeColor=none;" value="" vertex="1">
+          <mxGeometry height="4" width="118.4" x="59.2" y="206.5" as="geometry" />
+        </mxCell>
+        <mxCell id="ibMPlMII-0fUmiLcsoeb-1" parent="ui_mock_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bfdbfe;strokeColor=#3b82f6;fontSize=10;fontColor=#1e3a8a;" value="Task B" vertex="1">
+          <mxGeometry height="24" width="97.6" x="340" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="ibMPlMII-0fUmiLcsoeb-2" parent="ui_mock_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bfdbfe;strokeColor=#3b82f6;fontSize=10;fontColor=#1e3a8a;" value="Task C" vertex="1">
+          <mxGeometry height="24" width="97.6" x="450" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="ibMPlMII-0fUmiLcsoeb-6" parent="ui_mock_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fca5a5;strokeColor=#ef4444;fontSize=10;fontColor=#7f1d1d;" value="Fix" vertex="1">
+          <mxGeometry height="24" width="88.8" x="500" y="187" as="geometry" />
+        </mxCell>
+        <mxCell id="ibMPlMII-0fUmiLcsoeb-7" parent="ui_mock_group" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#e2e8f0;" value="" vertex="1">
+          <mxGeometry height="50" width="710" x="14.8" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="ibMPlMII-0fUmiLcsoeb-8" parent="ui_mock_group" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#e2e8f0;" value="" vertex="1">
+          <mxGeometry height="80" width="710" x="14.8" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ibMPlMII-0fUmiLcsoeb-9" parent="ui_mock_group" style="text;html=1;fontSize=10;fontStyle=1;fontColor=#94a3b8;" value="+add parametr" vertex="1">
+          <mxGeometry height="20" width="148" x="22.2" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="ibMPlMII-0fUmiLcsoeb-10" parent="ui_mock_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;fontSize=10;fontColor=#666666;" value="12 m" vertex="1">
+          <mxGeometry height="20" width="40" x="110" y="45" as="geometry" />
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--0" connectable="0" parent="tl_layer" style="group;align=left;verticalAlign=top;" value="" vertex="1">
+          <mxGeometry height="1310" width="1310" x="-1330" y="-1300" as="geometry" />
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--1" parent="tk8CezdlO10O_8Og_6T--0" style="whiteSpace=wrap;html=1;aspect=fixed;" value="&lt;div style=&quot;forced-color-adjust: none;&quot;&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="1310" width="1310" as="geometry" />
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--2" connectable="0" parent="tk8CezdlO10O_8Og_6T--0" style="group" value="" vertex="1">
+          <mxGeometry height="932.5423728813558" width="1184.180790960452" x="81.41242937853107" y="148.0225988700565" as="geometry" />
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--3" edge="1" parent="tk8CezdlO10O_8Og_6T--2" source="tk8CezdlO10O_8Og_6T--4" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;startSize=8;endSize=8;" target="tk8CezdlO10O_8Og_6T--12" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--4" parent="tk8CezdlO10O_8Og_6T--2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;arcSize=3;autosize=1;" value="Наверное ключевая составляющая проекта.&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;⚠️ Изучить наработки предыдущей попытки там все было идеально дл момента пока не ушло в баг&lt;/div&gt;" vertex="1">
+          <mxGeometry height="44.40677966101695" width="436.66666666666663" y="340.4519774011299" as="geometry" />
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--5" edge="1" parent="tk8CezdlO10O_8Og_6T--2" source="tk8CezdlO10O_8Og_6T--6" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;startSize=8;endSize=8;" target="tk8CezdlO10O_8Og_6T--8" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--6" parent="tk8CezdlO10O_8Og_6T--2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;arcSize=3;autosize=1;" value="Цель&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Визуальное представление задач на временном графике&lt;/div&gt;" vertex="1">
+          <mxGeometry height="74.01129943502825" width="259.03954802259886" x="333.05084745762707" y="436.66666666666663" as="geometry" />
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--7" edge="1" parent="tk8CezdlO10O_8Og_6T--2" source="tk8CezdlO10O_8Og_6T--8" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;startSize=8;endSize=8;" target="tk8CezdlO10O_8Og_6T--10" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--8" parent="tk8CezdlO10O_8Og_6T--2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;arcSize=3;autosize=1;" value="Градация временного масштаба:&lt;div&gt;1 неделя - 1w добавляется деление почасам&lt;/div&gt;&lt;div&gt;2 недели - 2w&lt;/div&gt;&lt;div&gt;3 недели - 3w&lt;/div&gt;&lt;div&gt;1 месяц - M&lt;/div&gt;&lt;div&gt;1 квартал - Q&lt;/div&gt;&lt;div&gt;Пол года - 1/2Y&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Отражение дат минимум на пол года&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Визуальное представление согласно параметрам zoom&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Отражение текущего дня, недели в зависимости от зумм&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Отражение выходных&amp;nbsp; при дневной разметке&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Добавить справочник с выходными&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="214.6327683615819" width="259.03954802259886" x="695.7062146892655" y="22.203389830508474" as="geometry" />
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--9" edge="1" parent="tk8CezdlO10O_8Og_6T--2" source="tk8CezdlO10O_8Og_6T--10" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;startSize=8;endSize=8;" target="tk8CezdlO10O_8Og_6T--17" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--10" parent="tk8CezdlO10O_8Og_6T--2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;arcSize=3;autosize=1;" value="Градация временного масштаба:&lt;div&gt;1 неделя - 1w&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;добавляется деление почасам, перемещение по часам&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="66.61016949152543" width="251.63841807909603" x="710.5084745762712" y="384.8587570621469" as="geometry" />
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--11" edge="1" parent="tk8CezdlO10O_8Og_6T--2" source="tk8CezdlO10O_8Og_6T--12" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;startSize=8;endSize=8;" target="tk8CezdlO10O_8Og_6T--13" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--12" parent="tk8CezdlO10O_8Og_6T--2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;arcSize=3;autosize=1;" value="1 задача согласно параметрам время начала и время конца формирует визуальный Bar на временной сеьке и конвертируется соглвсно временному масштабу&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;По вертикали сопоставляются двнные задачи время начала и время конца, и на носит на временеую шкалу bar&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;По горизонтали используется, базово ресурс, в далбнейщем могут использоваться другие параметры, например номер детали, соответсвенно можно будет отразить периодичность производства детали. Или отразить последовательно операции верхнеуровнего изделия&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="259.03954802259886" width="236.83615819209038" x="22.203389830508474" y="458.8700564971751" as="geometry" />
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--13" parent="tk8CezdlO10O_8Og_6T--2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;arcSize=3;autosize=1;" value="&lt;div&gt;Если&amp;nbsp; задача блокер, bar закрашивается в красный цвет если задача выполнена в зеленый. Использовать спокойные тона .&lt;/div&gt;&lt;div&gt;Прозрачные заливки&lt;/div&gt;" vertex="1">
+          <mxGeometry height="103.61581920903954" width="296.045197740113" x="7.401129943502824" y="821.5254237288135" as="geometry" />
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--14" parent="tk8CezdlO10O_8Og_6T--2" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#6d5100;align=left;spacing=8;size=10;textShadow=0;shadow=1;fontColor=light-dark(#000000,#F7F7F7);" value="&lt;div&gt;&lt;div&gt;Перемещение bar&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- При перемещении bar на графике timeline изменяется время начала и конца задачи соотыетственно в базе данных&lt;/div&gt;&lt;div&gt;- если потчнуть задачу нва графике за край, можно увеличить или уменьшить срок ее выполнения&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- при fix&amp;nbsp; &amp;nbsp;- true растяжение задачи недопускается.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;-при переходе через выходной появляется иконка выходного (красный календарик)&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- при наложении задач на одну линию полоса параметра (ресурс или иное) линия увеличивается соответственно, пока незнаю до какого количества задач ограничить&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="340.4519774011299" width="177.6271186440678" x="384.8587570621469" y="592.090395480226" as="geometry" />
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--15" edge="1" parent="tk8CezdlO10O_8Og_6T--2" source="tk8CezdlO10O_8Og_6T--16" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;startSize=8;endSize=8;" target="tk8CezdlO10O_8Og_6T--8" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--16" parent="tk8CezdlO10O_8Og_6T--2" style="shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;size=10;position=0.75;base=20;position2=0.75;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;align=left;collapsible=0;verticalAlign=top;" value="&lt;b&gt;Понять, как реализовать отражение в диапазонетекущего времени&lt;/b&gt;&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;Например пии переключении с полугода на недельныйграфик, чтобы не перетаскивать ползунок через вссе 6 месяцев&lt;/b&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="81.41242937853107" width="199.83050847457625" x="984.3502824858756" as="geometry">
+            <mxRectangle height="60" width="660" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tk8CezdlO10O_8Og_6T--17" parent="tk8CezdlO10O_8Og_6T--2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;arcSize=3;autosize=1;" value="Параметры временного масштаба:&lt;div&gt;2 недели - 2w&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="66.61016949152543" width="177.6271186440678" x="999.1525423728813" y="384.8587570621469" as="geometry" />
+        </mxCell>
+        <mxCell id="qPycr9qDVSrv6hM1Po3U-0" parent="tk8CezdlO10O_8Og_6T--0" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=19;fontStyle=1" value="&lt;br&gt;&lt;div&gt;&lt;div&gt;⚠️ ARCHIVE / ЧЕРНОВИК&lt;/div&gt;&lt;div&gt;&lt;br style=&quot;color: rgb(0, 0, 0); background-color: rgb(236, 236, 236);&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="110" width="320" x="40" y="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="sidebar_nav" name="Sidebar Navigation">
+    <mxGraphModel dx="1554" dy="914" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1200" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="nav_main" value="&lt;b&gt;Sidebar Navigation&lt;/b&gt;&lt;br&gt;Боковое меню для переключения между экранами приложения.&lt;br&gt;Collapsible — сворачивается до иконок." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;spacing=10;" parent="1" vertex="1">
+          <mxGeometry x="40" y="40" width="340" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_items" value="&lt;b&gt;Пункты меню (MVP)&lt;/b&gt;&lt;br&gt;&lt;hr&gt;1. &lt;b&gt;All tasks&lt;/b&gt; — иконка CheckSquare, route /workspace&lt;br&gt;2. &lt;b&gt;Timeline&lt;/b&gt; — иконка Calendar, route /timeline&lt;br&gt;3. &lt;b&gt;Resources&lt;/b&gt; — иконка Users, route /resources&lt;br&gt;&lt;hr&gt;❌ Gantt — не MVP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d9e8ff;strokeColor=#2b6cb0;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="140" width="340" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_features" value="&lt;b&gt;Особенности&lt;/b&gt;&lt;br&gt;&lt;hr&gt;- Collapsible: сворачивается до иконок&lt;br&gt;- Project name в header&lt;br&gt;- Подсветка активного пункта&lt;br&gt;- Подпункты (проекты) — не обязательно MVP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dfffe0;strokeColor=#2f855a;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="310" width="340" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_mock_group" value="UI Mockup: Sidebar" style="group;container=1;" parent="1" connectable="0" vertex="1">
+          <mxGeometry x="420" y="40" width="200" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_mock_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#334155;shadow=1;arcSize=3;" parent="nav_mock_group" vertex="1">
+          <mxGeometry width="200" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_mock_header" value="Project name" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontStyle=1;fontSize=14;fontColor=#f1f5f9;" parent="nav_mock_group" vertex="1">
+          <mxGeometry x="20" y="20" width="140" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_mock_collapse" value="≡" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=16;fontColor=#94a3b8;" parent="nav_mock_group" vertex="1">
+          <mxGeometry x="165" y="20" width="20" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_mock_item1" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#334155;strokeColor=none;" parent="nav_mock_group" vertex="1">
+          <mxGeometry x="15" y="70" width="170" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_mock_icon1" value="☑" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=14;fontColor=#f1f5f9;" parent="nav_mock_group" vertex="1">
+          <mxGeometry x="20" y="76" width="24" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_mock_label1" value="All tasks" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=12;fontColor=#f1f5f9;" parent="nav_mock_group" vertex="1">
+          <mxGeometry x="50" y="78" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_mock_item2" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;" parent="nav_mock_group" vertex="1">
+          <mxGeometry x="15" y="116" width="170" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_mock_icon2" value="📅" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=14;fontColor=#94a3b8;" parent="nav_mock_group" vertex="1">
+          <mxGeometry x="20" y="122" width="24" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_mock_label2" value="Timeline" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=12;fontColor=#94a3b8;" parent="nav_mock_group" vertex="1">
+          <mxGeometry x="50" y="124" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_mock_item3" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;" parent="nav_mock_group" vertex="1">
+          <mxGeometry x="15" y="162" width="170" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_mock_icon3" value="👥" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=14;fontColor=#94a3b8;" parent="nav_mock_group" vertex="1">
+          <mxGeometry x="20" y="168" width="24" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_mock_label3" value="Resources" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=12;fontColor=#94a3b8;" parent="nav_mock_group" vertex="1">
+          <mxGeometry x="50" y="170" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_mock_divider" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#334155;" parent="nav_mock_group" vertex="1">
+          <mxGeometry x="15" y="220" width="170" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_mock_gantt" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;opacity=50;" parent="nav_mock_group" vertex="1">
+          <mxGeometry x="15" y="240" width="170" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_mock_icon_gantt" value="📊" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=14;fontColor=#475569;" parent="nav_mock_group" vertex="1">
+          <mxGeometry x="20" y="246" width="24" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_mock_label_gantt" value="Gantt (не MVP)" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=12;fontColor=#475569;fontStyle=2;" parent="nav_mock_group" vertex="1">
+          <mxGeometry x="50" y="248" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="nav_ref" value="&lt;b&gt;Референс&lt;/b&gt;&lt;br&gt;examples/Sidebar.tsx" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#6d5100;align=left;spacing=8;size=10;" parent="1" vertex="1">
+          <mxGeometry x="420" y="460" width="200" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="resources_page" name="Resources">
+    <mxGraphModel dx="868" dy="522" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1200" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="res_main" value="&lt;b&gt;Resources — Справочник ресурсов&lt;/b&gt;&lt;br&gt;Список исполнителей и рабочих центров для Timeline.&lt;br&gt;Используется в левой колонке Timeline и в поле Executors задачи." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;spacing=10;" parent="1" vertex="1">
+          <mxGeometry x="40" y="40" width="340" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="res_fields" value="&lt;b&gt;Поля ресурса&lt;/b&gt;&lt;br&gt;&lt;hr&gt;- id (автоматический)&lt;br&gt;- name (название)&lt;br&gt;- type (тип: executor / workstation / custom)&lt;br&gt;- schedule (график работы — ссылка на справочник)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d9e8ff;strokeColor=#2b6cb0;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="160" width="340" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="res_actions" value="&lt;b&gt;Действия&lt;/b&gt;&lt;br&gt;&lt;hr&gt;- Создание нового ресурса&lt;br&gt;- Редактирование (Edit Resource Dialog)&lt;br&gt;- Удаление (с проверкой связей)&lt;br&gt;- ПКМ → контекстное меню" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dfffe0;strokeColor=#2f855a;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="310" width="340" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="res_schedule_note" value="&lt;b&gt;Schedule: доступ&lt;/b&gt;&lt;br&gt;Справочник графиков пока скрыт от пользователя. Позже нужно определить, как предоставлять доступ, чтобы иметь стандартные и кастомные варианты." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fef3c7;strokeColor=#d97706;align=left;spacing=8;size=14;" vertex="1" parent="1">
+          <mxGeometry x="40" y="710" width="340" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_group" value="UI Mockup: Resources Table" style="group;container=1;" parent="1" connectable="0" vertex="1">
+          <mxGeometry x="420" y="40" width="480" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;shadow=1;arcSize=3;" parent="res_mock_group" vertex="1">
+          <mxGeometry width="480" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_title" value="Resources" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontStyle=1;fontSize=14;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="20" y="10" width="200" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_add_btn" value="+ Add Resource" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=#000000;fontColor=#ffffff;fontSize=11;fontStyle=1;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="360" y="10" width="100" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_header" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#e2e8f0;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="20" y="50" width="440" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_h1" value="Name" style="text;html=1;fontSize=10;fontStyle=1;fontColor=#64748b;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="25" y="55" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_h2" value="Type" style="text;html=1;fontSize=10;fontStyle=1;fontColor=#64748b;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="180" y="55" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_h3" value="Schedule" style="text;html=1;fontSize=10;fontStyle=1;fontColor=#64748b;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="290" y="55" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_row1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#e2e8f0;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="20" y="80" width="440" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_r1c1" value="Ivan Ivanov" style="text;html=1;fontSize=10;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="25" y="87" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_r1c2" value="Executor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#3b82f6;fontSize=9;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="180" y="87" width="70" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_r1c3" value="5/2 (Mon-Fri)" style="text;html=1;fontSize=10;fontColor=#666666;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="290" y="87" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_row2" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#e2e8f0;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="20" y="115" width="440" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_r2c1" value="CNC Machine #1" style="text;html=1;fontSize=10;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="25" y="122" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_r2c2" value="Workstation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#f59e0b;fontSize=9;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="180" y="122" width="70" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_r2c3" value="24/7" style="text;html=1;fontSize=10;fontColor=#666666;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="290" y="122" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_row3" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#e2e8f0;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="20" y="150" width="440" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_r3c1" value="Petr Petrov" style="text;html=1;fontSize=10;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="25" y="157" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_r3c2" value="Executor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#3b82f6;fontSize=9;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="180" y="157" width="70" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_r3c3" value="5/2 (Mon-Fri)" style="text;html=1;fontSize=10;fontColor=#666666;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="290" y="157" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_context" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;shadow=1;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="300" y="200" width="100" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_ctx_edit" value="✏️ Edit" style="text;html=1;fontSize=10;fontStyle=1;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="305" y="208" width="90" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_ctx_del" value="🗑️ Delete" style="text;html=1;fontSize=10;fontColor=#dc2626;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="305" y="230" width="90" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="res_mock_ctx_label" value="← ПКМ меню" style="text;html=1;fontSize=9;fontColor=#999999;fontStyle=2;" parent="res_mock_group" vertex="1">
+          <mxGeometry x="300" y="265" width="100" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_desc" value="&lt;b&gt;Add / Edit Resource Dialog&lt;/b&gt;&lt;br&gt;&lt;hr&gt;Модальное окно для создания и редактирования ресурса.&lt;br&gt;&lt;br&gt;&lt;b&gt;Поля:&lt;/b&gt;&lt;br&gt;- Name (обязательное)&lt;br&gt;- Type (dropdown: Executor / Workstation / Custom)&lt;br&gt;- Schedule (dropdown — ссылка на справочник графиков)&lt;br&gt;&lt;br&gt;&lt;b&gt;Действия:&lt;/b&gt;&lt;br&gt;- Save — сохранить и закрыть&lt;br&gt;- Cancel — закрыть без сохранения&lt;br&gt;&lt;br&gt;&lt;b&gt;Edit:&lt;/b&gt; тот же диалог, поля заполнены данными." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8d5ff;strokeColor=#7c3aed;align=left;verticalAlign=top;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="450" width="340" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_mock_group" value="UI Mockup: Add Resource Dialog" style="group;container=1;" connectable="0" vertex="1" parent="1">
+          <mxGeometry x="420" y="360" width="320" height="320" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_mock_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;shadow=1;arcSize=6;" vertex="1" parent="res_dialog_mock_group">
+          <mxGeometry width="320" height="320" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_mock_title" value="Add Resource" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontStyle=1;fontSize=14;" vertex="1" parent="res_dialog_mock_group">
+          <mxGeometry x="20" y="15" width="200" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_mock_close" value="✕" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=14;fontColor=#999999;" vertex="1" parent="res_dialog_mock_group">
+          <mxGeometry x="285" y="15" width="20" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_label_name" value="Name *" style="text;html=1;fontSize=10;fontColor=#374151;fontStyle=1;" vertex="1" parent="res_dialog_mock_group">
+          <mxGeometry x="20" y="55" width="100" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_input_name" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d1d5db;" vertex="1" parent="res_dialog_mock_group">
+          <mxGeometry x="20" y="75" width="280" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_placeholder_name" value="Enter resource name..." style="text;html=1;fontSize=10;fontColor=#9ca3af;" vertex="1" parent="res_dialog_mock_group">
+          <mxGeometry x="30" y="82" width="200" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_label_type" value="Type" style="text;html=1;fontSize=10;fontColor=#374151;fontStyle=1;" vertex="1" parent="res_dialog_mock_group">
+          <mxGeometry x="20" y="120" width="100" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_input_type" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d1d5db;" vertex="1" parent="res_dialog_mock_group">
+          <mxGeometry x="20" y="140" width="280" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_value_type" value="Executor" style="text;html=1;fontSize=10;fontColor=#111827;" vertex="1" parent="res_dialog_mock_group">
+          <mxGeometry x="30" y="147" width="200" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_dropdown_type" value="▼" style="text;html=1;fontSize=9;fontColor=#6b7280;align=right;" vertex="1" parent="res_dialog_mock_group">
+          <mxGeometry x="260" y="147" width="30" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_label_schedule" value="Schedule" style="text;html=1;fontSize=10;fontColor=#374151;fontStyle=1;" vertex="1" parent="res_dialog_mock_group">
+          <mxGeometry x="20" y="185" width="100" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_input_schedule" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d1d5db;" vertex="1" parent="res_dialog_mock_group">
+          <mxGeometry x="20" y="205" width="280" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_value_schedule" value="5/2 (Mon-Fri)" style="text;html=1;fontSize=10;fontColor=#111827;" vertex="1" parent="res_dialog_mock_group">
+          <mxGeometry x="30" y="212" width="200" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_dropdown_schedule" value="▼" style="text;html=1;fontSize=9;fontColor=#6b7280;align=right;" vertex="1" parent="res_dialog_mock_group">
+          <mxGeometry x="260" y="212" width="30" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_btn_cancel" value="Cancel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d1d5db;fontSize=11;" vertex="1" parent="res_dialog_mock_group">
+          <mxGeometry x="120" y="270" width="80" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="res_dialog_btn_save" value="Save" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=#000000;fontColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" parent="res_dialog_mock_group">
+          <mxGeometry x="210" y="270" width="90" height="32" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="qW-e182h5-gcgfVNEmVd" name="Многопользовательский режим">
+    <mxGraphModel dx="2354" dy="1714" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="irzFuCppE5DIX5yiHSxq-1" value="&lt;div&gt;&lt;div&gt;Для многопользовательского или единоличного использования продумать стартовый интерфейс&lt;/div&gt;&lt;/div&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#6d5100;align=left;spacing=8;size=10;textShadow=0;shadow=1;fontColor=light-dark(#000000,#F7F7F7);" parent="1" vertex="1">
+          <mxGeometry x="-480" y="-520" width="260" height="190" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="changelog_page" name="Changelog">
+    <mxGraphModel dx="1954" dy="914" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1200" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="changelog_title" value="&lt;h1&gt;Changelog&lt;/h1&gt;&lt;div&gt;История изменений проекта. 1 чат = 1 блок.&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="40" y="40" width="400" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_001" value="&lt;b&gt;07-12-2025 | Настройка Changelog&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [--:--] Добавлено правило #6 в rules_block_ai о ведении Changelog&lt;/div&gt;&lt;div&gt;• [--:--] Создана страница Changelog в drawio&lt;/div&gt;&lt;div&gt;• [--:--] Первая запись changelog&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="120" width="400" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_002" value="&lt;b&gt;11-12-2025 | Версия Task update&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [18:54] Проверил баг «Failed to fetch» и увидел, что фронт отправляет только OPTIONS, потому что CORS не пропускает PATCH.&lt;/div&gt;&lt;div&gt;• [18:57] Расширил CORS (методы, заголовки, credentials) — теперь PATCH /tasks работает и ошибка исчезнет.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="320" width="400" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_003" value="&lt;b&gt;11-12-2025 | Версия Timeline UI&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [22:10] Сделал трёхуровневый хедер с уровнями месяц/неделя/день и «+ Add Value» в левой колонке.&lt;/div&gt;&lt;div&gt;• [22:13] Заменил иконки зума на визуальные кнопки 1W, 2W, 3W, M, Q, H/Y.&lt;/div&gt;&lt;div&gt;• [22:15] Придал выходным розовый фон в шапке и сетке, чтобы стиль соответствовал скриншоту.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="520" width="400" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_004" value="&lt;b&gt;11-12-2025 | TimelineChart: Month header style&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [23:11] Привёл строку месяцев (Month header) в TimelineChart к стилю из examples/frontend_export: bg-muted, border-border, высота h-11, типографика.&lt;/div&gt;&lt;div&gt;• [23:11] Добавил фиксированную высоту на внутренний flex-контейнер месяцев, чтобы совпадало с DOM-элементом и не прыгало по высоте.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="740" width="400" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_005" value="&lt;b&gt;11-12-2025 | TimelineChart: header fix (визуал как example)&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [23:18] Исправил расчёт dayWidth (ResizeObserver + FIT_DAYS/FIT_WEEKS), из-за чего ячейки месяцев/недель снова получают ширину и не слипаются.&lt;/div&gt;&lt;div&gt;• [23:18] Привёл стили 3-строчной шапки (месяцы/недели/дни) к examples/frontend_export: высоты 44px, bg-muted/bg-muted/50, подсветка today/weekend.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="910" width="400" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_006" value="&lt;b&gt;11-12-2025 | TimelineChart: синхронизация колонок header↔ресурсы&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [23:31] Добавил flex-shrink-0 + minWidth на все левые блоки header, чтобы они не сжимались и начинались строго от RESOURCE_COLUMN_WIDTH.&lt;/div&gt;&lt;div&gt;• [23:31] Ввёл gridWidth = timelineData.length * dayWidth и применил его к контейнерам header и timeline-части строк ресурсов.&lt;/div&gt;&lt;div&gt;• [23:31] Timeline-часть строк ресурсов теперь имеет фиксированную ширину gridWidth, чтобы vertical borders совпадали с header.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="1100" width="400" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_007" value="&lt;b&gt;12-12-2025 | TimelineChart: fix column drift при скролле&amp;nbsp;&lt;/b&gt;&lt;div&gt;&lt;b&gt;&lt;font style=&quot;color: rgb(255, 1, 1);&quot;&gt;БАГ!&lt;/font&gt;&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [00:48] Исправил вызов getClampedDayWidth (передавал 1 аргумент вместо 2) — теперь dayWidth вычисляется корректно через ResizeObserver + FIT_DAYS/FIT_WEEKS.&lt;/div&gt;&lt;div&gt;• [00:48] Ввёл gridWidth = timelineData.length * dayWidth и применил к: 1) header месяцы/недели/дни, 2) timeline-часть строк ресурсов.&lt;/div&gt;&lt;div&gt;• [00:48] Все левые sticky-блоки получили flex-shrink-0 + minWidth — границы header/ресурсов теперь совпадают при скролле.&lt;/div&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="1300" width="400" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_008" value="&lt;b&gt;12-12-2025 | TimelineChart: fix sticky отлипает при скролле&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [01:00] КОРЕНЬ ПРОБЛЕМЫ: sticky left-0 работает внутри своего контейнера (flex-строки). Когда scroll был на уровне страницы, sticky упирался в границу строки и «отлипал».&lt;/div&gt;&lt;div&gt;• [01:00] Добавил overflow-x-auto на containerRef — теперь TimelineChart сам scroll-контейнер по X.&lt;/div&gt;&lt;div&gt;• [01:00] Ввёл totalWidth = RESOURCE_COLUMN_WIDTH + gridWidth и применил minWidth: totalWidth ко всем строкам (header 3 уровня + resource rows).&lt;/div&gt;&lt;div&gt;• [01:00] Теперь sticky никогда не упирается в границу строки — колонка ресурсов остаётся на месте при любом scrollLeft.&lt;br&gt;&lt;br&gt;&lt;b&gt;&lt;font style=&quot;font-size: 14px; color: rgb(0, 154, 0);&quot;&gt;Сработало!&lt;/font&gt;&lt;/b&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="1500" width="390" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_009" value="&lt;b&gt;12-12-2025 | SmartDatePicker для Timeline&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [03:05] Подключил react-calendar и создал SmartDatePicker с popover-выбором и новой стилизацией.&lt;/div&gt;&lt;div&gt;• [03:12] Заменил пары дат в хедере Timeline на SmartDatePicker, чтобы получить голубую подсветку и анимацию.&lt;/div&gt;&lt;div&gt;• [03:20] TaskDialog тоже перешёл на SmartDatePicker, сохранены Duration/ Fix и отключение End при фиксированной длительности.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="1780" width="400" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_010" value="&lt;b&gt;13-12-2025 | SmartDatePicker: navigation label&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [01:36] Навёл кастомный navigationLabel для react-calendar, форматируя месяц через date-fns и убрал букву Г.&lt;/div&gt;&lt;div&gt;• [01:36] Добавил этот блок в changelog drawio.&lt;/div&gt;&lt;div&gt;• [01:40] Убрал prev2Label/next2Label (двойные стрелки) и убрал :focus стиль с кнопок навигации, чтобы они не залипали серым цветом.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="1980" width="400" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_011" value="&lt;b&gt;13-12-2025 | TimelineChart: drag/resize/link fixes&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [03:52] Разделил drag-задачу и расчёт laneов, чтобы она оставалась на своей полосе и не подпрыгивала при движении.&lt;/div&gt;&lt;div&gt;• [03:58] Добавил левый resize-хэндл и режим resize-left с безопасным ограничением и сохранением только изменённого поля.&lt;/div&gt;&lt;div&gt;• [04:03] Поставил иконку-ссылку с автодобавлением https://, клики по ней не запускают drag.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="2160" width="400" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_012" value="&lt;b&gt;13-12-2025 | TimelineChart: highlight today&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [02:21] Подсветил текущий день (#FFCCE2) в сетке и в строке дней, чтобы он всегда выделялся поверх фоновой окраски выходных.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="2380" width="400" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_013" value="&lt;b&gt;13-12-2025 | Timeline UI: Zoom slider &amp; cursor polish&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [05:40] Подогнал ползунок Zoom к рискам: добавил margin по 8px к track, теперь thumb совпадает с метками 1W…H/Y и сторонние позиции в крайних точках исчезли.&lt;/div&gt;&lt;div&gt;• [05:45] Выключил «руку» на всех элементах: глобальный cursor-default в CSS, thumb/root и текст зума больше не используют cursor-pointer или анимацию Grab.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="2600" width="400" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_014" value="&lt;b&gt;13-12-2025 | TimelineChart: детальная планетка для ссылки&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [04:28] Заменил иконку Globe на кастомную SVG «планета с кольцом» (больше деталей, чем у стандартного глобуса).&lt;/div&gt;&lt;div&gt;• [04:28] Цвет иконки сделал синим (text-sky-200, hover:text-sky-100), через currentColor.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="2780" width="400" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_015" value="&lt;b&gt;13-12-2025 | Timeline: сужение до 1 дня&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [02:38] Убрал минимум 30 дней и сделал расчёт timelineData по инклюзивному диапазону — выбор Start=End теперь даёт 1 день.&lt;/div&gt;&lt;div&gt;• [02:38] Разрешил сжимать задачу ресайзом до 1 дня (endDate == startDate), без принудительного +1 день.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="2960" width="400" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_016" value="&lt;b&gt;13-12-2025 | TaskDialog: Delete button&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [02:41] Добавил кнопку Delete в окне Edit Task (TaskDialog), доступна только в режиме редактирования.&lt;/div&gt;&lt;div&gt;• [02:41] Подключил кнопку к существующему confirm-диалогу удаления на страницах AllTasks/Timeline (через onDelete).&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="3140" width="400" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_017" value="&lt;b&gt;18-12-2025 | Desktop restore + build fix&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [22:45] Восстановил desktop/package.json, desktop/main.js, desktop/preload.js и scripts/prepare-build.js после удаления.&lt;/div&gt;&lt;div&gt;• [22:45] Починил падение сборки на пустой папке icons (перешли на дефолтную иконку Electron).&lt;/div&gt;&lt;div&gt;• [22:45] Обошёл ошибку winCodeSign/симлинков: выставил win.signAndEditExecutable=false, после чего NSIS сборка завершилась успешно.&lt;/div&gt;&lt;div&gt;• [22:45] Сгенерирован installer: release\\TATO Setup 1.0.0.exe.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="3320" width="400" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_018" value="&lt;b&gt;18-12-2025 | White screen fix (Electron + Vite base)&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [23:06] Причина белого экрана: Vite собирал ассеты с base=/ (абсолютные /assets/*), что ломается в Electron file:// и даёт ERR_FILE_NOT_FOUND.&lt;/div&gt;&lt;div&gt;• [23:06] Исправил: добавлен base=&quot;./&quot; в vite.config.ts, чтобы ассеты были относительными ./assets/*.&lt;/div&gt;&lt;div&gt;• [23:06] Пересобрал frontend и desktop installer, чтобы новая сборка вошла в app.asar/resources.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="3520" width="400" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_019" value="&lt;b&gt;18-12-2025 | Electron file:// routing fix (HashRouter)&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [23:23] Причина серого экрана: BrowserRouter видел pathname вида /C:/Program Files/.../index.html и маршруты не совпадали.&lt;/div&gt;&lt;div&gt;• [23:23] Исправил: App.tsx переведён на HashRouter (маршруты через #/timeline).&lt;/div&gt;&lt;div&gt;• [23:23] Пересобрал frontend и desktop installer: release\\TATO Setup 1.0.0.exe.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="3720" width="400" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_020" value="&lt;b&gt;18-12-2025 | Database connection fix (Windows paths + Template)&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [23:46] Исправил DATABASE_URL: теперь обратные слеши Windows (\) меняются на прямые (/), как требует Prisma.&lt;/div&gt;&lt;div&gt;• [23:46] Добавил копирование БД: если в AppData нет tato.db, приложение копирует чистый шаблон из ресурсов (template.db).&lt;/div&gt;&lt;div&gt;• [23:46] Пересобрал installer: release\\TATO Setup 1.0.0.exe.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="3910" width="400" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_021" value="&lt;b&gt;20-12-2025 | Security hardening (sandbox + network allowlist)&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [12:45] Добавил sandbox: true в webPreferences — renderer полностью изолирован от Node.&lt;/div&gt;&lt;div&gt;• [12:45] Добавил session.setPermissionRequestHandler → deny-by-default (камера/микрофон/геолокация заблокированы).&lt;/div&gt;&lt;div&gt;• [12:45] Добавил session.webRequest.onBeforeRequest с allowlist: разрешены только file://, 127.0.0.1:4000 и dev-сервер.&lt;/div&gt;&lt;div&gt;• [12:45] Никакие внешние запросы из renderer теперь невозможны — приложение полностью изолировано.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="4110" width="400" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_022" value="&lt;b&gt;20-12-2025 | Унификация календаря (SmartDatePicker)&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [13:00] Выделил SmartDatePicker в отдельный компонент в папке components для переиспользования.&lt;/div&gt;&lt;div&gt;• [13:00] Заменил стандартный календарь в хедере Timeline на SmartDatePicker — теперь везде один тип календаря.&lt;/div&gt;&lt;div&gt;• [13:00] Обновил TaskDialog для использования нового пути импорта SmartDatePicker.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="4320" width="400" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="changelog_023" value="&lt;b&gt;20-12-2025 | Unified dev workflow (web + desktop sync)&lt;/b&gt;&lt;hr&gt;&lt;div&gt;• [17:00] Настроил Vite слушать на 127.0.0.1:5173 (host: &#39;127.0.0.1&#39;) — решает проблему IPv6/IPv4 на Windows.&lt;/div&gt;&lt;div&gt;• [17:00] Electron в dev-режиме теперь не запускает свой backend (используй backend npm run dev отдельно).&lt;/div&gt;&lt;div&gt;• [17:00] Electron loadURL использует 127.0.0.1:5173, allowlist обновлён для обоих форматов (localhost и 127.0.0.1).&lt;/div&gt;&lt;div&gt;• [17:00] Теперь web (браузер) и desktop (Electron) показывают один и тот же UI из Vite dev server.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="4510" width="400" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="prJ-eV0i-qB0504gQesg-1" value="Визуальные ошибки в календаре.&lt;br&gt;Смещены стрелки, подсветка не оттцентрована.&lt;br&gt;Аккуратно добавить номера недель." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="-280" y="2960" width="320" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="prJ-eV0i-qB0504gQesg-2" value="Пропал пкм - edit task и double click" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="-280" y="3140" width="320" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="prJ-eV0i-qB0504gQesg-3" value="Поменять цвета, сделать более прозрачные." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="-281" y="3330" width="320" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="prJ-eV0i-qB0504gQesg-4" value="Сделать перетаскивание плавнее!!!!" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="-280" y="3510" width="320" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="HN-DKFeUxEpytFU99lN6-1" value="Когда нажимаешь в пустое поле, в create/edit task dialog, задача вылетает. Нужно, чтобы сохранялся черновик и вылетало окошко, вы уверены?&lt;br&gt;&lt;br&gt;Как реализовать черновить в базе данных?" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="-280" y="4500" width="320" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="HN-DKFeUxEpytFU99lN6-2" value="Добавить пкм copy" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="-280" y="4690" width="320" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="HN-DKFeUxEpytFU99lN6-3" value="Условие, если задача - блокер, но закрыта, её имя горит красным, но закраска - зелёный цвет, как у всех закрытых задач" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="-280" y="4870" width="320" height="170" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

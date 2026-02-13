@@ -1,0 +1,63 @@
+---
+description: Стандарты верстки таблиц и таймлайнов (липкие шапки, видимый горизонтальный скролл)
+globs: **/src/pages/**/*.tsx
+alwaysApply: true
+---
+
+# Стандарты табличного интерфейса TATO
+
+Этот документ описывает архитектурный подход к реализации таблиц, списков и графиков таймлайна в проекте. Эти правила обязательны для всех страниц: "Список задач", "Ресурсы", "Проекты", "Номенклатура".
+
+## Основные принципы
+
+1.  **Фиксация заголовков (Sticky Headers)**:
+    - Заголовки страниц и шапки таблиц должны быть всегда видны при вертикальном скролле.
+    - Используйте `sticky top-0` и соответствующий `z-index` (обычно `z-20` для шапок таблиц и `z-50` для заголовков страниц).
+
+2.  **Доступность горизонтального скролла**:
+    - Горизонтальный скроллбар **всегда** должен быть зафиксирован в нижней видимой части экрана (viewport), а не уходить под длинную таблицу.
+    - Это достигается путем ограничения высоты контента окна (`h-screen` или `flex-1 overflow-hidden`) так, чтобы скроллбар контейнера всегда оставался в пределах видимости.
+
+3.  **Синхронизация прокрутки (Scroll Sync)**:
+    - Если интерфейс разделен на несколько вертикальных панелей (например, список параметров слева и сетка таймлайна справа), их вертикальная прокрутка должна быть синхронизирована.
+    - Реализуйте синхронизацию через `React.useRef` и обработчик `onScroll`.
+
+## Пример реализации (Шаблон)
+
+```tsx
+const sidebarRef = React.useRef<HTMLDivElement>(null);
+const timelineRef = React.useRef<HTMLDivElement>(null);
+const isSyncing = React.useRef(false);
+
+const syncScroll = (source: 'sidebar' | 'timeline') => {
+  if (isSyncing.current) return;
+  isSyncing.current = true;
+  if (source === 'timeline' && sidebarRef.current && timelineRef.current) {
+    sidebarRef.current.scrollTop = timelineRef.current.scrollTop;
+  } else if (source === 'sidebar' && sidebarRef.current && timelineRef.current) {
+    timelineRef.current.scrollTop = sidebarRef.current.scrollTop;
+  }
+  isSyncing.current = false;
+};
+
+// В JSX:
+<div className="flex h-full overflow-hidden">
+  <div 
+    ref={sidebarRef} 
+    onScroll={() => syncScroll('sidebar')}
+    className="overflow-y-auto hide-scrollbar"
+  >
+    {/* Контент слева */}
+  </div>
+  <div 
+    ref={timelineRef} 
+    onScroll={() => syncScroll('timeline')}
+    className="flex-1 overflow-auto"
+  >
+    {/* Контент справа (содержит горизонтальный скролл) */}
+  </div>
+</div>
+```
+
+## CSS Классы
+Для скрытия вспомогательных скроллбаров (например, у левой панели параметров) используйте класс `.hide-scrollbar`, объявленный в `index.css`.
