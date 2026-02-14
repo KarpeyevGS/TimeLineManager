@@ -1341,7 +1341,7 @@
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
         <mxCell id="-8Ff_YV_b711bDdPMOCz-1" value="&lt;p dir=&quot;ltr&quot;&gt;Текст для добавления в ТЗ:&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;1. Иерархическая группировка строк (Collapsible Groups)&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Функционал: Поддержка древовидной структуры данных (Parent-Child). Возможность сворачивания/разворачивания групп строк через иконку «+/-» в левой панели параметров.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Поведение: При сворачивании родительской строки все дочерние строки скрываются из DOM или получают display: none. Состояние (collapsed/expanded) должно сохраняться в локальном стейте или БД. Визуально группа выделяется отступом (indent) или фоновым цветом.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;2. Фиксация приоритетных строк (Row Freezing)&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Функционал: Возможность «закрепить» выбранные строки (например, верхнеуровневый план) в верхней части таблицы.&lt;/p&gt;&lt;p dir=&quot;ltr&quot;&gt;Поведение: Закрепленные строки отделяются от основного списка горизонтальным разделителем и остаются неподвижными при вертикальном скролле, но продолжают синхронно прокручиваться по горизонтали вместе с основной сеткой таймлайна.&lt;/p&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fontColor=#000000;darkOpacity=0.05;fillColor=#FFF9B2;strokeColor=none;fillStyle=solid;direction=west;gradientDirection=north;gradientColor=#FFF2A1;shadow=1;size=20;pointerEvents=1;align=left;" vertex="1" parent="1">
-          <mxGeometry x="-830" y="-510" width="860" height="370" as="geometry" />
+          <mxGeometry x="-820" y="-510" width="860" height="370" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

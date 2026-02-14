@@ -5,8 +5,12 @@ git add .
 git commit -m "Краткое описание того, что сделал"
 
 # 3. Отправить всё в облако (на GitHub)
-git push origin main
-
+   git push
+# 4. Проверка
+git status
 
 # frontend run 
+cd TimeLinePlanner\frontend
+
 npm run dev
+

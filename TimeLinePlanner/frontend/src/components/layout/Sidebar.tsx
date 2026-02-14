@@ -24,12 +24,16 @@ const MENU_ITEMS: MenuItem[] = [
   { icon: Users, label: 'Resources', id: 'resources' },
 ];
 
+// Типизация пропсов для Sidebar
+interface SidebarProps {
+  activePage: string;
+  onPageChange: (id: string) => void;
+}
+
 // Типизация компонента как React.FC (Functional Component)
-export const Sidebar: React.FC = () => {
+export const Sidebar: React.FC<SidebarProps> = ({ activePage, onPageChange }) => {
   // Состояние для управления шириной панели 
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
-  // Состояние для отслеживания выбранного в данный момент пункта
-  const [activeId, setActiveId] = useState<string>('tasks');
 
   return (
     <aside 
@@ -59,12 +63,12 @@ export const Sidebar: React.FC = () => {
       <nav className="flex-1 p-3 space-y-2">
         {MENU_ITEMS.map((item) => {
           // Вычисляем, является ли данный пункт активным прямо при рендере
-          const isActive = activeId === item.id;
+          const isActive = activePage === item.id;
           
           return (
             <button
               key={item.id}
-              onClick={() => setActiveId(item.id)} // Установка активного ID по клику
+              onClick={() => onPageChange(item.id)} // Установка активного ID через пропс
               // Условные стили: подсветка фона и текста для активного состояния
               className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'p-3'} rounded-xl transition-all group relative ${
                 isActive 

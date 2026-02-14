@@ -130,6 +130,26 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ range, onRange
               border: 1px solid var(--color-app-primary) !important;
               color: var(--color-app-primary) !important;
               font-weight: 900 !important;
+              position: relative;
+              z-index: 1;
+            }
+            /* Убираем основную обводку, если день в диапазоне, так как мы добавили ::after */
+            .rdp-today.rdp-range_middle .rdp-day_button,
+            .rdp-today.rdp-range_start .rdp-day_button,
+            .rdp-today.rdp-range_end .rdp-day_button {
+              border: none !important;
+            }
+            /* Дополнительная рамка для текущего дня при пересечении диапазоном */
+            .rdp-today.rdp-range_middle .rdp-day_button::after,
+            .rdp-today.rdp-range_start .rdp-day_button::after,
+            .rdp-today.rdp-range_end .rdp-day_button::after {
+              content: "";
+              position: absolute;
+              inset: 0;
+              border: 1px solid var(--color-app-primary);
+              border-radius: 10px;
+              pointer-events: none;
+              z-index: 2;
             }
             .rdp-weekday {
               font-size: 10px !important;
