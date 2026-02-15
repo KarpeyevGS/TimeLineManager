@@ -1,0 +1,16 @@
+# 1. Собрать все изменения в проектe
+git add .
+
+# 2. Создать локальное "сохранение" с описанием
+git commit -m "Краткое описание того, что сделал"
+
+# 3. Отправить всё в облако (на GitHub)
+   git push
+# 4. Проверка
+git status
+
+# frontend run 
+cd TimeLinePlanner\frontend
+
+npm run dev
+
