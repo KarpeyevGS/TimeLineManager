@@ -1181,7 +1181,8 @@ export const TimelinePage: React.FC = () => {
           task={taskModal.task}
           paramId={taskModal.paramId}
           initialDate={taskModal.initialDate}
-          customFieldTypes={store.customFieldTypes.getAll().map(t => t.name)}
+          customFieldTypes={store.customFieldTypes.getAll()}
+          onAddCustomFieldType={(name) => store.customFieldTypes.add(name)}
           onSave={handleSaveTask}
           onDelete={taskModal.mode === 'edit' ? handleDeleteTask : undefined}
           onClose={() => setTaskModal(null)}
@@ -1193,6 +1194,7 @@ export const TimelinePage: React.FC = () => {
         isOpen={parameterModal.isOpen}
         existingParameters={PARAMETERS}
         availableTasks={store.appData.tasks}
+        customFieldTypes={store.customFieldTypes.getAll()}
         onSave={handleSaveParameter}
         onClose={() => {
           console.log('🚪 ParameterModal onClose called');

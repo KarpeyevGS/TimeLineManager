@@ -1,20 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Plus, Minus } from 'lucide-react';
-import type { TimelineParameter, Task } from '../../store';
+import { X, Plus } from 'lucide-react';
+import type { TimelineParameter, Task, CustomFieldType } from '../../store';
 
 interface ParameterModalProps {
   isOpen: boolean;
   existingParameters: TimelineParameter[];
   availableTasks?: Task[];
+  customFieldTypes?: CustomFieldType[];
   onSave: (parameter: Omit<TimelineParameter, 'id'>) => void;
   onClose: () => void;
 }
 
-// Известные поля для фильтрации
-const FILTER_FIELD_OPTIONS = [
-  { key: 'platform', label: 'Платформа' },
-  { key: 'operationType', label: 'Тип операции' },
-  { key: 'workerId', label: 'Исполнитель' },
+// Стандартные поля задачи для фильтрации
+const STATIC_FILTER_OPTIONS = [
   { key: 'priority', label: 'Приоритет' },
   { key: 'status', label: 'Статус' },
 ];
@@ -23,6 +21,7 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
   isOpen,
   existingParameters,
   availableTasks = [],
+  customFieldTypes = [],
   onSave,
   onClose,
 }) => {
@@ -44,13 +43,20 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
     }
   }, [onClose, isOpen]);
 
+  // Динамические опции фильтрации: статичные + кастомные типы пользователя
+  const filterFieldOptions = useMemo(() => {
+    const custom = customFieldTypes.map(t => ({ key: t.id, label: t.name }));
+    return [...STATIC_FILTER_OPTIONS, ...custom];
+  }, [customFieldTypes]);
+
   // Вычисляем уникальные значения для каждого поля фильтра
   const filterValueOptions = useMemo(() => {
     const options: Record<string, string[]> = {};
-    FILTER_FIELD_OPTIONS.forEach((field) => {
+    filterFieldOptions.forEach((field) => {
       const values = new Set<string>();
       availableTasks.forEach((task) => {
-        const value = task[field.key as keyof Task];
+        // Проверяем стандартные поля и customFields
+        const value = task[field.key as keyof Task] ?? task.customFields?.[field.key];
         if (value) {
           values.add(String(value));
         }
@@ -58,7 +64,7 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
       options[field.key] = Array.from(values).sort();
     });
     return options;
-  }, [availableTasks]);
+  }, [availableTasks, filterFieldOptions]);
 
   if (!isOpen) {
     console.log('🔧 ParameterModal isOpen is false, returning null');
@@ -69,18 +75,13 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
 
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
-    // Проверяем, что хотя бы один фильтр добавлен
-    if (Object.keys(filterFields).length === 0) {
-      errs.filters = 'Укажите хотя бы один фильтр для параметра';
-    }
     if (!name.trim()) errs.name = 'Обязательное поле';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
   const handleAddFilterField = () => {
-    // Добавляем первое доступное поле из списка, которого ещё нет
-    const availableField = FILTER_FIELD_OPTIONS.find(opt => !(opt.key in filterFields));
+    const availableField = filterFieldOptions.find(opt => !(opt.key in filterFields));
     if (availableField) {
       setFilterFields(prev => ({ ...prev, [availableField.key]: '' }));
     }
@@ -225,27 +226,22 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
                       className="flex-1 h-7 px-2 text-xs rounded border border-app-border bg-white text-app-text-head outline-none focus:border-app-primary transition-colors cursor-pointer"
                     >
                       <option value="">— Выберите поле</option>
-                      {FILTER_FIELD_OPTIONS.map(opt => (
+                      {filterFieldOptions.map(opt => (
                         <option key={opt.key} value={opt.key}>
                           {opt.label}
                         </option>
                       ))}
                     </select>
 
-                    {/* Value selector dropdown */}
+                    {/* Value text input */}
                     {fieldKey && (
-                      <select
+                      <input
+                        type="text"
                         value={fieldValue}
                         onChange={e => handleFilterChange(fieldKey, fieldKey, e.target.value)}
-                        className="flex-1 h-7 px-2 text-xs rounded border border-app-border bg-white text-app-text-head outline-none focus:border-app-primary transition-colors cursor-pointer"
-                      >
-                        <option value="">— Выберите значение</option>
-                        {filterValueOptions[fieldKey]?.map(val => (
-                          <option key={val} value={val}>
-                            {val}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder="Значение..."
+                        className="flex-1 h-7 px-2 text-xs rounded border border-app-border bg-white text-app-text-head placeholder:text-gray-300 outline-none focus:border-app-primary transition-colors"
+                      />
                     )}
 
                     {/* Remove button */}

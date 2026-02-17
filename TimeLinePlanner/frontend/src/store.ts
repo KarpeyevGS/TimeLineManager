@@ -112,11 +112,7 @@ const createInitialAppData = (): AppData => ({
     created: new Date().toISOString(),
     lastModified: new Date().toISOString(),
   },
-  customFieldTypes: [
-    { id: 'cft_1', name: 'Platform' },
-    { id: 'cft_2', name: 'Version' },
-    { id: 'cft_3', name: 'Environment' },
-  ],
+  customFieldTypes: [] as CustomFieldType[],
   resources: [
     { id: 'res_1', name: 'Иван Иванов', role: 'Developer' },
     { id: 'res_2', name: 'Мария Петрова', role: 'Designer' },
@@ -184,7 +180,7 @@ export const matchesTaskFilters = (task: Task, filters: Record<string, string>):
   }
 
   return Object.entries(filters).every(([key, value]) => {
-    const taskValue = task[key as keyof Task];
+    const taskValue = task[key as keyof Task] ?? task.customFields?.[key];
     return taskValue === value;
   });
 };
@@ -317,6 +313,13 @@ export const useAppStore = () => {
     return appData.customFieldTypes;
   }, [appData.customFieldTypes]);
 
+  const deleteCustomFieldType = useCallback((id: string): void => {
+    setAppData(prev => ({
+      ...prev,
+      customFieldTypes: prev.customFieldTypes.filter(t => t.id !== id),
+    }));
+  }, []);
+
   // ===== Операции с ресурсами =====
   const getResources = useCallback((): Resource[] => {
     return appData.resources;
@@ -436,6 +439,7 @@ export const useAppStore = () => {
     customFieldTypes: {
       add: addCustomFieldType,
       getAll: getCustomFieldTypes,
+      delete: deleteCustomFieldType,
     },
     resources: {
       getAll: getResources,

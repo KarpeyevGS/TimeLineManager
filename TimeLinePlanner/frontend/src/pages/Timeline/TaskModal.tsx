@@ -5,12 +5,18 @@ import { X, ChevronRight, ChevronDown, Plus } from 'lucide-react';
 import { DateRangePicker } from '../../components/ui/DateRangePicker';
 import type { Task } from '../../store';
 
+interface CustomFieldTypeDef {
+  id: string;
+  name: string;
+}
+
 interface TaskModalProps {
   mode: 'add' | 'edit';
   task?: Task;
   paramId?: string;
   initialDate?: Date;
-  customFieldTypes: string[]; // Типы из store
+  customFieldTypes: CustomFieldTypeDef[];
+  onAddCustomFieldType: (name: string) => CustomFieldTypeDef;
   onSave: (data: Omit<Task, 'id'> & { id?: string }) => void;
   onDelete?: () => void;
   onClose: () => void;
@@ -22,7 +28,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   // paramId больше не используется, но оставляем в props для совместимости
   paramId,
   initialDate,
-  customFieldTypes: initialFieldTypes,
+  customFieldTypes,
+  onAddCustomFieldType,
   onSave,
   onDelete,
   onClose,
@@ -40,7 +47,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(task?.priority ?? 'medium');
   const [status, setStatus] = useState<'not_started' | 'in_progress' | 'done'>(task?.status ?? 'not_started');
   const [description, setDescription] = useState(task?.description ?? '');
-  const [customFieldTypes, setCustomFieldTypes] = useState<string[]>(initialFieldTypes);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>(task?.customFields ?? {});
   const [customFieldsOpen, setCustomFieldsOpen] = useState(false);
   const [addingNewType, setAddingNewType] = useState(false);
@@ -62,15 +68,15 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   const handleAddNewType = () => {
     const trimmed = newTypeName.trim();
-    if (trimmed && !customFieldTypes.includes(trimmed)) {
-      setCustomFieldTypes(prev => [...prev, trimmed]);
+    if (trimmed && !customFieldTypes.some(t => t.name === trimmed)) {
+      onAddCustomFieldType(trimmed);
       setNewTypeName('');
       setAddingNewType(false);
     }
   };
 
-  const handleCustomFieldChange = (type: string, value: string) => {
-    setCustomFieldValues(prev => ({ ...prev, [type]: value }));
+  const handleCustomFieldChange = (id: string, value: string) => {
+    setCustomFieldValues(prev => ({ ...prev, [id]: value }));
   };
 
   const handleSubmit = () => {
@@ -235,14 +241,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
           {customFieldsOpen && (
             <div className="flex flex-col gap-2 border border-app-border rounded p-3 -mt-1">
-              {customFieldTypes.map(type => (
-                <div key={type} className="flex flex-col gap-1">
-                  <label className={`${labelCls} text-[10px]`}>{type}</label>
+              {customFieldTypes.map(({ id, name }) => (
+                <div key={id} className="flex flex-col gap-1">
+                  <label className={`${labelCls} text-[10px]`}>{name}</label>
                   <input
                     type="text"
-                    value={customFieldValues[type] ?? ''}
-                    onChange={e => handleCustomFieldChange(type, e.target.value)}
-                    placeholder={`Enter ${type}`}
+                    value={customFieldValues[id] ?? ''}
+                    onChange={e => handleCustomFieldChange(id, e.target.value)}
+                    placeholder={`Enter ${name}`}
                     className={inputCls()}
                   />
                 </div>
