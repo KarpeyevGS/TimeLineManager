@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { DateRange } from 'react-day-picker';
 import {
   format,
@@ -11,64 +11,33 @@ import {
 import { ru } from 'date-fns/locale';
 import { Plus, Minus, Pin } from 'lucide-react';
 import { DateRangePicker } from '../../components/ui/DateRangePicker';
-
-// Интерфейсы
-interface Parameter {
-  id: number;
-  name: string;
-  parentId?: number;
-  level: number;
-}
+import { TaskModal } from './TaskModal';
+import { ParameterModal } from './ParameterModal';
+import { useAppStore, type Task, type TimelineParameter } from '../../store';
 
 interface ContextMenuState {
   x: number;
   y: number;
-  paramId: number;
+  paramId: string;  // ← Теперь строка (ID параметра)
 }
 
-// Иерархические mock-данные (3 уровня)
-const PARAMETERS: Parameter[] = [
-  // Производство (id=1-19)
-  { id: 1, name: 'Производство', level: 0 },
-  { id: 2, name: 'Сварочный цех', parentId: 1, level: 1 },
-  { id: 3, name: 'Сварщик 1', parentId: 2, level: 2 },
-  { id: 4, name: 'Сварщик 2', parentId: 2, level: 2 },
-  { id: 5, name: 'Сварщик 3', parentId: 2, level: 2 },
-  { id: 6, name: 'Сборочный цех', parentId: 1, level: 1 },
-  { id: 7, name: 'Слесарь 1', parentId: 6, level: 2 },
-  { id: 8, name: 'Слесарь 2', parentId: 6, level: 2 },
-  { id: 9, name: 'Проверка качества', parentId: 1, level: 1 },
-  { id: 10, name: 'Контролер 1', parentId: 9, level: 2 },
-  { id: 11, name: 'Контролер 2', parentId: 9, level: 2 },
-  { id: 12, name: 'Упаковка', parentId: 1, level: 1 },
-  { id: 13, name: 'Упаковщик 1', parentId: 12, level: 2 },
-  { id: 14, name: 'Упаковщик 2', parentId: 12, level: 2 },
-  { id: 15, name: 'Малярный цех', parentId: 1, level: 1 },
-  { id: 16, name: 'Маляр 1', parentId: 15, level: 2 },
-  { id: 17, name: 'Маляр 2', parentId: 15, level: 2 },
-  { id: 18, name: 'Сушка', parentId: 15, level: 2 },
+interface TimelineRowMenuState {
+  x: number;
+  y: number;
+  paramId: string;  // ← Теперь строка (ID параметра)
+  date: Date;
+}
 
-  // Логистика (id=20-35)
-  { id: 20, name: 'Логистика', level: 0 },
-  { id: 21, name: 'Приемка материалов', parentId: 20, level: 1 },
-  { id: 22, name: 'Приемщик 1', parentId: 21, level: 2 },
-  { id: 23, name: 'Приемщик 2', parentId: 21, level: 2 },
-  { id: 24, name: 'Склад готовой продукции', parentId: 20, level: 1 },
-  { id: 25, name: 'Кладовщик 1', parentId: 24, level: 2 },
-  { id: 26, name: 'Кладовщик 2', parentId: 24, level: 2 },
-  { id: 27, name: 'Отгрузка', parentId: 20, level: 1 },
-  { id: 28, name: 'Грузчик 1', parentId: 27, level: 2 },
-  { id: 29, name: 'Грузчик 2', parentId: 27, level: 2 },
+interface TaskModalState {
+  mode: 'add' | 'edit';
+  task?: Task;
+  paramId?: string;  // ← Теперь строка (ID параметра)
+  initialDate?: Date;
+}
 
-  // Управление (id=30-40)
-  { id: 30, name: 'Управление', level: 0 },
-  { id: 31, name: 'Планирование', parentId: 30, level: 1 },
-  { id: 32, name: 'Плановик 1', parentId: 31, level: 2 },
-  { id: 33, name: 'Плановик 2', parentId: 31, level: 2 },
-  { id: 34, name: 'Учет', parentId: 30, level: 1 },
-  { id: 35, name: 'Бухгалтер 1', parentId: 34, level: 2 },
-  { id: 36, name: 'Бухгалтер 2', parentId: 34, level: 2 },
-];
+interface ParameterModalState {
+  isOpen: boolean;
+}
 
 const ZOOM_OPTIONS = ['2W', '3W', 'M', 'Q', '2Q'];
 const ZOOM_CONFIG: Record<number, number> = {
@@ -79,7 +48,27 @@ const ZOOM_CONFIG: Record<number, number> = {
   4: 9,   // 2Q
 };
 
+interface DragState {
+  taskId: string;
+  startX: number;
+  startDate: Date;
+  endDate: Date;
+}
+
+interface ResizeState {
+  taskId: string;
+  side: 'left' | 'right';
+  startX: number;
+  startDate: Date;
+  endDate: Date;
+}
+
 export const TimelinePage: React.FC = () => {
+  console.log('📊 TimelinePage rendering');
+  // Store
+  const store = useAppStore();
+  console.log('🎯 Store initialized:', store);
+
   // Рефы
   const sidebarRef = React.useRef<HTMLDivElement>(null);
   const timelineRef = React.useRef<HTMLDivElement>(null);
@@ -87,6 +76,7 @@ export const TimelinePage: React.FC = () => {
   const frozenTimelineRef = React.useRef<HTMLDivElement>(null);
   const isSyncing = React.useRef(false);
   const contextMenuRef = React.useRef<HTMLDivElement>(null);
+  const timelineRowMenuRef = React.useRef<HTMLDivElement>(null);
 
   // Состояния
   const [zoomIndex, setZoomIndex] = React.useState(2);
@@ -94,16 +84,39 @@ export const TimelinePage: React.FC = () => {
     from: new Date(2026, 0, 1),
     to: new Date(2026, 0, 31),
   });
-  const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
-  const [frozenIds, setFrozenIds] = useState<Set<number>>(new Set());
+  // Выбранная конфигурация timeline — берём первую из store
+  const selectedTimelineId = store.appData.timelineConfigs?.[0]?.id ?? 'timeline_default';
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const [frozenIds, setFrozenIds] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [dragState, setDragState] = useState<DragState | null>(null);
+  const [resizeState, setResizeState] = useState<ResizeState | null>(null);
+  const [timelineRowMenu, setTimelineRowMenu] = useState<TimelineRowMenuState | null>(null);
+  const [taskModal, setTaskModal] = useState<TaskModalState | null>(null);
+  const [parameterModal, setParameterModal] = useState<ParameterModalState>({ isOpen: false });
+  const [dragPreview, setDragPreview] = useState<Task | null>(null);
 
   const dayWidth = ZOOM_CONFIG[zoomIndex] || 56;
+
+  // Загружаем конфигурацию выбранной timeline
+  const timelineConfig = useMemo(
+    () => store.timelines.getConfig(selectedTimelineId),
+    [store.appData.timelineConfigs, selectedTimelineId]
+  );
+
+  // Параметры текущей timeline
+  const PARAMETERS = useMemo(() => timelineConfig?.parameters ?? [], [timelineConfig]);
+
+  // Группируем задачи по параметрам
+  const tasksGroupedByParam = useMemo(
+    () => store.timelines.groupTasksForTimeline(selectedTimelineId),
+    [store.appData.tasks, store.appData.timelineConfigs, selectedTimelineId]
+  );
 
   // Вычисляемые данные для иерархии
   const parentIds = useMemo(
     () => new Set(PARAMETERS.filter(p => p.parentId !== undefined).map(p => p.parentId!)),
-    []
+    [PARAMETERS]
   );
 
   const visibleRows = useMemo(() => {
@@ -115,7 +128,7 @@ export const TimelinePage: React.FC = () => {
       }
       return true;
     });
-  }, [collapsedIds]);
+  }, [PARAMETERS, collapsedIds]);
 
   const frozenRows = useMemo(
     () => visibleRows.filter(p => frozenIds.has(p.id)),
@@ -126,6 +139,70 @@ export const TimelinePage: React.FC = () => {
     () => visibleRows.filter(p => !frozenIds.has(p.id)),
     [visibleRows, frozenIds]
   );
+
+  // Проверка перекрытия двух задач
+  const tasksOverlap = (task1: Task, task2: Task): boolean => {
+    return !(task1.endDate < task2.startDate || task2.endDate < task1.startDate);
+  };
+
+  // Применяем dragPreview к задачам если идет перетаскивание
+  const getDisplayTasks = useCallback((paramTasks: Task[]): Task[] => {
+    if (!dragPreview) return paramTasks;
+    return paramTasks.map(t => t.id === dragPreview.id ? dragPreview : t);
+  }, [dragPreview]);
+
+  // Распределение задач по слоям (для стекирования при перекрытии)
+  const getTaskLayers = (paramId: string): Task[][] => {
+    const paramTasks = tasksGroupedByParam.get(paramId) ?? [];
+    const displayTasks = getDisplayTasks(paramTasks);
+    const layers: Task[][] = [];
+
+    displayTasks.forEach(task => {
+      let placed = false;
+
+      for (let i = 0; i < layers.length; i++) {
+        const canPlace = !layers[i].some(t => tasksOverlap(task, t));
+        if (canPlace) {
+          layers[i].push(task);
+          placed = true;
+          break;
+        }
+      }
+
+      if (!placed) {
+        layers.push([task]);
+      }
+    });
+
+    return layers;
+  };
+
+  // Расчет позиции и ширины задачи
+  const getTaskBarPosition = (task: Task) => {
+    if (!dateRange?.from || !dateRange?.to) return null;
+
+    const taskStart = task.startDate;
+    const taskEnd = task.endDate;
+    const rangeStart = dateRange.from;
+    const rangeEnd = dateRange.to;
+
+    // Если задача полностью вне диапазона
+    if (taskEnd < rangeStart || taskStart > rangeEnd) {
+      return null;
+    }
+
+    // Вычисляем смещение от начала диапазона
+    const effectiveStart = taskStart < rangeStart ? rangeStart : taskStart;
+    const effectiveEnd = taskEnd > rangeEnd ? rangeEnd : taskEnd;
+
+    const daysFromRangeStart = Math.floor((effectiveStart.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24));
+    const taskDurationDays = Math.ceil((effectiveEnd.getTime() - effectiveStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+    return {
+      left: daysFromRangeStart * dayWidth,
+      width: Math.max(taskDurationDays * dayWidth, 20), // Минимальная ширина 20px
+    };
+  };
 
   // Динамический расчет дней на основе диапазона
   const { days, totalWidth, weeks, months, quarters, startOffsetDays } = useMemo(() => {
@@ -239,7 +316,7 @@ export const TimelinePage: React.FC = () => {
   };
 
   // Управление состоянием иерархии
-  const toggleCollapse = (id: number) => {
+  const toggleCollapse = (id: string) => {
     setCollapsedIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -252,9 +329,9 @@ export const TimelinePage: React.FC = () => {
   };
 
   // Получить всех потомков параметра (рекурсивно)
-  const getAllDescendants = (paramId: number): number[] => {
-    const descendants: number[] = [];
-    const traverse = (pid: number) => {
+  const getAllDescendants = (paramId: string): string[] => {
+    const descendants: string[] = [];
+    const traverse = (pid: string) => {
       PARAMETERS.filter(p => p.parentId === pid).forEach(child => {
         descendants.push(child.id);
         traverse(child.id);
@@ -264,7 +341,7 @@ export const TimelinePage: React.FC = () => {
     return descendants;
   };
 
-  const toggleFreeze = (id: number) => {
+  const toggleFreeze = (id: string) => {
     setFrozenIds(prev => {
       const next = new Set(prev);
       const allDescendants = getAllDescendants(id);
@@ -282,48 +359,184 @@ export const TimelinePage: React.FC = () => {
     setContextMenu(null);
   };
 
-  const handleContextMenu = (e: React.MouseEvent, paramId: number) => {
+  const handleContextMenu = (e: React.MouseEvent, paramId: string) => {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, paramId });
   };
 
-  // Закрытие контекстного меню по клику вне
+  // ПКМ по пустой ячейке timeline — меню «Добавить задачу»
+  const handleTimelineRowContextMenu = (e: React.MouseEvent, paramId: string) => {
+    e.preventDefault();
+    const containerLeft = timelineRef.current?.getBoundingClientRect().left ?? 0;
+    const scrollLeft = timelineRef.current?.scrollLeft ?? 0;
+    const clickX = e.clientX - containerLeft + scrollLeft;
+    const dayOffset = Math.max(0, Math.floor(clickX / dayWidth));
+    const clickDate = new Date(dateRange?.from ?? new Date());
+    clickDate.setDate(clickDate.getDate() + dayOffset);
+    setTimelineRowMenu({ x: e.clientX, y: e.clientY, paramId, date: clickDate });
+  };
+
+  // ПКМ по task-бару — открывает Edit modal напрямую
+  const handleTaskBarContextMenu = (e: React.MouseEvent, task: Task) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setTaskModal({ mode: 'edit', task });
+  };
+
+  // Сохранение задачи (add / edit)
+  const handleSaveTask = (data: Omit<Task, 'id'> & { id?: string }) => {
+    if (taskModal?.mode === 'edit' && data.id) {
+      store.tasks.update(data.id, data);
+    } else {
+      store.tasks.add(data);
+    }
+    setTaskModal(null);
+  };
+
+  // Удаление задачи из Edit modal
+  const handleDeleteTask = () => {
+    if (taskModal?.task) {
+      store.tasks.delete(taskModal.task.id);
+    }
+    setTaskModal(null);
+  };
+
+  // Сохранение параметра
+  const handleSaveParameter = (parameter: Omit<TimelineParameter, 'id'>) => {
+    console.log('💾 Saving parameter:', parameter);
+    if (Object.keys(parameter.filters).length === 0) {
+      console.warn('⚠️ Parameter has no filters, rejecting');
+      return;
+    }
+    store.timelines.addParameter(selectedTimelineId, parameter);
+    setParameterModal({ isOpen: false });
+    console.log('✅ Parameter saved and modal closed');
+  };
+
+  // Обработчики drag and drop
+  const handleTaskMouseDown = (e: React.MouseEvent, task: Task) => {
+    e.preventDefault();
+    setDragState({
+      taskId: task.id,
+      startX: e.clientX,
+      startDate: task.startDate,
+      endDate: task.endDate,
+    });
+  };
+
+  const handleResizeMouseDown = (e: React.MouseEvent, task: Task, side: 'left' | 'right') => {
+    e.preventDefault();
+    e.stopPropagation();
+    setResizeState({
+      taskId: task.id,
+      side,
+      startX: e.clientX,
+      startDate: task.startDate,
+      endDate: task.endDate,
+    });
+  };
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    const allTasks = store.tasks.getAll();
+    if (dragState && dateRange?.from) {
+      const deltaX = e.clientX - dragState.startX;
+      const daysDelta = Math.round(deltaX / dayWidth);
+
+      const taskToUpdate = allTasks.find(t => t.id === dragState.taskId);
+      if (taskToUpdate) {
+        const newStartDate = new Date(dragState.startDate);
+        const newEndDate = new Date(dragState.endDate);
+
+        newStartDate.setDate(newStartDate.getDate() + daysDelta);
+        newEndDate.setDate(newEndDate.getDate() + daysDelta);
+
+        setDragPreview({ ...taskToUpdate, startDate: newStartDate, endDate: newEndDate });
+      }
+    } else if (resizeState && dateRange?.from) {
+      const deltaX = e.clientX - resizeState.startX;
+      const daysDelta = Math.round(deltaX / dayWidth);
+
+      const taskToUpdate = allTasks.find(t => t.id === resizeState.taskId);
+      if (taskToUpdate) {
+        if (resizeState.side === 'right') {
+          const newEndDate = new Date(resizeState.endDate);
+          newEndDate.setDate(newEndDate.getDate() + daysDelta);
+          if (newEndDate >= resizeState.startDate) {
+            setDragPreview({ ...taskToUpdate, endDate: newEndDate });
+          }
+        } else {
+          const newStartDate = new Date(resizeState.startDate);
+          newStartDate.setDate(newStartDate.getDate() + daysDelta);
+          if (newStartDate <= resizeState.endDate) {
+            setDragPreview({ ...taskToUpdate, startDate: newStartDate });
+          }
+        }
+      }
+    }
+  }, [dragState, resizeState, dateRange, dayWidth, store.tasks]);
+
+  const handleMouseUp = useCallback(() => {
+    if (dragPreview && dragState) {
+      store.tasks.update(dragState.taskId, {
+        startDate: dragPreview.startDate,
+        endDate: dragPreview.endDate,
+      });
+    } else if (dragPreview && resizeState) {
+      store.tasks.update(resizeState.taskId, {
+        startDate: dragPreview.startDate,
+        endDate: dragPreview.endDate,
+      });
+    }
+    setDragState(null);
+    setResizeState(null);
+    setDragPreview(null);
+  }, [dragPreview, dragState, resizeState, store.tasks]);
+
+  // Закрытие контекстных меню по клику вне
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
         setContextMenu(null);
+      }
+      if (timelineRowMenuRef.current && !timelineRowMenuRef.current.contains(event.target as Node)) {
+        setTimelineRowMenu(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Синхронизация горизонтального скролла между всеми контейнерами
+  // Обработчики mouse events для drag and drop / resize
   useEffect(() => {
-    const syncScroll = (source: 'timeline' | 'header' | 'frozen') => {
-      const tl = timelineRef.current?.scrollLeft;
-      if (tl === undefined) return;
+    if (!dragState && !resizeState) return;
 
-      if (source !== 'timeline' && timelineRef.current) {
-        timelineRef.current.scrollLeft = tl;
-      }
-      if (source !== 'header' && timeHeaderRef.current) {
-        timeHeaderRef.current.scrollLeft = tl;
-      }
-      if (source !== 'frozen' && frozenTimelineRef.current) {
-        frozenTimelineRef.current.scrollLeft = tl;
-      }
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
     };
-
-    // Синхронизировать при изменении параметров
-    syncScroll('all');
-  }, [dayWidth, totalWidth]);
+  }, [dragState, resizeState, dayWidth, dateRange, handleMouseMove, handleMouseUp]);
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
       {/* Заголовок страницы - фиксирован */}
       <div className="px-4 py-2 bg-app-surface z-50 flex-shrink-0 border-b border-app-border flex justify-between items-center">
-        <h2 className="text-xl font-bold text-app-text-head">График Timeline</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-bold text-app-text-head">График Timeline</h2>
+          <button
+            onClick={() => {
+              console.log('🔘 Параметр button clicked');
+              setParameterModal({ isOpen: true });
+            }}
+            className="flex items-center gap-1.5 h-7 px-3 text-xs font-semibold rounded bg-app-primary text-white hover:bg-app-primary-hover transition-colors"
+            title="Добавить новый параметр в timeline"
+          >
+            <Plus size={14} />
+            Параметр
+          </button>
+        </div>
 
         <div className="flex items-center gap-6">
           {/* Календарь выбора диапазона */}
@@ -542,45 +755,54 @@ export const TimelinePage: React.FC = () => {
       {frozenRows.length > 0 && (
         <div className="flex flex-row flex-shrink-0 border-b-2 border-app-primary/30 bg-app-surface">
           <div className="w-52 min-w-[13rem] flex-shrink-0 border-r border-app-border bg-app-surface">
-            {frozenRows.map((param) => (
-              <div
-                key={param.id}
-                className={`h-[28px] min-h-[28px] flex items-center gap-1 shadow-[0_1px_0_0_var(--color-app-border)] select-none hover:bg-app-bg/10 relative border-l-2 border-app-primary px-0 py-0`}
-                style={{ paddingLeft: `${4 + param.level * 16}px` }}
-                onContextMenu={(e) => handleContextMenu(e, param.id)}
-              >
-                {parentIds.has(param.id) ? (
-                  <button
-                    onClick={() => toggleCollapse(param.id)}
-                    className="w-4 h-4 flex items-center justify-center text-app-text-muted hover:text-app-primary flex-shrink-0"
-                  >
-                    {collapsedIds.has(param.id) ? <Plus size={10} /> : <Minus size={10} />}
-                  </button>
-                ) : (
-                  <span className="w-4 flex-shrink-0" />
-                )}
+            {frozenRows.map((param) => {
+              const layers = getTaskLayers(param.id);
+              const rowHeight = Math.max(24, layers.length * 24);
 
-                <span className={`text-xs truncate flex-1 ${param.level === 0 ? 'font-bold text-app-text-head' : 'font-semibold text-app-text-main'}`}>
-                  {param.name}
-                </span>
-
-                {/* Pin иконка для frozen параметров */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFreeze(param.id);
+              return (
+                <div
+                  key={param.id}
+                  className={`flex items-center gap-1 shadow-[0_1px_0_0_var(--color-app-border)] select-none hover:bg-app-bg/10 relative border-l-2 border-app-primary px-0 py-0`}
+                  style={{
+                    paddingLeft: `${4 + param.level * 16}px`,
+                    height: `${rowHeight}px`,
+                    minHeight: `${rowHeight}px`,
                   }}
-                  className={`p-0.5 rounded flex-shrink-0 transition-colors ${
-                    frozenIds.has(param.id)
-                      ? 'bg-app-primary/20 text-app-primary opacity-100'
-                      : 'opacity-0 hover:opacity-100 text-app-text-muted hover:text-app-primary hover:bg-app-primary/10'
-                  }`}
-                  title={frozenIds.has(param.id) ? 'Открепить' : 'Закрепить'}
+                  onContextMenu={(e) => handleContextMenu(e, param.id)}
                 >
-                  <Pin size={12} />
-                </button>
-              </div>
-            ))}
+                  {parentIds.has(param.id) ? (
+                    <button
+                      onClick={() => toggleCollapse(param.id)}
+                      className="w-4 h-4 flex items-center justify-center text-app-text-muted hover:text-app-primary flex-shrink-0"
+                    >
+                      {collapsedIds.has(param.id) ? <Plus size={10} /> : <Minus size={10} />}
+                    </button>
+                  ) : (
+                    <span className="w-4 flex-shrink-0" />
+                  )}
+
+                  <span className={`text-xs truncate flex-1 ${param.level === 0 ? 'font-bold text-app-text-head' : 'font-semibold text-app-text-main'}`}>
+                    {param.name}
+                  </span>
+
+                  {/* Pin иконка для frozen параметров */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFreeze(param.id);
+                    }}
+                    className={`p-0.5 rounded flex-shrink-0 transition-colors ${
+                      frozenIds.has(param.id)
+                        ? 'bg-app-primary/20 text-app-primary opacity-100'
+                        : 'opacity-0 hover:opacity-100 text-app-text-muted hover:text-app-primary hover:bg-app-primary/10'
+                    }`}
+                    title={frozenIds.has(param.id) ? 'Открепить' : 'Закрепить'}
+                  >
+                    <Pin size={12} />
+                  </button>
+                </div>
+              );
+            })}
           </div>
           <div
             ref={frozenTimelineRef}
@@ -634,16 +856,62 @@ export const TimelinePage: React.FC = () => {
 
               {/* Строки frozen параметров */}
               <div className="relative z-10">
-                {frozenRows.map((param) => (
-                  <div
-                    key={param.id}
-                    className={`h-[28px] min-h-[28px] shadow-[0_1px_0_0_var(--color-app-border)] w-full hover:bg-app-bg/10 ${
-                      param.level === 0 ? 'bg-app-primary/5' : ''
-                    }`}
-                  >
-                    {/* Место для задач */}
-                  </div>
-                ))}
+                {frozenRows.map((param) => {
+                  const layers = getTaskLayers(param.id);
+                  const rowHeight = Math.max(24, layers.length * 24);
+
+                  return (
+                    <div
+                      key={param.id}
+                      className={`shadow-[0_1px_0_0_var(--color-app-border)] w-full hover:bg-app-bg/10 relative ${
+                        param.level === 0 ? 'bg-app-primary/5' : ''
+                      }`}
+                      style={{ height: `${rowHeight}px`, minHeight: `${rowHeight}px` }}
+                      onContextMenu={(e) => handleTimelineRowContextMenu(e, param.id)}
+                    >
+                      {/* Задачи по слоям */}
+                      {layers.map((layerTasks, layerIndex) =>
+                        layerTasks.map(task => {
+                          const position = getTaskBarPosition(task);
+                          if (!position) return null;
+
+                          const topOffset = layerIndex * 24 + 2;
+                          const isDragging = dragState?.taskId === task.id;
+                          const isResizing = resizeState?.taskId === task.id;
+
+                          return (
+                            <div
+                              key={task.id}
+                              onMouseDown={(e) => handleTaskMouseDown(e, task)}
+                              onContextMenu={(e) => handleTaskBarContextMenu(e, task)}
+                              className={`absolute h-[20px] bg-app-primary rounded-sm shadow-md text-white text-[10px] flex items-center font-medium transition-all select-none overflow-hidden ${
+                                isDragging ? 'shadow-2xl opacity-75 scale-105 cursor-grabbing' :
+                                isResizing ? 'shadow-2xl opacity-75 cursor-ew-resize' :
+                                'hover:shadow-lg cursor-grab'
+                              }`}
+                              style={{
+                                left: `${position.left}px`,
+                                width: `${position.width}px`,
+                                top: `${topOffset}px`,
+                              }}
+                              title={task.name}
+                            >
+                              <div
+                                className="absolute left-0 top-0 h-full w-[5px] z-10 cursor-ew-resize hover:bg-white/30"
+                                onMouseDown={(e) => handleResizeMouseDown(e, task, 'left')}
+                              />
+                              <span className="px-2 truncate w-full">{task.name}</span>
+                              <div
+                                className="absolute right-0 top-0 h-full w-[5px] z-10 cursor-ew-resize hover:bg-white/30"
+                                onMouseDown={(e) => handleResizeMouseDown(e, task, 'right')}
+                              />
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -659,15 +927,23 @@ export const TimelinePage: React.FC = () => {
           className="w-52 min-w-[13rem] flex-shrink-0 bg-app-surface border-r border-app-border flex flex-col overflow-y-auto overflow-x-hidden hide-scrollbar select-none"
         >
           <div className="min-w-[13rem]">
-            {scrollableRows.map((param) => (
-              <div
-                key={param.id}
-                className={`h-[28px] min-h-[28px] flex items-center gap-1 shadow-[0_1px_0_0_var(--color-app-border)] select-none hover:bg-app-bg/10 relative px-0 py-0 leading-none ${
-                  param.level === 0 ? 'bg-app-primary/5' : ''
-                }`}
-                style={{ paddingLeft: `${4 + param.level * 16}px` }}
-                onContextMenu={(e) => handleContextMenu(e, param.id)}
-              >
+            {scrollableRows.map((param) => {
+              const layers = getTaskLayers(param.id);
+              const rowHeight = Math.max(24, layers.length * 24);
+
+              return (
+                <div
+                  key={param.id}
+                  className={`flex items-center gap-1 shadow-[0_1px_0_0_var(--color-app-border)] select-none hover:bg-app-bg/10 relative px-0 py-0 leading-none ${
+                    param.level === 0 ? 'bg-app-primary/5' : ''
+                  }`}
+                  style={{
+                    paddingLeft: `${4 + param.level * 16}px`,
+                    height: `${rowHeight}px`,
+                    minHeight: `${rowHeight}px`,
+                  }}
+                  onContextMenu={(e) => handleContextMenu(e, param.id)}
+                >
                 {parentIds.has(param.id) ? (
                   <button
                     onClick={() => toggleCollapse(param.id)}
@@ -679,29 +955,30 @@ export const TimelinePage: React.FC = () => {
                   <span className="w-4 flex-shrink-0" />
                 )}
 
-                <span className={`text-xs truncate flex-1 ${param.level === 0 ? 'font-bold text-app-text-head' : 'font-semibold text-app-text-main'}`}>
-                  {param.name}
-                </span>
+                  <span className={`text-xs truncate flex-1 ${param.level === 0 ? 'font-bold text-app-text-head' : 'font-semibold text-app-text-main'}`}>
+                    {param.name}
+                  </span>
 
-                {/* Pin иконка для freeze параметров */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFreeze(param.id);
-                  }}
-                  className={`p-0.5 rounded flex-shrink-0 transition-colors ${
-                    frozenIds.has(param.id)
-                      ? 'bg-app-primary/20 text-app-primary opacity-100'
-                      : 'opacity-0 hover:opacity-100 text-app-text-muted hover:text-app-primary hover:bg-app-primary/10'
-                  }`}
-                  title={frozenIds.has(param.id) ? 'Открепить' : 'Закрепить'}
-                >
-                  <Pin size={12} />
-                </button>
-              </div>
-            ))}
+                  {/* Pin иконка для freeze параметров */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFreeze(param.id);
+                    }}
+                    className={`p-0.5 rounded flex-shrink-0 transition-colors ${
+                      frozenIds.has(param.id)
+                        ? 'bg-app-primary/20 text-app-primary opacity-100'
+                        : 'opacity-0 hover:opacity-100 text-app-text-muted hover:text-app-primary hover:bg-app-primary/10'
+                    }`}
+                    title={frozenIds.has(param.id) ? 'Открепить' : 'Закрепить'}
+                  >
+                    <Pin size={12} />
+                  </button>
+                </div>
+              );
+            })}
             {/* Компенсатор скроллбара */}
-            <div className="h-[17px] min-h-[17px] w-full bg-app-surface shadow-[0_1px_0_0_var(--color-app-border)]" />
+            <div className="h-[13px] min-h-[13px] w-full bg-app-surface shadow-[0_1px_0_0_var(--color-app-border)]" />
           </div>
         </div>
 
@@ -775,16 +1052,62 @@ export const TimelinePage: React.FC = () => {
 
               {/* Строки параметров */}
               <div className="relative z-10">
-                {scrollableRows.map((param) => (
-                  <div
-                    key={param.id}
-                    className={`h-[28px] min-h-[28px] shadow-[0_1px_0_0_var(--color-app-border)] w-full hover:bg-app-bg/10 ${
-                      param.level === 0 ? 'bg-app-primary/5' : ''
-                    }`}
-                  >
-                    {/* Место для задач */}
-                  </div>
-                ))}
+                {scrollableRows.map((param) => {
+                  const layers = getTaskLayers(param.id);
+                  const rowHeight = Math.max(24, layers.length * 24);
+
+                  return (
+                    <div
+                      key={param.id}
+                      className={`shadow-[0_1px_0_0_var(--color-app-border)] w-full hover:bg-app-bg/10 relative ${
+                        param.level === 0 ? 'bg-app-primary/5' : ''
+                      }`}
+                      style={{ height: `${rowHeight}px`, minHeight: `${rowHeight}px` }}
+                      onContextMenu={(e) => handleTimelineRowContextMenu(e, param.id)}
+                    >
+                      {/* Задачи по слоям */}
+                      {layers.map((layerTasks, layerIndex) =>
+                        layerTasks.map(task => {
+                          const position = getTaskBarPosition(task);
+                          if (!position) return null;
+
+                          const topOffset = layerIndex * 24 + 2;
+                          const isDragging = dragState?.taskId === task.id;
+                          const isResizing = resizeState?.taskId === task.id;
+
+                          return (
+                            <div
+                              key={task.id}
+                              onMouseDown={(e) => handleTaskMouseDown(e, task)}
+                              onContextMenu={(e) => handleTaskBarContextMenu(e, task)}
+                              className={`absolute h-[20px] bg-app-primary rounded-sm shadow-md text-white text-[10px] flex items-center font-medium transition-all select-none overflow-hidden ${
+                                isDragging ? 'shadow-2xl opacity-75 scale-105 cursor-grabbing' :
+                                isResizing ? 'shadow-2xl opacity-75 cursor-ew-resize' :
+                                'hover:shadow-lg cursor-grab'
+                              }`}
+                              style={{
+                                left: `${position.left}px`,
+                                width: `${position.width}px`,
+                                top: `${topOffset}px`,
+                              }}
+                              title={task.name}
+                            >
+                              <div
+                                className="absolute left-0 top-0 h-full w-[5px] z-10 cursor-ew-resize hover:bg-white/30"
+                                onMouseDown={(e) => handleResizeMouseDown(e, task, 'left')}
+                              />
+                              <span className="px-2 truncate w-full">{task.name}</span>
+                              <div
+                                className="absolute right-0 top-0 h-full w-[5px] z-10 cursor-ew-resize hover:bg-white/30"
+                                onMouseDown={(e) => handleResizeMouseDown(e, task, 'right')}
+                              />
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -829,6 +1152,53 @@ export const TimelinePage: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* КОНТЕКСТНОЕ МЕНЮ СТРОКИ TIMELINE (добавить задачу) */}
+      {timelineRowMenu && (
+        <div
+          ref={timelineRowMenuRef}
+          className="fixed z-[200] bg-app-surface border border-app-border rounded-xl shadow-2xl py-1 min-w-[160px]"
+          style={{ top: timelineRowMenu.y, left: timelineRowMenu.x }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              setTaskModal({ mode: 'add', paramId: timelineRowMenu.paramId, initialDate: timelineRowMenu.date });
+              setTimelineRowMenu(null);
+            }}
+            className="w-full text-left px-4 py-2 text-xs font-semibold text-app-text-main hover:bg-app-bg/50 transition-colors flex items-center gap-2"
+          >
+            <Plus size={12} />
+            Добавить задачу
+          </button>
+        </div>
+      )}
+
+      {/* МОДАЛЬНОЕ ОКНО ADD / EDIT TASK */}
+      {taskModal && (
+        <TaskModal
+          mode={taskModal.mode}
+          task={taskModal.task}
+          paramId={taskModal.paramId}
+          initialDate={taskModal.initialDate}
+          customFieldTypes={store.customFieldTypes.getAll().map(t => t.name)}
+          onSave={handleSaveTask}
+          onDelete={taskModal.mode === 'edit' ? handleDeleteTask : undefined}
+          onClose={() => setTaskModal(null)}
+        />
+      )}
+
+      {/* МОДАЛЬНОЕ ОКНО ADD PARAMETER */}
+      <ParameterModal
+        isOpen={parameterModal.isOpen}
+        existingParameters={PARAMETERS}
+        availableTasks={store.appData.tasks}
+        onSave={handleSaveParameter}
+        onClose={() => {
+          console.log('🚪 ParameterModal onClose called');
+          setParameterModal({ isOpen: false });
+        }}
+      />
     </div>
   );
 };
