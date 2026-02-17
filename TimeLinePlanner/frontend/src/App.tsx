@@ -6,7 +6,9 @@ import { ResourcesPage } from './pages/Resources/ResourcesPage';
 
 // 2. Главный компонент приложения
 function App() {
+  console.log('🚀 App component rendering');
   const [activePage, setActivePage] = useState('tasks');
+  console.log('📄 Current page:', activePage);
  
   // Функция для отрисовки активной страницы
   const renderPage = () => {

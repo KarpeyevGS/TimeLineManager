@@ -8,14 +8,16 @@ import 'react-day-picker/dist/style.css';
 interface DateRangePickerProps {
   range: DateRange | undefined;
   onRangeChange: (range: DateRange | undefined) => void;
+  fixedDropdown?: boolean;
 }
 
 type ViewMode = 'days' | 'months' | 'years';
 
-export const DateRangePicker: React.FC<DateRangePickerProps> = ({ range, onRangeChange }) => {
+export const DateRangePicker: React.FC<DateRangePickerProps> = ({ range, onRangeChange, fixedDropdown }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('days');
   const [currentMonth, setCurrentMonth] = useState<Date>(range?.from || new Date());
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Закрытие и сброс режима при клике вне
@@ -34,6 +36,10 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ range, onRange
   const handleToggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (fixedDropdown && !isOpen) {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+    }
     setIsOpen(prev => !prev);
   };
 
@@ -98,7 +104,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ range, onRange
       <button
         type="button"
         onClick={handleToggle}
-        className="flex items-center gap-2 px-3 py-1.5 bg-app-surface border border-app-border rounded-lg hover:bg-app-bg/50 transition-all shadow-sm text-app-text-main group relative z-10"
+        className="flex items-center gap-2 px-3 py-1.5 bg-app-surface border border-app-border rounded-lg hover:bg-app-bg/50 transition-all text-app-text-main group relative z-10"
       >
         <CalendarIcon size={14} className="text-app-primary group-hover:scale-110 transition-transform" />
         <span className="text-[11px] font-bold tracking-tight">
@@ -107,8 +113,9 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ range, onRange
       </button>
 
       {isOpen && (
-        <div 
-          className="absolute top-full right-0 mt-2 p-4 bg-app-surface/95 backdrop-blur-md border border-app-border rounded-2xl shadow-2xl z-[100] min-w-[320px] animate-in fade-in zoom-in duration-300 origin-top-right border-white/10"
+        <div
+          className={`${fixedDropdown ? 'fixed' : 'absolute top-full right-0 mt-2'} p-4 bg-app-surface/95 backdrop-blur-md border border-app-border rounded-2xl shadow-2xl z-[400] min-w-[320px] animate-in fade-in zoom-in duration-300 origin-top-right border-white/10`}
+          style={fixedDropdown ? { top: dropdownPos.top, right: dropdownPos.right } : undefined}
           onClick={(e) => e.stopPropagation()}
         >
           <style>{`
