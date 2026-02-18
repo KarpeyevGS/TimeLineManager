@@ -68,11 +68,6 @@ export interface Task {
   projectId?: string;
   resourceIds?: string[];
   customFields?: Record<string, string>;
-
-  // ← Фильтруемые поля для Timeline
-  platform?: string;         // Платформа (велосипед, скутер)
-  operationType?: string;    // Тип операции (сборка, окраска)
-  workerId?: string;         // Исполнитель
 }
 
 // Параметр Timeline с фильтрами
@@ -113,33 +108,7 @@ const createDefaultTimelineConfig = (): TimelineConfig => ({
   id: 'timeline_default',
   name: 'Новая Timeline',
   description: 'Добавьте параметры через UI',
-  parameters: [
-    // Примеры параметров с фильтрами
-    {
-      id: 'param_bike',
-      name: 'Велосипед',
-      level: 0,
-      filters: { platform: 'bike' },
-    },
-    {
-      id: 'param_scooter',
-      name: 'Скутер',
-      level: 0,
-      filters: { platform: 'scooter' },
-    },
-    {
-      id: 'param_assembly',
-      name: 'Сборка',
-      level: 0,
-      filters: { operationType: 'assembly' },
-    },
-    {
-      id: 'param_painting',
-      name: 'Окраска',
-      level: 0,
-      filters: { operationType: 'painting' },
-    },
-  ],
+  parameters: [],
 });
 
 const createInitialAppData = (): AppData => ({
@@ -158,49 +127,7 @@ const createInitialAppData = (): AppData => ({
     { id: 'proj_1', name: 'Project A', color: '#4a7a85' },
     { id: 'proj_2', name: 'Project B', color: '#3b82f6' },
   ],
-  tasks: [
-    // Задачи с фильтр-полями для тестирования
-    {
-      id: 'task_1',
-      name: 'Собрать велосипед',
-      startDate: new Date(2026, 0, 5),
-      endDate: new Date(2026, 0, 10),
-      platform: 'bike',          // ← Фильтр
-      operationType: 'assembly', // ← Фильтр
-      priority: 'high',
-      status: 'in_progress',
-    },
-    {
-      id: 'task_2',
-      name: 'Покрасить скутер',
-      startDate: new Date(2026, 0, 8),
-      endDate: new Date(2026, 0, 12),
-      platform: 'scooter',       // ← Фильтр
-      operationType: 'painting', // ← Фильтр
-      priority: 'medium',
-      status: 'not_started',
-    },
-    {
-      id: 'task_3',
-      name: 'Собрать скутер',
-      startDate: new Date(2026, 0, 12),
-      endDate: new Date(2026, 0, 15),
-      platform: 'scooter',       // ← Фильтр
-      operationType: 'assembly', // ← Фильтр
-      priority: 'high',
-      status: 'not_started',
-    },
-    {
-      id: 'task_4',
-      name: 'Покрасить велосипед',
-      startDate: new Date(2026, 0, 15),
-      endDate: new Date(2026, 0, 18),
-      platform: 'bike',          // ← Фильтр
-      operationType: 'painting', // ← Фильтр
-      priority: 'low',
-      status: 'not_started',
-    },
-  ],
+  tasks: [],
   timelineConfigs: [createDefaultTimelineConfig()],  // ← С примерами параметров
 });
 
@@ -217,7 +144,7 @@ export const matchesTaskFilters = (task: Task, filters: Record<string, string>):
   }
 
   return Object.entries(filters).every(([key, value]) => {
-    const taskValue = task[key as keyof Task] ?? task.customFields?.[key];
+    const taskValue = task.customFields?.[key];
     return taskValue === value;
   });
 };
@@ -255,6 +182,8 @@ export const loadAppData = (): AppData => {
     if (stored) {
       const parsed = JSON.parse(stored) as AppData;
       // Конвертируем строки обратно в Date
+      const customFieldIds = new Set((parsed.customFieldTypes ?? []).map(t => t.id));
+
       const loaded: AppData = {
         ...parsed,
         tasks: parsed.tasks?.map((task) => ({
@@ -263,7 +192,13 @@ export const loadAppData = (): AppData => {
           endDate: new Date(task.endDate),
         })) ?? [],
         // Гарантируем наличие timelineConfigs
-        timelineConfigs: parsed.timelineConfigs ?? [createDefaultTimelineConfig()],
+        // Параметры с фильтрами по неизвестным полям (не кастомным) — удаляем
+        timelineConfigs: (parsed.timelineConfigs ?? [createDefaultTimelineConfig()]).map(cfg => ({
+          ...cfg,
+          parameters: cfg.parameters.filter(p =>
+            Object.keys(p.filters ?? {}).every(k => customFieldIds.has(k))
+          ),
+        })),
       };
       return loaded;
     }

@@ -13,11 +13,6 @@ interface ParameterModalProps {
   onClose: () => void;
 }
 
-// Стандартные поля задачи для фильтрации
-const STATIC_FILTER_OPTIONS = [
-  { key: 'priority', label: 'Приоритет' },
-  { key: 'status', label: 'Статус' },
-];
 
 export const ParameterModal: React.FC<ParameterModalProps> = ({
   isOpen,
@@ -59,10 +54,9 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
     }
   }, [isOpen, mode, editingParameter]);
 
-  // Динамические опции фильтрации: статичные + кастомные типы пользователя
+  // Опции фильтрации: только кастомные типы полей пользователя
   const filterFieldOptions = useMemo(() => {
-    const custom = customFieldTypes.map(t => ({ key: t.id, label: t.name }));
-    return [...STATIC_FILTER_OPTIONS, ...custom];
+    return customFieldTypes.map(t => ({ key: t.id, label: t.name }));
   }, [customFieldTypes]);
 
   if (!isOpen) {
