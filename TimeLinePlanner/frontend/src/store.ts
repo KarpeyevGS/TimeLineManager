@@ -1,5 +1,42 @@
 import { useState, useCallback, useEffect } from 'react';
 
+// ============= Timeline View State =============
+
+export interface TimelineViewState {
+  dateRange: { from: string; to: string } | null; // ISO-строки
+  zoomIndex: number;
+  scrollLeft: number;
+}
+
+const TIMELINE_VIEW_KEY = 'timeline_view_state';
+
+const DEFAULT_TIMELINE_VIEW: TimelineViewState = {
+  dateRange: {
+    from: new Date(2026, 0, 1).toISOString(),
+    to: new Date(2026, 0, 31).toISOString(),
+  },
+  zoomIndex: 2,
+  scrollLeft: 0,
+};
+
+export const loadTimelineViewState = (): TimelineViewState => {
+  try {
+    const stored = localStorage.getItem(TIMELINE_VIEW_KEY);
+    if (stored) return JSON.parse(stored) as TimelineViewState;
+  } catch {
+    // ignore
+  }
+  return DEFAULT_TIMELINE_VIEW;
+};
+
+export const saveTimelineViewState = (state: TimelineViewState): void => {
+  try {
+    localStorage.setItem(TIMELINE_VIEW_KEY, JSON.stringify(state));
+  } catch {
+    // ignore
+  }
+};
+
 // ============= Типы данных =============
 
 export interface CustomFieldType {
@@ -428,6 +465,20 @@ export const useAppStore = () => {
     []
   );
 
+  const updateParameterInTimeline = useCallback(
+    (configId: string, paramId: string, updates: Partial<Omit<TimelineParameter, 'id'>>): void => {
+      setAppData(prev => ({
+        ...prev,
+        timelineConfigs: prev.timelineConfigs.map(cfg =>
+          cfg.id === configId
+            ? { ...cfg, parameters: cfg.parameters.map(p => p.id === paramId ? { ...p, ...updates } : p) }
+            : cfg
+        ),
+      }));
+    },
+    []
+  );
+
   return {
     appData,
     tasks: {
@@ -453,8 +504,25 @@ export const useAppStore = () => {
       groupTasksForTimeline,
       addParameter: addParameterToTimeline,
       deleteParameter: deleteParameterFromTimeline,
+      updateParameter: updateParameterInTimeline,
     },
     export: exportData,
     import: importData,
   };
+};
+
+// ============= Хук useTimelineViewState =============
+
+export const useTimelineViewState = () => {
+  const [viewState, setViewState] = useState<TimelineViewState>(loadTimelineViewState);
+
+  const updateViewState = useCallback((updates: Partial<TimelineViewState>) => {
+    setViewState(prev => {
+      const next = { ...prev, ...updates };
+      saveTimelineViewState(next);
+      return next;
+    });
+  }, []);
+
+  return { viewState, updateViewState };
 };

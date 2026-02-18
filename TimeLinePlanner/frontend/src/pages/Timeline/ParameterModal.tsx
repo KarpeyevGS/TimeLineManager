@@ -4,6 +4,8 @@ import type { TimelineParameter, Task, CustomFieldType } from '../../store';
 
 interface ParameterModalProps {
   isOpen: boolean;
+  mode?: 'add' | 'edit';
+  editingParameter?: TimelineParameter;
   existingParameters: TimelineParameter[];
   availableTasks?: Task[];
   customFieldTypes?: CustomFieldType[];
@@ -19,18 +21,17 @@ const STATIC_FILTER_OPTIONS = [
 
 export const ParameterModal: React.FC<ParameterModalProps> = ({
   isOpen,
+  mode = 'add',
+  editingParameter,
   existingParameters,
-  availableTasks = [],
   customFieldTypes = [],
   onSave,
   onClose,
 }) => {
-  console.log('🔧 ParameterModal rendering, isOpen:', isOpen);
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState<string | undefined>(undefined);
   const [filterFields, setFilterFields] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showFilters, setShowFilters] = useState(false);
 
   // Все hooks ДОЛЖНЫ быть вызваны ДО условного return!
   useEffect(() => {
@@ -43,35 +44,30 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
     }
   }, [onClose, isOpen]);
 
+  // Заполняем форму при открытии в режиме edit
+  useEffect(() => {
+    if (isOpen && mode === 'edit' && editingParameter) {
+      setName(editingParameter.name);
+      setParentId(editingParameter.parentId);
+      setFilterFields(editingParameter.filters ?? {});
+      setErrors({});
+    } else if (isOpen && mode === 'add') {
+      setName('');
+      setParentId(undefined);
+      setFilterFields({});
+      setErrors({});
+    }
+  }, [isOpen, mode, editingParameter]);
+
   // Динамические опции фильтрации: статичные + кастомные типы пользователя
   const filterFieldOptions = useMemo(() => {
     const custom = customFieldTypes.map(t => ({ key: t.id, label: t.name }));
     return [...STATIC_FILTER_OPTIONS, ...custom];
   }, [customFieldTypes]);
 
-  // Вычисляем уникальные значения для каждого поля фильтра
-  const filterValueOptions = useMemo(() => {
-    const options: Record<string, string[]> = {};
-    filterFieldOptions.forEach((field) => {
-      const values = new Set<string>();
-      availableTasks.forEach((task) => {
-        // Проверяем стандартные поля и customFields
-        const value = task[field.key as keyof Task] ?? task.customFields?.[field.key];
-        if (value) {
-          values.add(String(value));
-        }
-      });
-      options[field.key] = Array.from(values).sort();
-    });
-    return options;
-  }, [availableTasks, filterFieldOptions]);
-
   if (!isOpen) {
-    console.log('🔧 ParameterModal isOpen is false, returning null');
     return null;
   }
-
-  console.log('✅ ParameterModal rendering modal content');
 
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
@@ -107,12 +103,7 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
   };
 
   const handleSubmit = () => {
-    console.log('🔘 ParameterModal handleSubmit called');
-    console.log('📝 Current form state:', { name, parentId, filterFields });
-    if (!validate()) {
-      console.log('❌ Validation failed');
-      return;
-    }
+    if (!validate()) return;
 
     const newLevel = parentId ? (existingParameters.find(p => p.id === parentId)?.level ?? 0) + 1 : 0;
 
@@ -122,15 +113,12 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
       parentId: parentId || undefined,
       filters: Object.keys(filterFields).length > 0 ? filterFields : {},
     };
-    console.log('✅ Calling onSave with:', parameterData);
 
     onSave(parameterData);
-    console.log('✅ onSave called successfully');
 
     setName('');
     setParentId(undefined);
     setFilterFields({});
-    console.log('🔄 Form reset completed');
   };
 
   const inputCls = (field?: string) =>
@@ -140,26 +128,29 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
 
   const labelCls = 'text-[11px] font-semibold text-app-text-head';
 
+  const isEdit = mode === 'edit';
+
+  // В режиме edit исключаем самого себя из списка родителей
+  const parentOptions = isEdit
+    ? existingParameters.filter(p => p.id !== editingParameter?.id)
+    : existingParameters;
+
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center">
       <div
         className="absolute inset-0 bg-black/20"
-        onClick={() => {
-          console.log('🖱️ Backdrop clicked');
-          onClose();
-        }}
+        onClick={onClose}
       />
 
       <div
         className="relative z-10 bg-white border border-app-border rounded-xl w-[380px] max-h-[90vh] overflow-y-auto flex flex-col"
-        onClick={(e) => {
-          console.log('🖱️ Modal content clicked');
-          e.stopPropagation();
-        }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-app-border">
-          <h2 className="text-sm font-bold text-app-text-head">Добавить параметр</h2>
+          <h2 className="text-sm font-bold text-app-text-head">
+            {isEdit ? 'Редактировать параметр' : 'Добавить параметр'}
+          </h2>
           <button
             onClick={onClose}
             className="text-app-text-muted hover:text-app-text-main transition-colors"
@@ -195,7 +186,7 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
               className="w-full h-8 px-2 text-xs rounded border border-app-border bg-white text-app-text-head outline-none focus:border-app-primary transition-colors cursor-pointer"
             >
               <option value="">— Нет (верхний уровень)</option>
-              {existingParameters.map(p => (
+              {parentOptions.map(p => (
                 <option key={p.id} value={p.id}>
                   {p.name} (уровень {p.level})
                 </option>
@@ -203,7 +194,7 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
             </select>
           </div>
 
-          {/* Filters Section - REQUIRED */}
+          {/* Filters Section */}
           <div className="flex flex-col gap-1">
             <label className={labelCls}>
               Фильтры параметра <span className="text-app-error">*</span>
@@ -281,7 +272,7 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
             onClick={handleSubmit}
             className="h-7 px-4 text-xs font-semibold rounded bg-app-primary text-white hover:bg-app-primary-hover transition-colors"
           >
-            Создать параметр
+            {isEdit ? 'Сохранить изменения' : 'Создать параметр'}
           </button>
         </div>
       </div>

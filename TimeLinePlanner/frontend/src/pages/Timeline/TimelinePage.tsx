@@ -9,11 +9,11 @@ import {
   isToday
 } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { Plus, Minus, Pin } from 'lucide-react';
+import { Plus, Minus, Pin, Pencil, Trash2 } from 'lucide-react';
 import { DateRangePicker } from '../../components/ui/DateRangePicker';
 import { TaskModal } from './TaskModal';
 import { ParameterModal } from './ParameterModal';
-import { useAppStore, type Task, type TimelineParameter } from '../../store';
+import { useAppStore, useTimelineViewState, type Task, type TimelineParameter } from '../../store';
 
 interface ContextMenuState {
   x: number;
@@ -37,6 +37,8 @@ interface TaskModalState {
 
 interface ParameterModalState {
   isOpen: boolean;
+  mode?: 'add' | 'edit';
+  editingParameter?: TimelineParameter;
 }
 
 const ZOOM_OPTIONS = ['2W', '3W', 'M', 'Q', '2Q'];
@@ -68,6 +70,7 @@ export const TimelinePage: React.FC = () => {
   // Store
   const store = useAppStore();
   console.log('🎯 Store initialized:', store);
+  const { viewState, updateViewState } = useTimelineViewState();
 
   // Рефы
   const sidebarRef = React.useRef<HTMLDivElement>(null);
@@ -77,13 +80,21 @@ export const TimelinePage: React.FC = () => {
   const isSyncing = React.useRef(false);
   const contextMenuRef = React.useRef<HTMLDivElement>(null);
   const timelineRowMenuRef = React.useRef<HTMLDivElement>(null);
+  const scrollSaveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Состояния
-  const [zoomIndex, setZoomIndex] = React.useState(2);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: new Date(2026, 0, 1),
-    to: new Date(2026, 0, 31),
-  });
+  // Состояния из постоянного хранилища
+  const zoomIndex = viewState.zoomIndex;
+  const setZoomIndex = (idx: number) => updateViewState({ zoomIndex: idx });
+
+  const dateRange: DateRange | undefined = viewState.dateRange
+    ? { from: new Date(viewState.dateRange.from), to: new Date(viewState.dateRange.to) }
+    : undefined;
+  const setDateRange = (range: DateRange | undefined) =>
+    updateViewState({
+      dateRange: range?.from && range?.to
+        ? { from: range.from.toISOString(), to: range.to.toISOString() }
+        : null,
+    });
   // Выбранная конфигурация timeline — берём первую из store
   const selectedTimelineId = store.appData.timelineConfigs?.[0]?.id ?? 'timeline_default';
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
@@ -286,6 +297,17 @@ export const TimelinePage: React.FC = () => {
     };
   }, [dateRange, dayWidth]);
 
+  // Восстанавливаем горизонтальный scroll при монтировании
+  useEffect(() => {
+    const savedScroll = viewState.scrollLeft;
+    if (savedScroll > 0 && timelineRef.current) {
+      timelineRef.current.scrollLeft = savedScroll;
+      if (timeHeaderRef.current) timeHeaderRef.current.scrollLeft = savedScroll;
+      if (frozenTimelineRef.current) frozenTimelineRef.current.scrollLeft = savedScroll;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Синхронизация скролла
   const syncFromTimeline = () => {
     if (isSyncing.current) return;
@@ -295,6 +317,14 @@ export const TimelinePage: React.FC = () => {
     if (timeHeaderRef.current && tl) timeHeaderRef.current.scrollLeft = tl.scrollLeft;
     if (frozenTimelineRef.current && tl) frozenTimelineRef.current.scrollLeft = tl.scrollLeft;
     isSyncing.current = false;
+
+    // Дебаунс сохранения scrollLeft
+    if (scrollSaveTimer.current) clearTimeout(scrollSaveTimer.current);
+    scrollSaveTimer.current = setTimeout(() => {
+      if (timelineRef.current) {
+        updateViewState({ scrollLeft: timelineRef.current.scrollLeft });
+      }
+    }, 300);
   };
 
   const syncFromSidebar = () => {
@@ -401,16 +431,25 @@ export const TimelinePage: React.FC = () => {
     setTaskModal(null);
   };
 
-  // Сохранение параметра
+  // Сохранение параметра (add)
   const handleSaveParameter = (parameter: Omit<TimelineParameter, 'id'>) => {
-    console.log('💾 Saving parameter:', parameter);
-    if (Object.keys(parameter.filters).length === 0) {
-      console.warn('⚠️ Parameter has no filters, rejecting');
-      return;
-    }
+    if (Object.keys(parameter.filters).length === 0) return;
     store.timelines.addParameter(selectedTimelineId, parameter);
     setParameterModal({ isOpen: false });
-    console.log('✅ Parameter saved and modal closed');
+  };
+
+  // Обновление параметра (edit)
+  const handleUpdateParameter = (updates: Omit<TimelineParameter, 'id'>) => {
+    if (parameterModal.editingParameter) {
+      store.timelines.updateParameter(selectedTimelineId, parameterModal.editingParameter.id, updates);
+    }
+    setParameterModal({ isOpen: false });
+  };
+
+  // Удаление параметра из контекстного меню
+  const handleDeleteParameter = (paramId: string) => {
+    store.timelines.deleteParameter(selectedTimelineId, paramId);
+    setContextMenu(null);
   };
 
   // Обработчики drag and drop
@@ -1129,6 +1168,26 @@ export const TimelinePage: React.FC = () => {
             <Pin size={12} />
             {frozenIds.has(contextMenu.paramId) ? 'Открепить строку' : 'Закрепить строку'}
           </button>
+          <button
+            onClick={() => {
+              const param = PARAMETERS.find(p => p.id === contextMenu.paramId);
+              if (param) {
+                setParameterModal({ isOpen: true, mode: 'edit', editingParameter: param });
+                setContextMenu(null);
+              }
+            }}
+            className="w-full text-left px-4 py-2 text-xs font-semibold text-app-text-main hover:bg-app-bg/50 transition-colors flex items-center gap-2"
+          >
+            <Pencil size={12} />
+            Редактировать параметр
+          </button>
+          <button
+            onClick={() => handleDeleteParameter(contextMenu.paramId)}
+            className="w-full text-left px-4 py-2 text-xs font-semibold text-app-error hover:bg-app-error/10 transition-colors flex items-center gap-2"
+          >
+            <Trash2 size={12} />
+            Удалить параметр
+          </button>
           {parentIds.has(contextMenu.paramId) && (
             <button
               onClick={() => {
@@ -1189,17 +1248,16 @@ export const TimelinePage: React.FC = () => {
         />
       )}
 
-      {/* МОДАЛЬНОЕ ОКНО ADD PARAMETER */}
+      {/* МОДАЛЬНОЕ ОКНО ADD / EDIT PARAMETER */}
       <ParameterModal
         isOpen={parameterModal.isOpen}
+        mode={parameterModal.mode ?? 'add'}
+        editingParameter={parameterModal.editingParameter}
         existingParameters={PARAMETERS}
         availableTasks={store.appData.tasks}
         customFieldTypes={store.customFieldTypes.getAll()}
-        onSave={handleSaveParameter}
-        onClose={() => {
-          console.log('🚪 ParameterModal onClose called');
-          setParameterModal({ isOpen: false });
-        }}
+        onSave={parameterModal.mode === 'edit' ? handleUpdateParameter : handleSaveParameter}
+        onClose={() => setParameterModal({ isOpen: false })}
       />
     </div>
   );
