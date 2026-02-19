@@ -8,7 +8,13 @@
       "Bash(curl:*)",
       "Bash(pkill:*)",
       "Bash(git add:*)",
+<<<<<<< HEAD
       "Bash(git commit:*)"
+=======
+      "Bash(git commit:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm install:*)"
+>>>>>>> d8e44a7 (Много чего)
     ]
   }
 }

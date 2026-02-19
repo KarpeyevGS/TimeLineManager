@@ -10,7 +10,11 @@ git commit -m "Краткое описание того, что сделал"
 git status
 
 # frontend run 
+<<<<<<< HEAD
 cd TimeLinePlanner\frontend
+=======
+cd frontend
+>>>>>>> d8e44a7 (Много чего)
 
 npm run dev
 

@@ -1,0 +1,21 @@
+/* В файле src/index.css */
+@theme {
+  /* Базовый шрифт */
+  --font-sans: "Inter Tight", sans-serif;
+
+  /* Функциональные цвета (Система) */
+  --color-app-bg: #d8e8ed;        /* Основной фон страницы */
+  --color-app-surface: #f4f9fa;   /* Фон карточек и модалок */
+  --color-app-border: #b8d5db;    /* Разделители и границы */
+
+  /* Типографика */
+  --color-app-text-main: #2c4a52; /* Основной текст */
+  --color-app-text-head: #1a2d32; /* Заголовки */
+  --color-app-text-muted: #7eaeb8;/* Вторичный/подсказки */
+
+  /* Интерактив */
+  --color-app-primary:#5e7e85;  #2c4a52;   /* Кнопки, активные элементы */
+  --color-app-primary-hover: #2c4a52; 
+  --color-app-accent: #3b82f6;    /* Акценты (уведомления и т.д.) */
+  --color-app-error: #e17055;     /* Ошибки */
+}
