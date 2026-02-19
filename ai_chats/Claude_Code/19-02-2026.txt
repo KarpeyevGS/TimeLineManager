@@ -1,0 +1,341 @@
+✻ Conversation compacted (ctrl+o for history)
+
+  ⎿  Referenced file frontend\src\pages\Timeline\TaskModal.tsx
+  ⎿  Read frontend\src\store.ts (522 lines)
+  ⎿  Referenced file frontend\src\pages\Timeline\TimelinePage.tsx
+  ⎿  Read frontend\src\pages\Tasks\TasksPage.tsx (278 lines)
+  ⎿  Read frontend\src\index.css (35 lines)
+
+ Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+     Analysis:
+     Let me analyze this conversation chronologically:
+
+     1. **Session continuation** - The conversation starts with a system reminder context showing previous work (TaskModal.tsx color picker positioning fix
+     using createPortal).
+
+     2. **Color picker popover fix (createPortal)** - User requested fixing the color picker popover in TaskModal.tsx that was causing horizontal scrollbar
+     due to `overflow-y-auto` on the modal container. The fix involved using `createPortal` with `fixed` positioning and `getBoundingClientRect()` for
+     dynamic coordinates.
+
+     3. **New zoom levels (3Q and Y)** - User requested adding '3Q' and 'Y' zoom levels to TimelinePage.tsx with dayWidth values of 6 and 4 respectively.
+
+     4. **Week numbers in Y mode** - User requested showing week numbers in the Y zoom mode with smaller font instead of hiding them.
+
+     5. **Hierarchical sorting of rows** - User requested that child parameters appear directly under their parent in the sidebar, not at the end of the
+     list. Solution: `sortHierarchically` function added.
+
+     6. **Globe icon for tasks with links** - User requested adding a Globe icon to task bars when `task.link` is set.
+
+     7. **Three features combined** - Major task:
+        - Navigation arrows (ChevronLeft/ChevronRight) in the Parameters header
+        - Checkboxes for row selection
+        - Drag-and-Drop for row reordering using @dnd-kit
+
+     Let me trace through the code changes carefully:
+
+     **Color picker createPortal fix:**
+     - Added `useRef` and `createPortal` imports
+     - Added `colorButtonRef` and `pickerPosition` state
+     - Changed button to calculate position on click using `getBoundingClientRect()`
+     - Used `createPortal` to render palette in `document.body`
+
+     **Zoom levels:**
+     - Added '3Q' and 'Y' to ZOOM_OPTIONS
+     - Added indices 5:6 and 6:4 to ZOOM_CONFIG
+     - Slider already used `max={ZOOM_OPTIONS.length - 1}` dynamically
+
+     **Header text overflow for new zoom levels:**
+     - Month cells: added `overflow-hidden` + `truncate`
+     - Week cells: added `{dayWidth >= 5 && 'W${w.number}'}` condition
+
+     **Week numbers in Y mode:**
+     - Removed the `dayWidth >= 5` condition
+     - Added dynamic fontSize via inline style: 7px at ≤4, 8px at ≤6, 9px otherwise
+     - Added letterSpacing: -0.05em for Y mode
+     - Added `leading-none px-0` classes
+
+     **Hierarchical sorting:**
+     - Created `sortHierarchically` function before TimelinePage
+     - Applied to PARAMETERS useMemo
+
+     **Globe icon:**
+     - Added Globe to lucide-react imports
+     - Added `<a>` tag with Globe icon in both task bar sections (frozen and scrollable)
+     - Changed span from `w-full` to `flex-1 min-w-0`
+
+     **DnD + checkboxes + navigation arrows:**
+     - Installed @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities
+     - Added `reorderParameters` to store.ts
+     - Added to store return value
+     - Created `SortableParamRow` component (outside TimelinePage)
+     - Added imports: ChevronLeft, ChevronRight, GripVertical, dnd-kit
+     - Added `selectedParamIds` state
+     - Added `toggleSelectParam`, `navigateLeft`, `navigateRight`, `dndSensors`, `handleParamDragEnd`
+     - Updated header to include navigation arrows
+     - Updated frozenRows to include checkboxes and drag handle placeholder
+     - Replaced scrollableRows rendering with DnD-wrapped SortableParamRow components
+
+     TypeScript compilation passed with no errors.
+
+     Summary:
+     1. Primary Request and Intent:
+
+     The conversation (continued from a previous session) addressed several sequential feature requests for a React-based Timeline Planner application:
+
+     1. **Color picker popover fix (createPortal)**: Fix the color picker in TaskModal.tsx that caused horizontal scrollbar in the modal's `overflow-y-auto`
+      container. Solution: use `createPortal` to render palette in `document.body`, with dynamic `fixed` positioning via `getBoundingClientRect()`.
+
+     2. **New zoom levels (3Q, Y)**: Add '3Q' (6px/day) and 'Y' (4px/day) zoom levels to TimelinePage.tsx.
+
+     3. **Week numbers in Y mode**: Show week numbers "W1, W2..." in Y zoom mode using smaller font instead of hiding them.
+
+     4. **Hierarchical row sorting**: Child parameters must appear directly under their parent in the sidebar, not appended at the list end.
+
+     5. **Globe icon on task bars**: Show a Globe icon on the right side of task bars when `task.link` is set, clicking opens the link.
+
+     6. **Three combined features**:
+        - Navigation arrows (ChevronLeft/ChevronRight) in "Параметры" header for level navigation
+        - Checkboxes for row selection with visual highlight
+        - Drag-and-Drop row reordering using @dnd-kit, hierarchy-aware (siblings only)
+
+     ---
+
+     2. Key Technical Concepts:
+     - React 19 with TypeScript, Vite, Tailwind CSS v4
+     - `createPortal` from react-dom for rendering overlays outside the DOM tree
+     - `getBoundingClientRect()` for dynamic fixed positioning
+     - `useRef` for DOM element references
+     - @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities for Drag-and-Drop
+     - `useSortable` hook for individual sortable rows
+     - `DndContext`, `SortableContext`, `verticalListSortingStrategy` for DnD setup
+     - `PointerSensor` with `activationConstraint: { distance: 5 }` to prevent click interference
+     - Global Singleton store pattern with subscribers in store.ts
+     - Hierarchical tree sorting via recursive walk function
+     - `sortHierarchically`: flat array → parent-first ordered array, preserving sibling order
+     - `useCallback` for memoized handlers
+     - CSS `overflow-hidden` + `truncate` for text clipping
+     - Dynamic inline styles for fontSize/letterSpacing in header cells
+
+     ---
+
+     3. Files and Code Sections:
+
+     **frontend/src/pages/Timeline/TaskModal.tsx**
+     - Fixed color picker popover using createPortal
+     - Added `useRef` and `createPortal` imports
+     - Added `colorButtonRef: useRef<HTMLButtonElement>` and `pickerPosition: { top, left }` state
+     - Button click calculates position, checks if space to the right, places left or right of button
+     - Portal renders overlay + popover into `document.body`
+
+     Key code:
+     ```tsx
+     import React, { useState, useEffect, useRef } from 'react';
+     import { createPortal } from 'react-dom';
+     // ...
+     const [pickerPosition, setPickerPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+     const colorButtonRef = useRef<HTMLButtonElement>(null);
+     // ...
+     onClick={() => {
+       if (!colorPickerOpen && colorButtonRef.current) {
+         const rect = colorButtonRef.current.getBoundingClientRect();
+         const popoverWidth = 256;
+         const spaceRight = window.innerWidth - rect.right;
+         const left = spaceRight >= popoverWidth + 8 ? rect.right + 8 : rect.left - popoverWidth - 8;
+         setPickerPosition({ top: rect.top, left });
+       }
+       setColorPickerOpen(!colorPickerOpen);
+     }}
+     // ...
+     {colorPickerOpen && createPortal(
+       <>
+         <div className="fixed inset-0 z-[350]" onClick={() => setColorPickerOpen(false)} />
+         <div className="fixed z-[360] bg-white border border-app-border rounded-lg shadow-2xl p-3 w-64"
+           style={{ top: pickerPosition.top, left: pickerPosition.left }}>
+           <div className="grid grid-cols-4 gap-2">
+             {COLORS.map((col) => (...))}
+           </div>
+         </div>
+       </>,
+       document.body
+     )}
+     ```
+
+     **frontend/src/pages/Timeline/TimelinePage.tsx**
+     - Added `'3Q'` and `'Y'` to ZOOM_OPTIONS; `5: 6`, `6: 4` to ZOOM_CONFIG
+     - Slider uses `max={ZOOM_OPTIONS.length - 1}` dynamically (no change needed)
+     - Month cells in row 2: added `overflow-hidden` + `<span className="truncate">`
+     - Week cells in row 3: removed hide condition, added dynamic fontSize via inline style:
+     ```tsx
+     style={{
+       fontSize: dayWidth <= 4 ? '7px' : dayWidth <= 6 ? '8px' : '9px',
+       letterSpacing: dayWidth <= 4 ? '-0.05em' : undefined,
+     }}
+     className="flex-shrink-0 flex items-center justify-center font-bold bg-app-primary/5 relative z-10 overflow-hidden leading-none px-0"
+     // always renders: {`W${w.number}`}
+     ```
+     - Added `sortHierarchically` function before TimelinePage:
+     ```tsx
+     const sortHierarchically = (params: TimelineParameter[]): TimelineParameter[] => {
+       const idSet = new Set(params.map(p => p.id));
+       const childrenOf = new Map<string, TimelineParameter[]>();
+       const roots: TimelineParameter[] = [];
+       for (const p of params) {
+         if (p.parentId && idSet.has(p.parentId)) {
+           if (!childrenOf.has(p.parentId)) childrenOf.set(p.parentId, []);
+           childrenOf.get(p.parentId)!.push(p);
+         } else { roots.push(p); }
+       }
+       const result: TimelineParameter[] = [];
+       const walk = (node: TimelineParameter) => {
+         result.push(node);
+         (childrenOf.get(node.id) ?? []).forEach(walk);
+       };
+       roots.forEach(walk);
+       return result;
+     };
+     ```
+     - PARAMETERS useMemo now applies `sortHierarchically`
+     - Added `Globe` import, added to task bars:
+     ```tsx
+     {task.link && (
+       <a href={task.link} target="_blank" rel="noopener noreferrer"
+         onClick={(e) => e.stopPropagation()}
+         className="flex-shrink-0 mr-2 opacity-70 hover:opacity-100 transition-opacity">
+         <Globe size={10} />
+       </a>
+     )}
+     ```
+     - Added new imports: `ChevronLeft`, `ChevronRight`, `GripVertical`, dnd-kit packages
+     - Created `SortableParamRow` component (module-level, before TimelinePage):
+     ```tsx
+     interface SortableParamRowProps {
+       param: TimelineParameter; rowHeight: number; isSelected: boolean;
+       isParent: boolean; isCollapsed: boolean; isFrozen: boolean;
+       onToggleSelect: () => void; onToggleCollapse: () => void;
+       onToggleFreeze: () => void; onContextMenu: (e: React.MouseEvent) => void;
+     }
+     const SortableParamRow: React.FC<SortableParamRowProps> = (...) => {
+       const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+         useSortable({ id: param.id });
+       return (
+         <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition,
+           paddingLeft: `${4 + param.level * 16}px`, height: `${rowHeight}px`,
+           opacity: isDragging ? 0.4 : 1, zIndex: isDragging ? 50 : undefined }}
+           className={`group flex items-center gap-1 ...
+             ${isSelected ? 'bg-app-primary/10' : param.level === 0 ? 'bg-app-primary/5 hover:bg-app-primary/10' : 'hover:bg-app-bg/10'}`}
+           onContextMenu={onContextMenu}>
+           {/* Drag handle - visible on group-hover */}
+           <div {...attributes} {...listeners} className="... opacity-0 group-hover:opacity-100">
+             <GripVertical size={10} />
+           </div>
+           {/* Checkbox */}
+           <input type="checkbox" checked={isSelected} onChange={onToggleSelect} ... />
+           {/* Collapse toggle or spacer */}
+           {/* Name */}
+           {/* Pin button */}
+         </div>
+       );
+     };
+     ```
+     - Added inside TimelinePage: `selectedParamIds` state, `toggleSelectParam`, `navigateLeft`, `navigateRight`, `dndSensors`, `handleParamDragEnd`
+     - Navigation arrows in header (ChevronLeft/ChevronRight) - `navigateLeft` collapses deepest expanded parent level, `navigateRight` expands shallowest
+     collapsed parent level
+     - frozenRows: added checkbox + drag handle placeholder (non-functional, visual consistency)
+     - scrollableRows: wrapped in `DndContext` + `SortableContext`, renders `SortableParamRow` components
+     - `handleParamDragEnd`: checks same level + same parentId before calling `store.timelines.reorderParameters`
+
+     **frontend/src/store.ts**
+     - Added `reorderParameters` useCallback:
+     ```ts
+     const reorderParameters = useCallback(
+       (configId: string, activeId: string, overId: string): void => {
+         const config = globalAppData.timelineConfigs.find(c => c.id === configId);
+         if (!config) return;
+         const params = [...config.parameters];
+         const activeIdx = params.findIndex(p => p.id === activeId);
+         const overIdx = params.findIndex(p => p.id === overId);
+         if (activeIdx === -1 || overIdx === -1) return;
+         const [moved] = params.splice(activeIdx, 1);
+         params.splice(overIdx, 0, moved);
+         globalAppData = { ...globalAppData,
+           timelineConfigs: globalAppData.timelineConfigs.map(cfg =>
+             cfg.id === configId ? { ...cfg, parameters: params } : cfg
+           ),
+         };
+         notifySubscribers();
+       }, []);
+     ```
+     - Added `reorderParameters` to returned `timelines` object
+
+     ---
+
+     4. Errors and fixes:
+     - **TypeScript compilation**: After all DnD changes, ran `npx tsc -b --noEmit` — **no errors**.
+     - **Color picker behind scroll**: Fixed by switching from `absolute` → `fixed` with `createPortal`. The previous attempt used `absolute top-0 left-full
+      ml-2` which caused horizontal scrollbar in `overflow-y-auto` container. Full createPortal approach resolves this.
+     - No other errors encountered in this session.
+
+     ---
+
+     5. Problem Solving:
+     - **Color picker positioning**: Three-stage fix: (1) absolute z-index, (2) absolute positioning, (3) createPortal with getBoundingClientRect. Final
+     solution is the correct approach.
+     - **Text overflow in compact zoom**: CSS `overflow-hidden truncate` prevents month names from overflowing cell boundaries at small dayWidth values.
+     - **Week numbers at 4px/day (28px cell)**: Dynamic font size (7px) + letterSpacing (-0.05em) makes "W12" fit in 28px.
+     - **Row ordering**: `sortHierarchically` solves the UX issue where newly added children appeared at list bottom instead of under their parent.
+     - **DnD with hierarchy constraint**: `handleParamDragEnd` checks `activeParam.level === overParam.level && activeParam.parentId === overParam.parentId`
+      before allowing reorder — prevents cross-level drops.
+
+     ---
+
+     6. All user messages:
+     - Previous session context (from summary): Multiple features implemented across multiple sessions
+     - "наставления носят рекомендательный характер, сам разберись в проблеме... Проблема: Модальное окно TaskModal имеет свойство overflow-y-auto...
+     Необходимо сделать так, чтобы палитра отображалась 'поверх' окна, не влияя на его размеры." — createPortal fix request
+     - "Объекты и файлы проекта для контекста: TimelinePage.tsx... Задача: Добавление новых уровней масштабирования (3Q и Y) в Timeline" — zoom levels
+     request
+     - "Задача: Отображение номеров недель в режиме зума 'Y' (Year)... удалите [условие скрытия]... Динамический размер шрифта... 7px... 8px... leading-none
+      и px-0... tracking-tighter для режима Y" — week numbers fix request
+     - "Объекты и файлы проекта для контекста... Задача: Реализация иерархической сортировки строк в TimelinePage" — hierarchical sort request
+     - "При наличии ссылки в задаче добавь значёк планетки (типа ссылка в интернет) в правую часть taskbar" — Globe icon request
+     - "Цель: Добавить навигацию по уровням, чекбоксы выбора строк и функционал Drag-and-Drop для изменения порядка строк в компоненте TimelinePage." —
+     major combined feature request (DnD + checkboxes + navigation arrows)
+     - (Current message) "Your task is to create a detailed summary of the conversation so far..." — summary request
+
+     ---
+
+     7. Pending Tasks:
+     - No explicitly pending tasks. All requested features in this session were implemented and TypeScript compiled cleanly.
+
+     ---
+
+     8. Current Work:
+     The last implemented task was the three-feature combination for TimelinePage:
+     1. Navigation arrows (ChevronLeft/ChevronRight) in Parameters header
+     2. Checkboxes for row selection with `bg-app-primary/10` highlight
+     3. Drag-and-Drop reordering with @dnd-kit (installed), `SortableParamRow` component, `reorderParameters` in store
+
+     All changes compiled successfully with `npx tsc -b --noEmit`.
+
+     ---
+
+     9. Optional Next Step:
+     No pending tasks were identified. All user requests in this session were completed. The TypeScript build passes cleanly. No next step is indicated
+     unless the user reports visual/functional issues after testing the implemented features.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at:
+     C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--TimeLineManager-4-18-02-2026\6d93e51a-033f-4800-9d1c-5d4b6309683f.jsonl
+
+
+
+
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file frontend\src\pages\Timeline\TimelinePage.tsx
+  ⎿  Read frontend\src\store.ts (544 lines)
+  ⎿  Referenced file frontend\src\pages\Timeline\TaskModal.tsx
+  ⎿  Read frontend\src\pages\Tasks\TasksPage.tsx (278 lines)
+  ⎿  Read frontend\src\index.css (35 lines)

@@ -1,0 +1,678 @@
+Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the
+     earlier portion of the conversation.
+
+     Analysis:
+     Let me chronologically analyze this conversation:
+
+     **Session Start (Message 1)**
+     - User accidentally closed PowerShell and asked if changes could be recovered
+     - I located chat logs from previous sessions (16-02-2026-task-bar and 16-02-2026-task-window)
+     - Read the logs to understand the context of the previous work
+
+     **Previous Work Context (From Logs)**
+     - Timeline bars with drag/drop and resize functionality had been implemented
+     - TaskModal component was created for add/edit task functionality
+     - Custom Fields section was added to TaskModal
+     - The work was focused on building a complete task management interface for a Gantt/Timeline chart
+
+     **Current Session Issues - Parameter Addition Problem (Messages 2-4)**
+     - User reported that parameters (custom row types like "Painter") were not being added to the timeline
+     - Provided console logs showing:
+       - Parameter was being saved to store successfully
+       - But `store.timelines.getConfig(selectedTimelineId)?.parameters` returned `undefined`
+       - Root cause: `selectedTimelineId = 'timeline_default'` but actual config ID was `'timeline_bike'`
+
+     **Root Cause Analysis and Fixes for Parameter Addition (Messages 5-7)**
+     - Fixed `selectedTimelineId` to be dynamic: `store.appData.timelineConfigs?.[0]?.id ?? 'timeline_default'`
+     - Updated useMemo dependencies to use `store.appData.timelineConfigs` instead of `store.timelines`
+     - Added diagnostics to trace the timelineConfigs changes
+     - Parameters now properly added to the timeline after this fix
+
+     **Main Task - Timeline Filtering Architecture Analysis (Message 8)**
+     - User identified the core problem: new parameters were showing ALL tasks instead of filtering by role/type
+     - Requested a comprehensive analysis and plan (not implementation yet)
+     - I used the Explore agent to analyze the codebase thoroughly
+
+     **Analysis Results Revealed 4 Core Issues (Message 8 - Agent Response)**
+     1. `matchesTaskFilters` had "vacuous truth" bug: when filters = {}, `.every()` returns true for all tasks
+     2. `groupTasksByFilters` had no guard against empty filters
+     3. ParameterModal had poor UX - free text input for filter field names
+     4. No validation that parameters must have filters
+
+     **Implementation Phase (Messages 9-11)**
+
+     Step 1 - Fixed matchesTaskFilters in store.ts:
+     ```typescript
+     export const matchesTaskFilters = (task: Task, filters: Record<string, string>): boolean => {
+       if (Object.keys(filters).length === 0) {
+         return false;
+       }
+       return Object.entries(filters).every(([key, value]) => {
+         const taskValue = task[key as keyof Task];
+         return taskValue === value;
+       });
+     };
+     ```
+
+     Step 2 - Redesigned ParameterModal:
+     - Added FILTER_FIELD_OPTIONS constant with 5 predefined filter fields (platform, operationType, workerId, priority,
+      status)
+     - Added useMemo hook to extract unique values from availableTasks for each filter field
+     - Converted free-text inputs to dropdown selectors for field names and values
+     - Made filters section required (not optional) with validation error
+     - Updated handleAddFilterField to auto-select first available field
+
+     Step 3 - Updated TimelinePage:
+     - Changed selectedTimelineId to use first config from store: `store.appData.timelineConfigs?.[0]?.id ??
+     'timeline_default'`
+     - Updated useMemo dependencies in timelineConfig and tasksGroupedByParam
+     - Added availableTasks prop to ParameterModal component
+
+     Step 4 - Added validation:
+     - Added check in handleSaveParameter to reject parameters with empty filters
+     - Added validation error in ParameterModal validate() function
+
+     **Cleanup and Commit (Message 10-11)**
+     - Removed diagnostic console.logs that were added during debugging
+     - Created git commit with detailed message describing all changes
+     - Commit hash: 7fe777d
+
+     **User Explicit Feedback Throughout:**
+     - "Продолжи" (Continue) - initial recovery request
+     - "Приступай к исправлениям. Отвечая на твой вопрос. при строке без фильтров вставляем пустую строку." - Begin
+     fixes, show empty row for parameters without filters
+     - "сохрани измененя" (Save changes) - commit the work
+
+     **Technical Accuracy Check:**
+     - All 4 steps were implemented as planned
+     - Code patterns follow existing conventions in the project
+     - No breaking changes to existing functionality
+     - Backward compatible: existing parameters with filters continue to work
+     - New parameters require filters, preventing the "show all tasks" issue
+
+     Summary:
+     ## 1. Primary Request and Intent
+
+     The user experienced a context reset (closed PowerShell) and requested continuation of previous work. The primary
+     intent evolved through the conversation:
+
+     **Phase 1 - Session Recovery:** Recover context from previous conversations and understand what had been
+     accomplished (Timeline bars, drag/drop, TaskModal with CustomFields).
+
+     **Phase 2 - Bug Identification:** User identified that newly added parameters (rows in the Timeline) were
+     displaying ALL tasks from the project instead of filtering them by specific criteria. For example, a "Painter"
+     parameter should only show painting tasks, not all tasks.
+
+     **Phase 3 - Analysis Request:** User asked for a detailed analysis of:
+     - Where filtering logic fails (data transformation for Timeline rows)
+     - How new parameters fetch their initial task list
+     - What the filtering mechanism should do
+     - A step-by-step plan to fix it (without implementation)
+
+     **Phase 4 - Implementation:** User approved the plan with explicit instruction: "Приступай к исправлениям. Отвечая
+     на твой вопрос. при строке без фильтров вставляем пустую строку." (Begin fixes. To answer your question: when a row
+      has no filters, insert an empty row.)
+
+     **Phase 5 - Commit:** User requested to save all changes: "сохрани измененя" (Save changes).
+
+     ## 2. Key Technical Concepts
+
+     - **React Hooks:** useState, useEffect, useMemo, useCallback
+     - **Timeline/Gantt Chart Architecture:** Multi-row display with task bars, drag/drop, filtering by parameters
+     - **Data Structure:** TimelineParameter interface with filters as Record<string, string>
+     - **Filter Matching Logic:** matchesTaskFilters function using strict equality and AND logic (all filters must
+     match)
+     - **Vacuous Truth Problem:** Empty filter sets returning true in `.every()` operation
+     - **TypeScript:** Interface definitions, keyof operator, optional properties
+     - **State Management:** Custom useAppStore hook with localStorage persistence
+     - **Component Props:** Passing availableTasks for dropdown auto-completion
+     - **Dropdown UI Pattern:** Converting free-text inputs to controlled selectors
+     - **Validation Pattern:** Required fields with error messages
+
+     ## 3. Files and Code Sections
+
+     ### C:\Users\Георгий\Desktop\prog\TimeLine\2_15-02-2026\TimeLinePlanner\frontend\src\store.ts
+
+     **Importance:** Core data structure and filtering logic that determines which tasks appear in which timeline rows.
+
+     **Changes Made:**
+     - Modified `matchesTaskFilters` function to return `false` when `filters` is empty (previously returned `true` due
+     to vacuous truth)
+     - This ensures parameters without filters show no tasks (empty rows) instead of all tasks
+
+     **Code Snippet - Fixed Function:**
+     ```typescript
+     export const matchesTaskFilters = (task: Task, filters: Record<string, string>): boolean => {
+       // If filters empty, task doesn't match parameter
+       if (Object.keys(filters).length === 0) {
+         return false;
+       }
+
+       return Object.entries(filters).every(([key, value]) => {
+         const taskValue = task[key as keyof Task];
+         return taskValue === value;
+       });
+     };
+     ```
+
+     **Related Interface:**
+     ```typescript
+     export interface TimelineParameter {
+       id: string;
+       name: string;
+       level: number;
+       parentId?: string;
+       filters: Record<string, string>;  // ← FILTERS - key-value pairs for matching
+     }
+     ```
+
+     **Related Task Fields:**
+     ```typescript
+     export interface Task {
+       id: string;
+       name: string;
+       startDate: Date;
+       endDate: Date;
+       priority?: 'low' | 'medium' | 'high';
+       status?: 'not_started' | 'in_progress' | 'done';
+       description?: string;
+       link?: string;
+       projectId?: string;
+       resourceIds?: string[];
+       customFields?: Record<string, string>;
+       // ← Filterable fields for Timeline
+       platform?: string;         // e.g., 'bike', 'scooter'
+       operationType?: string;    // e.g., 'assembly', 'painting'
+       workerId?: string;         // worker ID
+     }
+     ```
+
+     ###
+     C:\Users\Георгий\Desktop\prog\TimeLine\2_15-02-2026\TimeLinePlanner\frontend\src\pages\Timeline\ParameterModal.tsx
+
+     **Importance:** UI component where users define new parameters with filters. The redesign enforces strict filter
+     requirements and provides better UX with dropdowns and auto-completion.
+
+     **Major Changes:**
+     - Added imports: `useMemo` from React, `Task` type from store
+     - Added `availableTasks?: Task[]` prop to interface
+     - Added `FILTER_FIELD_OPTIONS` constant with 5 predefined filter fields
+     - Added `useMemo` hook to extract unique values from tasks for dropdown options
+     - Completely redesigned filter input UI from free-text to dropdown selectors
+     - Made filters section required (no longer optional)
+     - Updated validation to require at least one filter
+     - Updated `handleAddFilterField` to auto-select first available field
+
+     **Code Snippet - Filter Field Options:**
+     ```typescript
+     const FILTER_FIELD_OPTIONS = [
+       { key: 'platform', label: 'Платформа' },
+       { key: 'operationType', label: 'Тип операции' },
+       { key: 'workerId', label: 'Исполнитель' },
+       { key: 'priority', label: 'Приоритет' },
+       { key: 'status', label: 'Статус' },
+     ];
+     ```
+
+     **Code Snippet - Value Options Extraction:**
+     ```typescript
+     const filterValueOptions = useMemo(() => {
+       const options: Record<string, string[]> = {};
+       FILTER_FIELD_OPTIONS.forEach((field) => {
+         const values = new Set<string>();
+         availableTasks.forEach((task) => {
+           const value = task[field.key as keyof Task];
+           if (value) {
+             values.add(String(value));
+           }
+         });
+         options[field.key] = Array.from(values).sort();
+       });
+       return options;
+     }, [availableTasks]);
+     ```
+
+     **Code Snippet - Updated Validation:**
+     ```typescript
+     const validate = (): boolean => {
+       const errs: Record<string, string> = {};
+       // Check that at least one filter is added
+       if (Object.keys(filterFields).length === 0) {
+         errs.filters = 'Укажите хотя бы один фильтр для параметра';
+       }
+       if (!name.trim()) errs.name = 'Обязательное поле';
+       setErrors(errs);
+       return Object.keys(errs).length === 0;
+     };
+     ```
+
+     **Code Snippet - Filter Field Selection UI:**
+     ```typescript
+     {Object.entries(filterFields).map(([fieldKey, fieldValue]) => (
+       <div key={fieldKey} className="flex gap-2 items-end">
+         <select
+           value={fieldKey}
+           onChange={e => {
+             const newKey = e.target.value;
+             handleFilterChange(fieldKey, newKey, fieldValue);
+           }}
+           className="flex-1 h-7 px-2 text-xs rounded border border-app-border bg-white text-app-text-head outline-none
+     focus:border-app-primary transition-colors cursor-pointer"
+         >
+           <option value="">— Выберите поле</option>
+           {FILTER_FIELD_OPTIONS.map(opt => (
+             <option key={opt.key} value={opt.key}>
+               {opt.label}
+             </option>
+           ))}
+         </select>
+
+         {fieldKey && (
+           <select
+             value={fieldValue}
+             onChange={e => handleFilterChange(fieldKey, fieldKey, e.target.value)}
+             className="flex-1 h-7 px-2 text-xs rounded border border-app-border bg-white text-app-text-head
+     outline-none focus:border-app-primary transition-colors cursor-pointer"
+           >
+             <option value="">— Выберите значение</option>
+             {filterValueOptions[fieldKey]?.map(val => (
+               <option key={val} value={val}>
+                 {val}
+               </option>
+             ))}
+           </select>
+         )}
+
+         <button
+           type="button"
+           onClick={() => handleRemoveFilter(fieldKey)}
+           className="px-2 h-7 text-xs font-semibold text-app-error rounded border border-app-error/30
+     hover:bg-app-error/10 transition-colors flex-shrink-0"
+         >
+           −
+         </button>
+       </div>
+     ))}
+     ```
+
+     **Code Snippet - Updated handleAddFilterField:**
+     ```typescript
+     const handleAddFilterField = () => {
+       // Add first available field from list that doesn't exist yet
+       const availableField = FILTER_FIELD_OPTIONS.find(opt => !(opt.key in filterFields));
+       if (availableField) {
+         setFilterFields(prev => ({ ...prev, [availableField.key]: '' }));
+       }
+     };
+     ```
+
+     ###
+     C:\Users\Георгий\Desktop\prog\TimeLine\2_15-02-2026\TimeLinePlanner\frontend\src\pages\Timeline\TimelinePage.tsx
+
+     **Importance:** Main Timeline page component. Changes ensure correct parameter selection and proper prop passing to
+      ParameterModal.
+
+     **Changes Made:**
+     1. Fixed `selectedTimelineId` to be dynamic instead of hardcoded:
+        - Old: `const selectedTimelineId = 'timeline_default';`
+        - New: `const selectedTimelineId = store.appData.timelineConfigs?.[0]?.id ?? 'timeline_default';`
+
+     2. Updated useMemo dependencies for timelineConfig:
+        - Changed from `[store.timelines, selectedTimelineId]`
+        - To: `[store.appData.timelineConfigs, selectedTimelineId]`
+
+     3. Updated useMemo dependencies for tasksGroupedByParam:
+        - Changed from `[store.timelines, selectedTimelineId]`
+        - To: `[store.appData.tasks, store.appData.timelineConfigs, selectedTimelineId]`
+
+     4. Added `availableTasks` prop to ParameterModal component:
+     ```typescript
+     <ParameterModal
+       isOpen={parameterModal.isOpen}
+       existingParameters={PARAMETERS}
+       availableTasks={store.appData.tasks}  // ← NEW PROP
+       onSave={handleSaveParameter}
+       onClose={() => {
+         console.log('🚪 ParameterModal onClose called');
+         setParameterModal({ isOpen: false });
+       }}
+     />
+     ```
+
+     5. Updated `handleSaveParameter` to validate filters before saving:
+     ```typescript
+     const handleSaveParameter = (parameter: Omit<TimelineParameter, 'id'>) => {
+       console.log('💾 Saving parameter:', parameter);
+       if (Object.keys(parameter.filters).length === 0) {
+         console.warn('⚠️ Parameter has no filters, rejecting');
+         return;
+       }
+       store.timelines.addParameter(selectedTimelineId, parameter);
+       setParameterModal({ isOpen: false });
+       console.log('✅ Parameter saved and modal closed');
+     };
+     ```
+
+     6. Removed diagnostic useEffect that was monitoring timelineConfigs changes
+
+     7. Simplified PARAMETERS useMemo to one-liner
+
+     ## 4. Errors and fixes
+
+     **Error 1: Parameter Not Adding to Timeline**
+     - **Symptom:** When saving a new parameter, the parameter appeared to save to store (console logs showed success)
+     but didn't appear on the timeline UI
+     - **Root Cause:** `selectedTimelineId = 'timeline_default'` but the actual timeline config ID in store was
+     `'timeline_bike'`. When `addParameterToTimeline` tried to match `cfg.id === 'timeline_default'`, it found nothing
+     and the parameter wasn't added.
+     - **User Feedback:** Logs showed: `addParameterToTimeline called: {configId: 'timeline_default'...}` but `🔍
+     [EFFECT] timelineConfigs changed: [{"id":"timeline_bike","params":13}]`
+     - **How Fixed:** Changed selectedTimelineId to dynamically read the first config ID from store:
+     `store.appData.timelineConfigs?.[0]?.id ?? 'timeline_default'`
+
+     **Error 2: Vacuous Truth in matchesTaskFilters**
+     - **Symptom:** New parameters without filters were showing ALL tasks instead of being empty or prompting for
+     filters
+     - **Root Cause:** When `filters = {}`, `Object.entries({})` returns `[]`, and `[].every(predicate)` always returns
+     `true` in JavaScript (mathematical vacuous truth)
+     - **How Fixed:** Added guard clause: `if (Object.keys(filters).length === 0) return false;`
+
+     **Error 3: Poor UX for Filter Entry**
+     - **Symptom:** Users had to manually type field names (platform, operationType, etc.) which is error-prone and has
+     no validation
+     - **How Fixed:** Replaced free-text inputs with dropdown selectors from FILTER_FIELD_OPTIONS constant
+
+     ## 5. Problem Solving
+
+     **Problem 1: Parameters showing all tasks**
+     - **Analysis:** The core issue was two-fold:
+       1. Vacuous truth bug in matchesTaskFilters made empty filters always match
+       2. ParameterModal allowed parameters to be created without filters (optional section)
+     - **Solution:**
+       - Fixed matchesTaskFilters to return false for empty filters
+       - Made filters a required section with validation
+       - Provided dropdown-based UI to guide users
+
+     **Problem 2: selectedTimelineId pointing to wrong config**
+     - **Analysis:** Hardcoded ID didn't match actual config IDs in the store
+     - **Solution:** Made it dynamic by reading from first available config
+
+     **Problem 3: Dropdown values need to come from actual data**
+     - **Analysis:** Users need to select from existing values to match tasks correctly
+     - **Solution:** Extract unique values from availableTasks and populate dropdown options dynamically in useMemo
+
+     **Problem 4: UX was confusing - users didn't know what fields/values to enter**
+     - **Analysis:** Free-text input meant users had to know task field names and their values
+     - **Solution:** Predefined FILTER_FIELD_OPTIONS with auto-populated value dropdowns from real task data
+
+     ## 6. All user messages
+
+     1. "я случайно закрыл powershell можно восстановить, на чём мы сотановились, я должен был скинуть тебе лог"
+        (I accidentally closed PowerShell, can it be recovered? Where did we stop? I was supposed to send you a log)
+
+     2. "нет, не добавляется ты просил посмотреть логи, чтобы при клике появилась такая надпись, она появилась при клике
+      в поле названия параметра строки 🖱️ Modal content clicked..."
+        (No, it's not being added. You asked to look at logs so that when clicked this message would appear, it appeared
+      when clicking in the parameter name field. [Long console log provided])
+
+     3. "продолжи"
+        (Continue)
+
+     4. User provided extensive console logs showing the parameter save flow
+
+     5. "Context: I have a Timeline/Gantt chart component. Current issue: custom parameters (like "Painter" or
+     "Saboteur" in the sidebar) are displaying ALL tasks from the project instead of filtering them by their respective
+     roles/types... Task for you: Please analyze the code responsible for... Plan the fix: Provide a step-by-step plan
+     to implement a strict filter for these rows so they only show relevant tasks... Do not apply fixes yet, just show
+     me where the logic fails and how you plan to restrict the data flow for specific row types."
+        (Detailed problem statement with explicit request for analysis and plan, NOT implementation)
+
+     6. "Приступай к исправлениям. Отвечая на твой вопрос. при строке без фильтров вставляем пустую строку."
+        (Begin fixes. To answer your question: when a row has no filters, insert an empty row.)
+
+     7. "сохрани измененя"
+        (Save changes)
+
+     ## 7. Pending Tasks
+
+     - None. All requested work has been completed and committed.
+
+     ## 8. Current Work
+
+     The current work was implementing a 4-step fix to the Timeline filtering architecture:
+
+     1. **Modified store.ts - matchesTaskFilters function:** Added guard clause to return false when filters are empty,
+     fixing the "vacuous truth" bug that made all tasks match parameters with no filters.
+
+     2. **Redesigned ParameterModal.tsx:**
+        - Converted free-text filter input to dropdown selectors
+        - Added FILTER_FIELD_OPTIONS constant with 5 predefined filter types (platform, operationType, workerId,
+     priority, status)
+        - Implemented useMemo hook to extract unique values from availableTasks for autocomplete
+        - Made filters section required with validation
+        - Updated handleAddFilterField to auto-select first available field
+
+     3. **Updated TimelinePage.tsx:**
+        - Fixed selectedTimelineId to be dynamic: `store.appData.timelineConfigs?.[0]?.id ?? 'timeline_default'` instead
+      of hardcoded 'timeline_default'
+        - Updated useMemo dependencies to use store.appData directly instead of store.timelines object
+        - Added availableTasks prop to ParameterModal
+        - Added validation in handleSaveParameter to reject parameters without filters
+
+     4. **Cleaned up and committed:** Removed diagnostic console.logs and created git commit with detailed message
+     explaining all changes. Commit hash: 7fe777d
+
+     ## 9. Optional Next Step
+
+     No next step is required. The user's most recent explicit request was "сохрани измененя" (Save changes), which has
+     been completed with commit 7fe777d.
+
+     The work that was requested has been fully implemented:
+     - The timeline filtering architecture now enforces strict filter requirements
+     - Parameters without filters result in empty rows (as requested: "при строке без фильтров вставляем пустую строку")
+     - Users are guided through dropdown selectors instead of free-text entry
+     - The code properly distinguishes between parameters and their corresponding filtered task lists
+
+     The system is ready for testing and use.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you
+     generated), read the full transcript at: C:\Users\Георгий\.claude\projects\C--Users---------Desktop-prog-TimeLine-2
+     -15-02-2026\7fad1cb5-9ab1-4744-8098-69aa2fbe5979.jsonl
+
+
+
+
+
+
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file TimeLinePlanner\frontend\src\pages\Timeline\TimelinePage.tsx
+  ⎿  Read TimeLinePlanner\frontend\src\store.ts (457 lines)
+  ⎿  Read TimeLinePlanner\frontend\src\pages\Timeline\ParameterModal.tsx (295 lines)
+  ⎿  Read TimeLinePlanner\frontend\src\App.tsx (44 lines)
+  ⎿  Referenced file ai_chats\Claude_Code\16-02-2026-task-window
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Showing detailed transcript · ctrl+o to toggle · ctrl+e to show all
+
+
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of
+     context. The summary below covers the earlier portion of the conversation.
+
+     Analysis:
+     Let me analyze the conversation chronologically:
+
+     1. User wants to work on custom parameters for Timeline filtering
+     2. First task: remove 3 default fields (Platform, Version, Environment) from
+     Edit/Add Task form
+     3. Found the fields in store.ts createInitialAppData - removed them from
+     customFieldTypes array
+     4. User reported fields still showing - because localStorage had old data cached
+     5. Advised user to clear localStorage
+     6. User asked for plan to make "+Add New Type" work properly with persistence
+     7. Planned architecture: Справочник (dictionary) with typeId as key in customFields
+     8. Implemented 4 files: store.ts, TaskModal.tsx, TimelinePage.tsx,
+     ParameterModal.tsx
+     9. User reported issues with ParameterModal: filter button disabled, no option for
+     no filters, values only from existing tasks
+     10. Fixed 3 issues in ParameterModal: FILTER_FIELD_OPTIONS → filterFieldOptions,
+     removed required filter validation, replaced value dropdown with text input
+
+     Summary:
+     1. Primary Request and Intent:
+        - Remove 3 default custom field types (Platform, Version, Environment) from the
+     Add/Edit Task form, leaving only the "+Add New Type" button
+        - Implement a working system where "+Add New Type" creates a custom field type,
+     persists it to global store, and it appears across all task forms
+        - Custom field types should be usable as filters in Timeline parameter
+     configuration
+        - Fix ParameterModal issues: filter add button was disabled, no option for
+     parameter without filters, filter values only showed existing task values (should
+     be free text input)
+
+     2. Key Technical Concepts:
+        - React with TypeScript
+        - Zustand-like custom store with localStorage persistence (`useAppStore`)
+        - Custom field types as dictionary: `CustomFieldType { id, name }` with
+     `task.customFields: Record<typeId, value>`
+        - Timeline filtering via `matchesTaskFilters` — checks both `task[key]` and
+     `task.customFields?.[key]`
+        - Stable keys: typeId used as key in customFields (not name) to survive renames
+        - ParameterModal: dynamic filter field options = static fields + user-defined
+     customFieldTypes
+
+     3. Files and Code Sections:
+        - **`src/store.ts`**
+          - Removed default customFieldTypes (Platform, Version, Environment):
+     `customFieldTypes: [] as CustomFieldType[]`
+          - Fixed `matchesTaskFilters` to check customFields: `const taskValue =
+     task[key as keyof Task] ?? task.customFields?.[key];`
+          - Added `deleteCustomFieldType` function
+          - Exported `deleteCustomFieldType` in return object
+
+        - **`src/pages/Timeline/TaskModal.tsx`**
+          - Changed props: `customFieldTypes: string[]` → `customFieldTypes: { id:
+     string; name: string }[]`
+          - Added prop: `onAddCustomFieldType: (name: string) => CustomFieldTypeDef`
+          - Removed local `customFieldTypes` state (was
+     `useState<string[]>(initialFieldTypes)`)
+          - `handleAddNewType` now calls `onAddCustomFieldType(trimmed)` → saves to
+     global store
+          - `customFieldValues` key = `id` (not name): `value={customFieldValues[id] ??
+     ''}`
+          - Render uses `{id, name}` destructuring: `customFieldTypes.map(({ id, name })
+      => ...)`
+
+        - **`src/pages/Timeline/TimelinePage.tsx`**
+          - Changed TaskModal props:
+     `customFieldTypes={store.customFieldTypes.getAll()}` (full objects, not `.map(t =>
+     t.name)`)
+          - Added: `onAddCustomFieldType={(name) => store.customFieldTypes.add(name)}`
+          - Added to ParameterModal:
+     `customFieldTypes={store.customFieldTypes.getAll()}`
+
+        - **`src/pages/Timeline/ParameterModal.tsx`**
+          - Renamed `FILTER_FIELD_OPTIONS` → `STATIC_FILTER_OPTIONS` (only `priority`,
+     `status`)
+          - Removed `platform`, `operationType`, `workerId` from static options
+          - Added `customFieldTypes?: CustomFieldType[]` prop
+          - Added `filterFieldOptions` useMemo: `[...STATIC_FILTER_OPTIONS,
+     ...customFieldTypes.map(t => ({ key: t.id, label: t.name }))]`
+          - `filterValueOptions` now also checks `task.customFields?.[field.key]`
+          - Fixed `handleAddFilterField`: `FILTER_FIELD_OPTIONS.find` →
+     `filterFieldOptions.find`
+          - Removed required filter validation from `validate()` (parameter can have no
+     filters)
+          - Replaced value `<select>` dropdown with `<input type="text">` for free text
+     entry
+
+     4. Errors and fixes:
+        - **Platform/Version/Environment still showing after code change**: Data loaded
+     from localStorage (old cached data). Fixed by instructing user to clear
+     localStorage via DevTools or `localStorage.removeItem('timeline_app_data');
+     location.reload()`
+        - **ParameterModal filter button disabled (не работает)**:
+     `handleAddFilterField` referenced deleted constant `FILTER_FIELD_OPTIONS` instead
+     of new `filterFieldOptions` useMemo variable. Fixed by updating the reference.
+        - **TypeScript error**: Initial `customFieldTypes: []` caused type inference
+     issue — fixed with `customFieldTypes: [] as CustomFieldType[]`
+
+     5. Problem Solving:
+        - Chose `typeId` as key in `customFields` Record (not name) for stability
+        - Dynamic filter options in ParameterModal built from static + user
+     customFieldTypes
+        - `matchesTaskFilters` extended with `?? task.customFields?.[key]` — single line
+      change enabling full custom field filtering
+        - Free text input for filter values (instead of dropdown from existing tasks) —
+     more flexible for configuring parameters before tasks exist
+
+     6. All user messages:
+        - "C:\Users\Георгий\Desktop\prog\TimeLine\2_15-02-2026\ai_chats\Claude_Code\17-0
+     2-2026.txt мы остоновились здесь. Хочу теперь создавать реальные параметры в
+     главной памяти, чтобы по ним фильтровать в time line. 1 в форме Edit/add Task удали
+      3 поля по умолчанию Platform Version Environment. оставь только '+add new type'"
+        - "проверь, но у меня не удалилось Platform / Enter Platform / Version / Enter
+     Version / Environment / Enter Environment / http://localhost:5173/"
+        - "теперь сделай, чтобы при нажатии '+ Add New Type' добавлялся тип со
+     значением, и сохранялся, при сохранении в задачи. Этот новый тип должен отражаться
+     во всех формах edit task/add task, какой алгоритм выбрать, чтобы не закопаться в
+     пересчётах? как эффективно добавить кастомные поля в отражения всех задач? Это
+     нужно для того, чтобы пользователь, смог настроить себе кастомные параметры, и
+     свободно использовал по ним фильтры. Кажется, что для этого лучше всего
+     использовать справочник, но предложи свой вариант!"
+        - "приступай"
+        - "вроде сработало, при добавлении параметра в timeline не работает добавление
+     фильтра - кнопка отключена. И нет опцыы без фильтров. Фильтр принимает значение
+     только существующих параметров, в будующем это будет автопредложение из всех по
+     заполнению, но сейчас это не нужно внедрять! Спланируй, чтобы фильтры в timeline
+     Работали на кастомные поля, которые мы внедрили. ТОЛЬКО ПЛАН!"
+        - "действу"
+
+     7. Pending Tasks:
+        - None explicitly pending. All requested fixes have been implemented and
+     TypeScript compiles clean.
+
+     8. Current Work:
+        Fixed three issues in `ParameterModal.tsx`:
+        1. `handleAddFilterField` now uses `filterFieldOptions.find(...)` instead of
+     deleted `FILTER_FIELD_OPTIONS`
+        2. Removed required-filter validation from `validate()` — parameters can be
+     created without filters
+        3. Replaced filter value `<select>` with `<input type="text">` for free text
+     entry of filter values
+
+        Final TypeScript check passed with no errors.
+
+     9. Optional Next Step:
+        No explicit pending tasks remain. The user's last request ("действу" — proceed
+     with the plan) has been fully implemented. The next logical step would be to test
+     the full flow:
+        - Create a custom field type via "+Add New Type" in TaskModal
+        - Set a value for it when creating/editing a task
+        - Create a Timeline parameter using that custom field type as a filter
+        - Verify tasks appear correctly under that parameter in the Timeline view
+
+        But this is user testing, not a development task. No code changes are pending.
+
+     If you need specific details from before compaction (like exact code snippets,
+     error messages, or content you generated), read the full transcript at:
+     C:\Users\Георгий\.claude\projects\C--Users---------Desktop-prog-TimeLine-2-15-02-20
+     26\43b4cf13-6f5f-4fe0-b927-e03bd0d01872.jsonl
+
+
+
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Read TimeLinePlanner\frontend\src\pages\Timeline\ParameterModal.tsx (291 lines)
+  ⎿  Referenced file TimeLinePlanner\frontend\src\pages\Timeline\TimelinePage.tsx
+  ⎿  Read TimeLinePlanner\frontend\src\pages\Timeline\TaskModal.tsx (324 lines)
+  ⎿  Read TimeLinePlanner\frontend\src\store.ts (461 lines)
+  ⎿  Read ai_chats\Claude_Code\17-02-2026.txt (1 lines)
+
+────────────────────────────────────────────────────────────────────────────────────────
+  Showing detailed transcript · ctrl+o to toggle · ctrl+e to show all
+

@@ -1,0 +1,35 @@
+/* 1. Импортируем Tailwind v4 */
+@import "tailwindcss";
+
+/* 2. Подключаем шрифт Inter Tight из Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
+
+/* 3. Настраиваем тему Tailwind для использования этого шрифта по умолчанию */
+@theme {
+  /* Базовый шрифт */
+  --font-sans: "Inter Tight", sans-serif;
+
+  /* Функциональные цвета (Система) */
+  --color-app-bg: #d8e8ed;        /* Основной фон страницы */
+  --color-app-surface: #f4f9fa;   /* Фон карточек и модалок */
+  --color-app-border: #b8d5db;    /* Разделители и границы */
+
+  /* Типографика */
+  --color-app-text-main: #2c4a52; /* Основной текст */
+  --color-app-text-head: #1a2d32; /* Заголовки */
+  --color-app-text-muted: #7eaeb8;/* Вторичный/подсказки */
+
+  /* Интерактив */
+  --color-app-primary: #4a7a85;   /* Кнопки, активные элементы */
+  --color-app-primary-hover: #2c4a52; 
+  --color-app-accent: #3b82f6;    /* Акценты (уведомления и т.д.) */
+  --color-app-error: #e17055;     /* Ошибки */
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;           /* Firefox */
+  -ms-overflow-style: none;        /* IE/Edge */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;                   /* Chrome/Safari */
+}
