@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus } from 'lucide-react';
 import type { TimelineParameter, Task, CustomFieldType } from '../../store';
+import { Autocomplete } from '../../components/ui/Autocomplete';
 
 interface ParameterModalProps {
   isOpen: boolean;
   mode?: 'add' | 'edit';
   editingParameter?: TimelineParameter;
+  defaultParentId?: string;
   existingParameters: TimelineParameter[];
   availableTasks?: Task[];
   customFieldTypes?: CustomFieldType[];
@@ -18,7 +20,9 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
   isOpen,
   mode = 'add',
   editingParameter,
+  defaultParentId,
   existingParameters,
+  availableTasks = [],
   customFieldTypes = [],
   onSave,
   onClose,
@@ -48,16 +52,42 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
       setErrors({});
     } else if (isOpen && mode === 'add') {
       setName('');
-      setParentId(undefined);
+      setParentId(defaultParentId);
       setFilterFields({});
       setErrors({});
     }
-  }, [isOpen, mode, editingParameter]);
+  }, [isOpen, mode, editingParameter, defaultParentId]);
 
-  // Опции фильтрации: только кастомные типы полей пользователя
-  const filterFieldOptions = useMemo(() => {
-    return customFieldTypes.map(t => ({ key: t.id, label: t.name }));
+  // Имена полей для автозаполнения (отображаемые)
+  const fieldNameOptions = useMemo(
+    () => customFieldTypes.map(t => t.name),
+    [customFieldTypes]
+  );
+
+  // Хелпер: id → name и name → id
+  const fieldIdToName = useMemo(() => {
+    const m: Record<string, string> = {};
+    customFieldTypes.forEach(t => { m[t.id] = t.name; });
+    return m;
   }, [customFieldTypes]);
+
+  const fieldNameToId = useMemo(() => {
+    const m: Record<string, string> = {};
+    customFieldTypes.forEach(t => { m[t.name] = t.id; });
+    return m;
+  }, [customFieldTypes]);
+
+  // Уникальные значения для каждого field id из задач
+  const valueOptionsByFieldId = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    (availableTasks ?? []).forEach(task => {
+      Object.entries(task.customFields ?? {}).forEach(([fieldId, val]) => {
+        if (!map[fieldId]) map[fieldId] = [];
+        if (val && !map[fieldId].includes(val)) map[fieldId].push(val);
+      });
+    });
+    return map;
+  }, [availableTasks]);
 
   if (!isOpen) {
     return null;
@@ -71,21 +101,26 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
   };
 
   const handleAddFilterField = () => {
-    const availableField = filterFieldOptions.find(opt => !(opt.key in filterFields));
-    if (availableField) {
-      setFilterFields(prev => ({ ...prev, [availableField.key]: '' }));
-    }
+    // Добавляем пустую запись с временным ключом-заглушкой
+    const placeholder = `__new_${Date.now()}`;
+    setFilterFields(prev => ({ ...prev, [placeholder]: '' }));
   };
 
-  const handleFilterChange = (oldKey: string, newKey: string, value: string) => {
+  // Обновить ключ фильтра (поле) — пользователь выбрал name, конвертируем в id
+  const handleFilterFieldNameChange = (oldKey: string, newFieldName: string) => {
+    const newId = fieldNameToId[newFieldName] ?? oldKey;
     setFilterFields(prev => {
-      const next = { ...prev };
-      if (oldKey !== newKey && oldKey in next) {
-        delete next[oldKey];
+      const next: Record<string, string> = {};
+      for (const [k, v] of Object.entries(prev)) {
+        next[k === oldKey ? newId : k] = v;
       }
-      next[newKey] = value;
       return next;
     });
+  };
+
+  // Обновить значение фильтра
+  const handleFilterValueChange = (key: string, value: string) => {
+    setFilterFields(prev => ({ ...prev, [key]: value }));
   };
 
   const handleRemoveFilter = (key: string) => {
@@ -105,7 +140,10 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
       name: name.trim(),
       level: newLevel,
       parentId: parentId || undefined,
-      filters: Object.keys(filterFields).length > 0 ? filterFields : {},
+      // Исключаем незаполненные строки (временные ключи-заглушки и пустые значения)
+      filters: Object.fromEntries(
+        Object.entries(filterFields).filter(([k, v]) => !k.startsWith('__new_') && k && v)
+      ),
     };
 
     onSave(parameterData);
@@ -137,11 +175,11 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
       />
 
       <div
-        className="relative z-10 bg-white border border-app-border rounded-xl w-[380px] max-h-[90vh] overflow-y-auto flex flex-col"
+        className="relative z-10 bg-white border border-app-border rounded-xl w-[380px] max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-app-border">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-app-border flex-shrink-0">
           <h2 className="text-sm font-bold text-app-text-head">
             {isEdit ? 'Редактировать параметр' : 'Добавить параметр'}
           </h2>
@@ -154,7 +192,7 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="px-5 py-4 flex flex-col gap-3">
+        <div className="px-5 py-4 flex flex-col gap-3 overflow-y-auto">
           {/* Parameter Name */}
           <div className="flex flex-col gap-1">
             <label className={labelCls}>
@@ -199,46 +237,46 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
                   Нажмите кнопку ниже, чтобы добавить фильтр
                 </p>
               ) : (
-                Object.entries(filterFields).map(([fieldKey, fieldValue]) => (
-                  <div key={fieldKey} className="flex gap-2 items-end">
-                    {/* Field selector dropdown */}
-                    <select
-                      value={fieldKey}
-                      onChange={e => {
-                        const newKey = e.target.value;
-                        handleFilterChange(fieldKey, newKey, fieldValue);
-                      }}
-                      className="flex-1 h-7 px-2 text-xs rounded border border-app-border bg-white text-app-text-head outline-none focus:border-app-primary transition-colors cursor-pointer"
-                    >
-                      <option value="">— Выберите поле</option>
-                      {filterFieldOptions.map(opt => (
-                        <option key={opt.key} value={opt.key}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
+                Object.entries(filterFields).map(([fieldKey, fieldValue]) => {
+                  // Определяем отображаемое имя поля (для autocomplete)
+                  const fieldName = fieldIdToName[fieldKey] ?? '';
+                  // Доступные значения для выбранного поля
+                  const valueOptions = valueOptionsByFieldId[fieldKey] ?? [];
+                  // Поле является «настоящим» id, если нашли в словаре
+                  const isValidField = fieldKey in fieldIdToName;
 
-                    {/* Value text input */}
-                    {fieldKey && (
-                      <input
-                        type="text"
-                        value={fieldValue}
-                        onChange={e => handleFilterChange(fieldKey, fieldKey, e.target.value)}
-                        placeholder="Значение..."
-                        className="flex-1 h-7 px-2 text-xs rounded border border-app-border bg-white text-app-text-head placeholder:text-gray-300 outline-none focus:border-app-primary transition-colors"
+                  return (
+                    <div key={fieldKey} className="flex gap-2 items-center">
+                      {/* Field autocomplete */}
+                      <Autocomplete
+                        options={fieldNameOptions}
+                        value={fieldName}
+                        onChange={newName => handleFilterFieldNameChange(fieldKey, newName)}
+                        placeholder="Поле..."
+                        className="flex-1 min-w-0"
                       />
-                    )}
 
-                    {/* Remove button */}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFilter(fieldKey)}
-                      className="px-2 h-7 text-xs font-semibold text-app-error rounded border border-app-error/30 hover:bg-app-error/10 transition-colors flex-shrink-0"
-                    >
-                      −
-                    </button>
-                  </div>
-                ))
+                      {/* Value autocomplete */}
+                      <Autocomplete
+                        options={valueOptions}
+                        value={fieldValue}
+                        onChange={val => handleFilterValueChange(fieldKey, val)}
+                        placeholder={isValidField ? 'Значение...' : 'Сначала поле'}
+                        disabled={!isValidField}
+                        className="flex-1 min-w-0"
+                      />
+
+                      {/* Remove button */}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFilter(fieldKey)}
+                        className="flex-shrink-0 px-2 h-7 text-xs font-semibold text-app-error rounded border border-app-error/30 hover:bg-app-error/10 transition-colors"
+                      >
+                        −
+                      </button>
+                    </div>
+                  );
+                })
               )}
 
               <button
@@ -255,7 +293,7 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-app-border">
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-app-border flex-shrink-0">
           <button
             onClick={onClose}
             className="h-7 px-3 text-xs font-semibold rounded border border-app-border text-app-text-head hover:border-app-primary hover:text-app-primary transition-colors"

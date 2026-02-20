@@ -11,7 +11,7 @@ import {
 import { ru } from 'date-fns/locale';
 import { Plus, Minus, Pin, Pencil, Trash2, Globe, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
 import {
-  DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragMoveEvent,
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -45,6 +45,7 @@ interface ParameterModalState {
   isOpen: boolean;
   mode?: 'add' | 'edit';
   editingParameter?: TimelineParameter;
+  defaultParentId?: string;
 }
 
 const ZOOM_OPTIONS = ['2W', '3W', 'M', 'Q', '2Q', '3Q', 'Y'];
@@ -110,6 +111,8 @@ interface SortableParamRowProps {
   isParent: boolean;
   isCollapsed: boolean;
   isFrozen: boolean;
+  previewLevel?: number;
+  isDropTarget?: boolean;
   onToggleSelect: () => void;
   onToggleCollapse: () => void;
   onToggleFreeze: () => void;
@@ -118,10 +121,15 @@ interface SortableParamRowProps {
 
 const SortableParamRow: React.FC<SortableParamRowProps> = ({
   param, rowHeight, isSelected, isParent, isCollapsed, isFrozen,
+  previewLevel,
+  isDropTarget,
   onToggleSelect, onToggleCollapse, onToggleFreeze, onContextMenu,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: param.id });
+
+  const displayLevel = previewLevel ?? param.level;
+  const levelChanged = isDragging && previewLevel !== undefined && previewLevel !== param.level;
 
   return (
     <div
@@ -129,23 +137,25 @@ const SortableParamRow: React.FC<SortableParamRowProps> = ({
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
-        paddingLeft: `${4 + param.level * 16}px`,
+        paddingLeft: `${4 + displayLevel * 16}px`,
         height: `${rowHeight}px`,
         minHeight: `${rowHeight}px`,
-        opacity: isDragging ? 0.4 : 1,
+        opacity: isDragging ? 0.5 : 1,
         zIndex: isDragging ? 50 : undefined,
       }}
       className={`group flex items-center gap-1 shadow-[0_1px_0_0_var(--color-app-border)] select-none relative px-0 py-0 leading-none
-        ${isSelected ? 'bg-app-primary/10' : param.level === 0 ? 'bg-app-primary/5 hover:bg-app-primary/10' : 'hover:bg-app-bg/10'}
+        ${levelChanged ? 'ring-1 ring-inset ring-app-accent' : ''}
+        ${isDropTarget ? 'ring-2 ring-inset ring-app-primary bg-app-primary/15' : ''}
+        ${isSelected ? 'bg-app-primary/10' : displayLevel === 0 ? 'bg-app-primary/5 hover:bg-app-primary/10' : 'hover:bg-app-bg/10'}
       `}
       onContextMenu={onContextMenu}
     >
-      {/* Drag handle */}
+      {/* Drag handle — постоянно видимый */}
       <div
         {...attributes}
         {...listeners}
-        className="flex-shrink-0 w-3 h-full flex items-center justify-center cursor-grab active:cursor-grabbing text-app-text-muted hover:text-app-primary opacity-0 group-hover:opacity-100 transition-opacity"
-        title="Перетащить"
+        className="flex-shrink-0 w-3 h-full flex items-center justify-center cursor-grab active:cursor-grabbing text-app-text-muted hover:text-app-primary transition-colors"
+        title="Перетащить • горизонтально — изменить уровень вложенности"
       >
         <GripVertical size={10} />
       </div>
@@ -172,7 +182,7 @@ const SortableParamRow: React.FC<SortableParamRowProps> = ({
       )}
 
       {/* Name */}
-      <span className={`text-xs truncate flex-1 ${param.level === 0 ? 'font-bold text-app-text-head' : 'font-semibold text-app-text-main'}`}>
+      <span className={`text-xs flex-1 min-w-0 ${param.level === 0 ? 'font-bold text-app-text-head' : 'font-semibold text-app-text-main'}`}>
         {param.name}
       </span>
 
@@ -239,6 +249,8 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   });
   const [dragPreview, setDragPreview] = useState<Task | null>(null);
   const [selectedParamIds, setSelectedParamIds] = useState<Set<string>>(new Set());
+  const [dragActiveId, setDragActiveId] = useState<string | null>(null);
+  const [dragLevelDelta, setDragLevelDelta] = useState(0);
 
   const dayWidth = ZOOM_CONFIG[zoomIndex] || 56;
 
@@ -286,6 +298,19 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     () => visibleRows.filter(p => !frozenIds.has(p.id)),
     [visibleRows, frozenIds]
   );
+
+  // Динамическая ширина левой панели: базовые элементы строки + отступ по уровню + ширина текста
+  const sidebarWidth = useMemo(() => {
+    const FIXED_ELEMENTS = 12 + 4 + 12 + 4 + 16 + 4 + 20 + 8; // drag + gaps + checkbox + collapse + pin + rightPad
+    const CHAR_WIDTH = 7; // ~px на символ для text-xs
+    const MIN_WIDTH = 208; // w-52
+    let max = MIN_WIDTH;
+    for (const p of PARAMETERS) {
+      const rowWidth = (4 + p.level * 16) + FIXED_ELEMENTS + p.name.length * CHAR_WIDTH;
+      if (rowWidth > max) max = rowWidth;
+    }
+    return max;
+  }, [PARAMETERS]);
 
   // Проверка перекрытия двух задач
   const tasksOverlap = (task1: Task, task2: Task): boolean => {
@@ -570,15 +595,101 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   // ===== DnD для строк =====
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
+  const MAX_LEVEL = 5;
+
+  // Тип сценария drop
+  type DropScenario = 'reorder' | 'reparent' | 'lift';
+  const [dropScenario, setDropScenario] = useState<DropScenario | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+
+  // Отслеживаем Y-позицию курсора и кэшируем rect over-элемента
+  const pointerYRef = React.useRef(0);
+  const overRectRef = React.useRef<{ top: number; height: number } | null>(null);
+  const overIdRef = React.useRef<string | null>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { pointerYRef.current = e.clientY; };
+    document.addEventListener('mousemove', handler, { passive: true });
+    return () => document.removeEventListener('mousemove', handler);
+  }, []);
+
+  // Определяем сценарий на основе позиции курсора над over-элементом.
+  // Приоритет: reparent (основная зона строки) > lift (верхний край) > reorder
+  const updateDropScenario = useCallback((
+    overId: string,
+    overRect: { top: number; height: number },
+    activeId: string,
+  ) => {
+    const activeParam = PARAMETERS.find(p => p.id === activeId);
+    if (!activeParam) return;
+
+    const relY = (pointerYRef.current - overRect.top) / overRect.height;
+
+    // 1. Основная зона строки (нижние 80%) → reparent (высший приоритет)
+    if (relY >= 0.2 && overId !== activeId) {
+      const overParam = PARAMETERS.find(p => p.id === overId);
+      // Не reparent если over-элемент уже является родителем active
+      if (overParam && overParam.id !== activeParam.parentId) {
+        setDropScenario('reparent');
+        setDropTargetId(overId);
+        return;
+      }
+    }
+
+    // 2. Верхняя зона строки (верхние 20%) → lift, если применимо
+    if (relY < 0.2 && activeParam.parentId) {
+      const activeIdx = visibleRows.findIndex(p => p.id === activeId);
+      const overIdx = visibleRows.findIndex(p => p.id === overId);
+      const parentIdx = visibleRows.findIndex(p => p.id === activeParam.parentId);
+      if (parentIdx !== -1 && overIdx <= parentIdx && activeIdx > parentIdx) {
+        setDropScenario('lift');
+        setDropTargetId(null);
+        return;
+      }
+    }
+
+    // 3. Иначе → обычная перестановка
+    setDropScenario('reorder');
+    setDropTargetId(null);
+  }, [PARAMETERS, visibleRows]);
+
   const handleParamDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const activeParam = PARAMETERS.find(p => p.id === active.id);
-    const overParam = PARAMETERS.find(p => p.id === over.id);
-    if (!activeParam || !overParam) return;
-    if (activeParam.level !== overParam.level || activeParam.parentId !== overParam.parentId) return;
-    store.timelines.reorderParameters(selectedTimelineId, active.id as string, over.id as string);
-  }, [PARAMETERS, selectedTimelineId, store.timelines]);
+    const scenario = dropScenario;
+    const targetId = dropTargetId;
+
+    setDragActiveId(null);
+    setDragLevelDelta(0);
+    setDropScenario(null);
+    setDropTargetId(null);
+    overIdRef.current = null;
+    overRectRef.current = null;
+
+    if (!over) return;
+    const activeId = active.id as string;
+
+    if (scenario === 'lift') {
+      store.timelines.liftAboveParent(selectedTimelineId, activeId);
+    } else if (scenario === 'reparent' && targetId && targetId !== activeId) {
+      store.timelines.reparentUnder(selectedTimelineId, activeId, targetId);
+    } else if (scenario === 'reorder' && over.id !== active.id) {
+      store.timelines.reorderParameters(selectedTimelineId, activeId, over.id as string);
+    }
+  }, [dropScenario, dropTargetId, selectedTimelineId, store.timelines]);
+
+  const handleParamDragOver = useCallback((event: DragMoveEvent) => {
+    if (!event.over) { setDropScenario(null); setDropTargetId(null); return; }
+    const overId = event.over.id as string;
+    const rect = event.over.rect;
+    overIdRef.current = overId;
+    overRectRef.current = { top: rect.top, height: rect.height };
+    updateDropScenario(overId, overRectRef.current, event.active.id as string);
+  }, [updateDropScenario]);
+
+  const handleParamDragMove = useCallback((event: DragMoveEvent) => {
+    if (!overIdRef.current || !overRectRef.current) return;
+    updateDropScenario(overIdRef.current, overRectRef.current, event.active.id as string);
+  }, [updateDropScenario]);
 
   // ПКМ по пустой ячейке timeline — меню «Добавить задачу»
   const handleTimelineRowContextMenu = (e: React.MouseEvent, paramId: string) => {
@@ -821,38 +932,42 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
 
       {/* ШАПКА ДАТ + ПАРАМЕТРЫ (72px, flex-row, z-40) */}
       <div className="flex flex-row flex-shrink-0 border-b border-app-border bg-app-surface z-40">
-        <div className="w-52 min-w-[13rem] flex-shrink-0 border-r border-app-border h-[72px] flex flex-col justify-between pl-2 font-semibold text-app-text-main py-2">
+        <div className="flex-shrink-0 border-r border-app-border h-[72px] flex flex-col justify-between pl-2 font-semibold text-app-text-main py-2" style={{ width: sidebarWidth, minWidth: sidebarWidth }}>
           <span>Параметры</span>
           {/* Нижняя строка: кнопки уровней + стрелки навигации */}
           <div className="flex items-center justify-between pr-2">
-            {/* Кнопки уровней вложенности (как в Excel) */}
-            <div className="flex items-center gap-1">
-              {[0, 1].map((levelIdx) => {
-                const levelParents = PARAMETERS.filter(p => parentIds.has(p.id) && p.level === levelIdx).map(p => p.id);
-                const isCollapsed = levelParents.some(id => collapsedIds.has(id));
-                return (
-                  <button
-                    key={levelIdx}
-                    onClick={() => {
-                      setCollapsedIds(prev => {
-                        const next = new Set(prev);
-                        if (isCollapsed) {
-                          PARAMETERS.forEach(p => {
-                            if (parentIds.has(p.id) && p.level <= levelIdx) next.delete(p.id);
-                          });
-                        } else {
-                          levelParents.forEach(id => next.add(id));
-                        }
-                        return next;
-                      });
-                    }}
-                    className="w-4 h-4 flex items-center justify-center text-app-text-muted hover:text-app-primary transition-colors"
-                    title={`Уровень ${levelIdx + 1}`}
-                  >
-                    {isCollapsed ? <Plus size={10} /> : <Minus size={10} />}
-                  </button>
-                );
-              })}
+            {/* Кнопки уровней вложенности — динамически по max depth, выровнены с кнопками строк */}
+            {/* Отступ 28px = paddingLeft строки(4) + drag(12) + gap(4) + checkbox(12) + gap(4) - pl-2 хедера(8) */}
+            <div className="flex items-center gap-1" style={{ marginLeft: 28 }}>
+              {Array.from(
+                { length: Math.max(0, ...Array.from(parentIds).map(id => (PARAMETERS.find(p => p.id === id)?.level ?? 0))) + 1 },
+                (_, levelIdx) => {
+                  const levelParents = PARAMETERS.filter(p => parentIds.has(p.id) && p.level === levelIdx).map(p => p.id);
+                  const isCollapsed = levelParents.some(id => collapsedIds.has(id));
+                  return (
+                    <button
+                      key={levelIdx}
+                      onClick={() => {
+                        setCollapsedIds(prev => {
+                          const next = new Set(prev);
+                          if (isCollapsed) {
+                            PARAMETERS.forEach(p => {
+                              if (parentIds.has(p.id) && p.level <= levelIdx) next.delete(p.id);
+                            });
+                          } else {
+                            levelParents.forEach(id => next.add(id));
+                          }
+                          return next;
+                        });
+                      }}
+                      className="w-4 h-4 flex items-center justify-center text-app-text-muted hover:text-app-primary transition-colors"
+                      title={`${isCollapsed ? 'Развернуть' : 'Свернуть'} уровень ${levelIdx + 1}`}
+                    >
+                      {isCollapsed ? <Plus size={10} /> : <Minus size={10} />}
+                    </button>
+                  );
+                }
+              )}
             </div>
 
             {/* Стрелки навигации по уровням */}
@@ -1020,7 +1135,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
       {/* ЗАМОРОЖЕННЫЕ СТРОКИ (если есть) */}
       {frozenRows.length > 0 && (
         <div className="flex flex-row flex-shrink-0 border-b-2 border-app-primary/30 bg-app-surface">
-          <div className="w-52 min-w-[13rem] flex-shrink-0 border-r border-app-border bg-app-surface">
+          <div className="flex-shrink-0 border-r border-app-border bg-app-surface" style={{ width: sidebarWidth, minWidth: sidebarWidth }}>
             {frozenRows.map((param) => {
               const layers = getTaskLayers(param.id);
               const rowHeight = Math.max(24, layers.length * 24);
@@ -1061,7 +1176,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                     <span className="w-4 flex-shrink-0" />
                   )}
 
-                  <span className={`text-xs truncate flex-1 ${param.level === 0 ? 'font-bold text-app-text-head' : 'font-semibold text-app-text-main'}`}>
+                  <span className={`text-xs flex-1 min-w-0 ${param.level === 0 ? 'font-bold text-app-text-head' : 'font-semibold text-app-text-main'}`}>
                     {param.name}
                   </span>
 
@@ -1216,10 +1331,18 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         <div
           ref={sidebarRef}
           onScroll={syncFromSidebar}
-          className="w-52 min-w-[13rem] flex-shrink-0 bg-app-surface border-r border-app-border flex flex-col overflow-y-auto overflow-x-hidden hide-scrollbar select-none"
+          className="flex-shrink-0 bg-app-surface border-r border-app-border flex flex-col overflow-y-auto overflow-x-hidden hide-scrollbar select-none"
+          style={{ width: sidebarWidth, minWidth: sidebarWidth }}
         >
-          <div className="min-w-[13rem]">
-            <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleParamDragEnd}>
+          <div>
+            <DndContext
+              sensors={dndSensors}
+              collisionDetection={closestCenter}
+              onDragStart={(e) => { setDragActiveId(e.active.id as string); setDragLevelDelta(0); setDropScenario(null); setDropTargetId(null); }}
+              onDragMove={handleParamDragMove}
+              onDragOver={handleParamDragOver}
+              onDragEnd={handleParamDragEnd}
+            >
               <SortableContext items={scrollableRows.map(r => r.id)} strategy={verticalListSortingStrategy}>
                 {scrollableRows.map((param) => {
                   const layers = getTaskLayers(param.id);
@@ -1233,6 +1356,19 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                       isParent={parentIds.has(param.id)}
                       isCollapsed={collapsedIds.has(param.id)}
                       isFrozen={frozenIds.has(param.id)}
+                      previewLevel={(() => {
+                        if (dragActiveId !== param.id) return undefined;
+                        if (dropScenario === 'lift') {
+                          const parent = PARAMETERS.find(p => p.id === param.parentId);
+                          return parent ? parent.level : 0;
+                        }
+                        if (dropScenario === 'reparent' && dropTargetId) {
+                          const target = PARAMETERS.find(p => p.id === dropTargetId);
+                          return target ? Math.min(MAX_LEVEL, target.level + 1) : param.level;
+                        }
+                        return undefined;
+                      })()}
+                      isDropTarget={dropScenario === 'reparent' && dropTargetId === param.id}
                       onToggleSelect={() => toggleSelectParam(param.id)}
                       onToggleCollapse={() => toggleCollapse(param.id)}
                       onToggleFreeze={() => toggleFreeze(param.id)}
@@ -1433,6 +1569,16 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
             Редактировать параметр
           </button>
           <button
+            onClick={() => {
+              setParameterModal({ isOpen: true, mode: 'add', defaultParentId: contextMenu.paramId });
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-4 py-2 text-xs font-semibold text-app-text-main hover:bg-app-bg/50 transition-colors flex items-center gap-2"
+          >
+            <Plus size={12} />
+            Добавить строку
+          </button>
+          <button
             onClick={() => handleDeleteParameter(contextMenu.paramId)}
             className="w-full text-left px-4 py-2 text-xs font-semibold text-app-error hover:bg-app-error/10 transition-colors flex items-center gap-2"
           >
@@ -1521,6 +1667,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         isOpen={parameterModal.isOpen}
         mode={parameterModal.mode ?? 'add'}
         editingParameter={parameterModal.editingParameter}
+        defaultParentId={parameterModal.defaultParentId}
         existingParameters={PARAMETERS}
         availableTasks={store.appData.tasks}
         customFieldTypes={store.customFieldTypes.getAll()}

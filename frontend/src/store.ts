@@ -493,6 +493,167 @@ export const useAppStore = () => {
     []
   );
 
+  const reorderAndReparentParameter = useCallback(
+    (configId: string, activeId: string, overId: string, newLevel: number, newParentId: string | undefined): void => {
+      const config = globalAppData.timelineConfigs.find(c => c.id === configId);
+      if (!config) return;
+      const params = [...config.parameters];
+      const activeIdx = params.findIndex(p => p.id === activeId);
+      const overIdx = params.findIndex(p => p.id === overId);
+      if (activeIdx === -1 || overIdx === -1) return;
+
+      const activeParam = params[activeIdx];
+      const levelDelta = newLevel - activeParam.level;
+
+      // Собираем активный узел + всех потомков
+      const getDescendantIds = (pid: string): string[] => {
+        const result: string[] = [];
+        params.forEach(p => {
+          if (p.parentId === pid) {
+            result.push(p.id);
+            result.push(...getDescendantIds(p.id));
+          }
+        });
+        return result;
+      };
+      const movedIds = new Set([activeId, ...getDescendantIds(activeId)]);
+
+      const movedBlock = params.filter(p => movedIds.has(p.id));
+      const remaining = params.filter(p => !movedIds.has(p.id));
+
+      const updatedBlock = movedBlock.map(p => ({
+        ...p,
+        level: p.id === activeId ? newLevel : p.level + levelDelta,
+        parentId: p.id === activeId ? newParentId : p.parentId,
+      }));
+
+      const insertIdx = remaining.findIndex(p => p.id === overId);
+      const finalIdx = insertIdx === -1 ? remaining.length : insertIdx;
+
+      const result = [
+        ...remaining.slice(0, finalIdx),
+        ...updatedBlock,
+        ...remaining.slice(finalIdx),
+      ];
+
+      globalAppData = {
+        ...globalAppData,
+        timelineConfigs: globalAppData.timelineConfigs.map(cfg =>
+          cfg.id === configId ? { ...cfg, parameters: result } : cfg
+        ),
+      };
+      notifySubscribers();
+    },
+    []
+  );
+
+  // Вспомогательная: получить id всех потомков узла
+  const getDescendantIds = (params: TimelineParameter[], pid: string): string[] => {
+    const result: string[] = [];
+    params.forEach(p => {
+      if (p.parentId === pid) {
+        result.push(p.id);
+        result.push(...getDescendantIds(params, p.id));
+      }
+    });
+    return result;
+  };
+
+  // Сценарий 1: поднять узел выше его родителя (стать sibling родителя)
+  const liftAboveParentParameter = useCallback(
+    (configId: string, nodeId: string): void => {
+      const config = globalAppData.timelineConfigs.find(c => c.id === configId);
+      if (!config) return;
+      const params = [...config.parameters];
+
+      const node = params.find(p => p.id === nodeId);
+      if (!node || !node.parentId) return;
+      const parent = params.find(p => p.id === node.parentId);
+      if (!parent) return;
+
+      const levelDelta = parent.level - node.level; // всегда -1
+      const descendantIds = getDescendantIds(params, nodeId);
+      const movedIds = new Set([nodeId, ...descendantIds]);
+
+      const movedBlock = params.filter(p => movedIds.has(p.id)).map(p => ({
+        ...p,
+        level: p.level + levelDelta,
+        parentId: p.id === nodeId ? parent.parentId : p.parentId,
+      }));
+      const remaining = params.filter(p => !movedIds.has(p.id));
+
+      // Вставить перед родителем
+      const parentPosInRemaining = remaining.findIndex(p => p.id === parent.id);
+      const insertAt = parentPosInRemaining === -1 ? 0 : parentPosInRemaining;
+
+      const result = [
+        ...remaining.slice(0, insertAt),
+        ...movedBlock,
+        ...remaining.slice(insertAt),
+      ];
+
+      globalAppData = {
+        ...globalAppData,
+        timelineConfigs: globalAppData.timelineConfigs.map(cfg =>
+          cfg.id === configId ? { ...cfg, parameters: result } : cfg
+        ),
+      };
+      notifySubscribers();
+    },
+    []
+  );
+
+  // Сценарий 2: сделать узел дочерним другого узла
+  const reparentUnderParameter = useCallback(
+    (configId: string, nodeId: string, newParentId: string): void => {
+      const config = globalAppData.timelineConfigs.find(c => c.id === configId);
+      if (!config) return;
+      const params = [...config.parameters];
+
+      const node = params.find(p => p.id === nodeId);
+      const newParent = params.find(p => p.id === newParentId);
+      if (!node || !newParent) return;
+
+      const descendantIds = getDescendantIds(params, nodeId);
+      // Нельзя сделать родителем собственного потомка
+      if (descendantIds.includes(newParentId) || nodeId === newParentId) return;
+
+      const levelDelta = (newParent.level + 1) - node.level;
+      const movedIds = new Set([nodeId, ...descendantIds]);
+
+      const movedBlock = params.filter(p => movedIds.has(p.id)).map(p => ({
+        ...p,
+        level: Math.min(5, p.level + levelDelta),
+        parentId: p.id === nodeId ? newParentId : p.parentId,
+      }));
+      const remaining = params.filter(p => !movedIds.has(p.id));
+
+      // Вставить в конец детей newParent
+      const newParentPos = remaining.findIndex(p => p.id === newParentId);
+      let insertAt = newParentPos + 1;
+      while (insertAt < remaining.length) {
+        const cur = remaining[insertAt];
+        if (cur.level <= newParent.level) break;
+        insertAt++;
+      }
+
+      const result = [
+        ...remaining.slice(0, insertAt),
+        ...movedBlock,
+        ...remaining.slice(insertAt),
+      ];
+
+      globalAppData = {
+        ...globalAppData,
+        timelineConfigs: globalAppData.timelineConfigs.map(cfg =>
+          cfg.id === configId ? { ...cfg, parameters: result } : cfg
+        ),
+      };
+      notifySubscribers();
+    },
+    []
+  );
+
   return {
     appData,
     tasks: {
@@ -520,6 +681,9 @@ export const useAppStore = () => {
       deleteParameter: deleteParameterFromTimeline,
       updateParameter: updateParameterInTimeline,
       reorderParameters,
+      reorderAndReparent: reorderAndReparentParameter,
+      liftAboveParent: liftAboveParentParameter,
+      reparentUnder: reparentUnderParameter,
     },
     export: exportData,
     import: importData,

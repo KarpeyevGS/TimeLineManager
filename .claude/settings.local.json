@@ -8,13 +8,13 @@
       "Bash(curl:*)",
       "Bash(pkill:*)",
       "Bash(git add:*)",
-<<<<<<< HEAD
-      "Bash(git commit:*)"
-=======
       "Bash(git commit:*)",
       "Bash(npm run dev:*)",
-      "Bash(npm install:*)"
->>>>>>> d8e44a7 (Много чего)
+      "Bash(npm install:*)",
+      "Bash(dir:*)",
+      "Bash(cmd /c \"type \"\"C:\\\\Users\\\\Георгий\\\\Desktop\\\\prog\\\\TimeLine\\\\2_15-02-2026\\\\frontend\\\\src\\\\store.ts\"\"\")",
+      "Bash(cmd /c \"dir \"\"C:\\\\Users\\\\Георгий\\\\Desktop\\\\prog\\\\TimeLine\\\\2_15-02-2026\\\\frontend\\\\src\"\"\")",
+      "Bash(bash --version)"
     ]
   }
 }
