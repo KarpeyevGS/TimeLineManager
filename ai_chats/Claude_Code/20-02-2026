@@ -1,0 +1,332 @@
+Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the
+     earlier portion of the conversation.
+
+     Analysis:
+     Let me chronologically analyze the conversation to create a thorough summary.
+
+     1. **Dynamic sidebar width expansion** - User requested that the left parameter panel in TimelinePage dynamically
+     expand based on nesting depth so text isn't hidden.
+
+     2. **DnD drop-target priority fix** - User requested fixing drag-and-drop logic to prioritize "drop on parameter"
+     (reparent) over "lift above" scenario.
+
+     3. **Filter delete button placement** - User requested moving the "-" filter delete button inside the filter border
+      and removing scroll from the filter block.
+
+     4. **Filter autocomplete** - User requested replacing open text input for filter values with autocomplete that only
+      shows existing values.
+
+     5. **Bug fix** - `availableTasks is not defined` error in ParameterModal.
+
+     6. **DnD drop zones redesign** - Major rework of DnD logic with two distinct zones (reparent=bottom 85%, above=top
+     15%), custom sorting strategy, visual feedback.
+
+     7. **Performance fix** - User reported lag/slowdown after DnD changes.
+
+     8. **Threshold change** - User requested changing the upper zone threshold from 15% to 25%.
+
+     Key files:
+     - `frontend/src/pages/Timeline/TimelinePage.tsx` - Main component, heavily modified
+     - `frontend/src/pages/Timeline/ParameterModal.tsx` - Filter UI overhaul
+     - `frontend/src/components/ui/Autocomplete.tsx` - New component
+     - `frontend/src/store.ts` - Referenced for data structures
+
+     Let me trace all the specific code changes:
+
+     ### Task 1: Dynamic sidebar width
+     - Added `sidebarWidth` useMemo computing width from PARAMETERS (base 208px + level*16px + char*7px)
+     - Applied to 3 panels: header, frozen rows, main scrollable panel via `style={{ width: sidebarWidth, minWidth:
+     sidebarWidth }}`
+     - Removed `w-52 min-w-[13rem]` fixed classes
+     - Removed `truncate` from name spans → `flex-1 min-w-0`
+     - Removed `min-w-[13rem]` from inner div
+
+     ### Task 2: DnD priority fix
+     - Changed `updateDropScenario`: expanded reparent zone to 80% (relY >= 0.2), lift zone to top 20%
+     - Guard added: no reparent if target is already parent
+
+     ### Task 3: Filter button placement
+     - Modal: removed `overflow-y-auto` from outer container, added to body only; added `flex-shrink-0` to header/footer
+     - Filter row: `items-end` → `items-center`, input always rendered (disabled when no field), `min-w-0` on flex items
+
+     ### Task 4: Filter autocomplete
+     - Created `Autocomplete.tsx` component with options, value, onChange, placeholder, disabled props; dropdown
+     filtering
+     - ParameterModal: added `availableTasks` destructuring (was missing), added `fieldIdToName`, `fieldNameToId`,
+     `valueOptionsByFieldId` useMemos
+     - Changed `handleAddFilterField` to use `__new_${Date.now()}` placeholder keys
+     - Added `handleFilterFieldNameChange` and `handleFilterValueChange` handlers
+     - Replaced select+input with two Autocomplete components
+     - Filter saved with cleanup of `__new_` keys
+
+     ### Bug: `availableTasks is not defined`
+     - Error: prop was in interface but not destructured from props
+     - Fix: added `availableTasks = []` to destructuring
+
+     ### Task 5: DnD zones redesign
+     - New type: `DropScenario = 'reparent' | 'above'` (removed 'lift', 'reorder')
+     - Custom `dndSortingStrategy`: when 'reparent' → returns null (no row shifting); when 'above' → standard
+     verticalListSortingStrategy
+     - `dropScenarioRef` + `dropTargetIdRef` for sync access
+     - `setScenario(s, targetId)` helper with early exit
+     - `getDescendantIdsLocal` → moved to `activeDescendantsRef` computed once at drag start
+     - 15% threshold: top 15% = 'above', bottom 85% = 'reparent'
+     - `handleParamDragEnd`: 'reparent' → `reparentUnder`; 'above' → `reorderAndReparent(configId, activeId, targetId,
+     target.level, target.parentId)`
+     - SortableParamRow: new `dropZone?: 'reparent' | 'above'` prop; 'reparent' → ring+bg; 'above' → border-t-2
+
+     ### Task 6: Performance fix
+     - Removed console.log on every render (2 logs in TimelinePage)
+     - Unified two states into single `dropState` object
+     - Added early exit in `setScenario` via refs comparison
+     - Cached descendants in `activeDescendantsRef` computed once at `onDragStart`
+
+     ### Task 7: Threshold change
+     - Changed `relY < 0.15` to `relY < 0.25`
+
+     Summary:
+     1. Primary Request and Intent:
+        The user made a series of incremental improvements to a React-based Gantt/Timeline planner application
+     (`TimeLinePlanner`):
+        1. **Dynamic sidebar width**: Left parameter panel should auto-expand based on nesting depth and text length so
+     content isn't clipped.
+        2. **DnD priority fix**: Drag-and-drop should prioritize "reparent" (drop on row) over "lift above" scenario,
+     with correct zone thresholds.
+        3. **Filter button placement**: Move the "−" delete button inside the filter border; remove independent scroll
+     from filter block; modal header/footer should be sticky.
+        4. **Filter autocomplete**: Replace the free-text `<input>` for filter values with autocomplete dropdowns
+     showing only existing field names and values from tasks.
+        5. **Bug fix**: White screen due to `availableTasks is not defined`.
+        6. **DnD zones redesign**: Two distinct drop zones per row — "reparent" (bottom 85%, row highlights, no visual
+     shift of other rows) and "above" (top 15%, rows shift showing insert position). Custom dnd-kit sorting strategy.
+        7. **Performance fix**: Eliminate lag introduced by the DnD redesign.
+        8. **Threshold change**: Change upper zone threshold from 15% to 25%.
+
+     2. Key Technical Concepts:
+        - React 19 with TypeScript, Vite, Tailwind CSS v4
+        - `@dnd-kit/core` and `@dnd-kit/sortable` for drag-and-drop (`DndContext`, `SortableContext`, `useSortable`,
+     `verticalListSortingStrategy`)
+        - Custom dnd-kit sorting strategy (returns `null` to suppress transforms)
+        - `useRef` for synchronous drag state access without closure staleness
+        - Single combined state object to reduce re-renders during drag
+        - Early exit optimization: compare refs before calling `setState`
+        - O(n²) → O(1) optimization: cache descendant IDs once at drag start
+        - Tailwind dynamic `style={{ width }}` for computed sidebar width
+        - Autocomplete component with `onBlur`/`relatedTarget` for click-outside detection
+        - `useMemo` for derived data (sidebar width, field maps, value options)
+        - React hooks rules: all hooks before conditional return
+
+     3. Files and Code Sections:
+
+        - **`frontend/src/pages/Timeline/TimelinePage.tsx`** — Main component, most heavily modified.
+          - **Sidebar width**: Added `sidebarWidth` useMemo; removed fixed `w-52` from 3 panel divs:
+            ```tsx
+            const sidebarWidth = useMemo(() => {
+              const FIXED_ELEMENTS = 12 + 4 + 12 + 4 + 16 + 4 + 20 + 8;
+              const CHAR_WIDTH = 7;
+              const MIN_WIDTH = 208;
+              let max = MIN_WIDTH;
+              for (const p of PARAMETERS) {
+                const rowWidth = (4 + p.level * 16) + FIXED_ELEMENTS + p.name.length * CHAR_WIDTH;
+                if (rowWidth > max) max = rowWidth;
+              }
+              return max;
+            }, [PARAMETERS]);
+            ```
+          - **DnD state** unified into single object:
+            ```tsx
+            type DropScenario = 'reparent' | 'above';
+            const [dropState, setDropState] = useState<{ scenario: DropScenario | null; targetId: string | null }>({
+     scenario: null, targetId: null });
+            const dropScenario = dropState.scenario;
+            const dropTargetId = dropState.targetId;
+            const dropScenarioRef = React.useRef<DropScenario | null>(null);
+            const dropTargetIdRef = React.useRef<string | null>(null);
+            const activeDescendantsRef = React.useRef<Set<string>>(new Set());
+            ```
+          - **Custom sorting strategy**:
+            ```tsx
+            const dndSortingStrategy = useCallback(
+              (args: Parameters<typeof verticalListSortingStrategy>[0]) => {
+                if (dropScenarioRef.current === 'reparent') return null;
+                return verticalListSortingStrategy(args);
+              }, []
+            );
+            ```
+          - **`setScenario` with early exit**:
+            ```tsx
+            const setScenario = useCallback((s: DropScenario | null, targetId: string | null) => {
+              if (dropScenarioRef.current === s && dropTargetIdRef.current === targetId) return;
+              dropScenarioRef.current = s;
+              dropTargetIdRef.current = targetId;
+              setDropState({ scenario: s, targetId });
+            }, []);
+            ```
+          - **`updateDropScenario`** (25% threshold):
+            ```tsx
+            const relY = (pointerYRef.current - overRect.top) / overRect.height;
+            if (relY < 0.25) {
+              setScenario('above', overId);
+            } else {
+              if (activeDescendantsRef.current.has(overId)) { setScenario(null, null); return; }
+              if (overParam.id === activeParam.parentId) { setScenario('above', overId); return; }
+              if (overParam.level + 1 > MAX_LEVEL) { setScenario(null, null); return; }
+              setScenario('reparent', overId);
+            }
+            ```
+          - **`onDragStart`** caches descendants:
+            ```tsx
+            onDragStart={(e) => {
+              const activeId = e.active.id as string;
+              setDragActiveId(activeId); setDragLevelDelta(0); setScenario(null, null);
+              const descendants = new Set<string>();
+              const walk = (pid: string) => { PARAMETERS.forEach(p => { if (p.parentId === pid) { descendants.add(p.id);
+      walk(p.id); } }); };
+              walk(activeId);
+              activeDescendantsRef.current = descendants;
+            }}
+            ```
+          - **`handleParamDragEnd`**:
+            ```tsx
+            if (scenario === 'reparent') {
+              store.timelines.reparentUnder(selectedTimelineId, activeId, targetId);
+            } else if (scenario === 'above') {
+              const targetParam = PARAMETERS.find(p => p.id === targetId);
+              if (!targetParam) return;
+              store.timelines.reorderAndReparent(selectedTimelineId, activeId, targetId, targetParam.level,
+     targetParam.parentId);
+            }
+            ```
+          - **`SortableParamRow`** updated with `dropZone` prop:
+            ```tsx
+            interface SortableParamRowProps {
+              // ...
+              isDropTarget?: boolean;
+              dropZone?: 'reparent' | 'above';
+            }
+            // Visual:
+            className={`...
+              ${isDropTarget && dropZone === 'above' ? 'border-t-2 border-app-accent
+     shadow-[0_1px_0_0_var(--color-app-border)]' : 'shadow-[0_1px_0_0_var(--color-app-border)]'}
+              ${isDropTarget && dropZone === 'reparent' ? 'ring-2 ring-inset ring-app-primary bg-app-primary/15' : ''}
+            `}
+            ```
+          - Removed `console.log('📊 TimelinePage rendering')` and `console.log('🎯 Store initialized:', store)`.
+
+        - **`frontend/src/pages/Timeline/ParameterModal.tsx`** — Filter UI overhaul.
+          - Modal structure: `overflow-y-auto` moved from outer container to body only; `flex-shrink-0` added to
+     header/footer.
+          - `availableTasks = []` added to props destructuring (bug fix).
+          - New useMemos:
+            ```tsx
+            const fieldNameOptions = useMemo(() => customFieldTypes.map(t => t.name), [customFieldTypes]);
+            const fieldIdToName = useMemo(() => { const m: Record<string,string> = {}; customFieldTypes.forEach(t => {
+     m[t.id] = t.name; }); return m; }, [customFieldTypes]);
+            const fieldNameToId = useMemo(() => { const m: Record<string,string> = {}; customFieldTypes.forEach(t => {
+     m[t.name] = t.id; }); return m; }, [customFieldTypes]);
+            const valueOptionsByFieldId = useMemo(() => {
+              const map: Record<string, string[]> = {};
+              (availableTasks ?? []).forEach(task => {
+                Object.entries(task.customFields ?? {}).forEach(([fieldId, val]) => {
+                  if (!map[fieldId]) map[fieldId] = [];
+                  if (val && !map[fieldId].includes(val)) map[fieldId].push(val);
+                });
+              });
+              return map;
+            }, [availableTasks]);
+            ```
+          - `handleAddFilterField`: uses `__new_${Date.now()}` placeholder key.
+          - `handleFilterFieldNameChange`: converts display name → id, rebuilds filterFields object.
+          - Filter row renders two `<Autocomplete>` components instead of `<select>` + `<input>`.
+          - `handleSubmit` strips `__new_` keys and empty values before saving.
+
+        - **`frontend/src/components/ui/Autocomplete.tsx`** — New component created.
+          ```tsx
+          export const Autocomplete: React.FC<AutocompleteProps> = ({ options, value, onChange, placeholder, disabled,
+     className = '' }) => {
+            const [inputValue, setInputValue] = useState(value);
+            const [isOpen, setIsOpen] = useState(false);
+            const containerRef = useRef<HTMLDivElement>(null);
+            // syncs value on external change, filters options, handles select/blur/focus
+            // renders input + ul dropdown with max-h-40 overflow-y-auto
+          };
+          ```
+
+        - **`frontend/src/store.ts`** — Read only; confirmed existing functions:
+          - `reparentUnderParameter` → exposed as `store.timelines.reparentUnder`
+          - `reorderAndReparentParameter` → exposed as `store.timelines.reorderAndReparent`
+          - `liftAboveParentParameter` → exposed as `store.timelines.liftAboveParent` (no longer used in new DnD)
+          - `reorderParameters` → exposed as `store.timelines.reorderParameters` (no longer used in new DnD)
+
+     4. Errors and fixes:
+        - **`availableTasks is not defined`** (white screen): `availableTasks` was declared in `ParameterModalProps`
+     interface but not destructured from the component's props parameter. Fixed by adding `availableTasks = []` to the
+     destructuring in `ParameterModal`.
+        - **DnD lag/performance**: Four causes identified and fixed:
+          1. Two `console.log` calls on every render → removed
+          2. `getDescendantIdsLocal` O(n²) called on every mousemove → moved to `onDragStart` with
+     `activeDescendantsRef`
+          3. Two separate `setState` calls per drag event → unified into `setDropState({ scenario, targetId })`
+          4. Redundant state updates when values unchanged → early exit in `setScenario` via ref comparison
+
+     5. Problem Solving:
+        - **Sidebar width sync**: Three separate panel divs (header, frozen rows, main scrollable) all needed the same
+     computed width. Solved with a single `sidebarWidth` useMemo applied via `style` prop to all three.
+        - **DnD sorting suppression**: dnd-kit's `SortableContext` automatically shifts rows visually. For 'reparent'
+     zone this was undesirable. Solved with a custom strategy function that reads `dropScenarioRef` synchronously and
+     returns `null` to suppress transforms.
+        - **Filter key management**: Filters stored as `Record<string, string>` where keys are field IDs. User-facing
+     autocomplete shows names. When field name changes, old key must be deleted and new key (ID) inserted while
+     preserving order — solved by rebuilding the object entry-by-entry.
+
+     6. All user messages:
+        - "Задача: Реализовать динамическое расширение левой панели параметров при большой вложенности, чтобы текст не
+     скрывался." (with detailed DOM description)
+        - "Задача: Исправить логику определения drop-target при drag-and-drop. Приоритизировать попадание на параметр
+     перед смещением выше." (with detailed technical requirements)
+        - "Задача: Переместить кнопку удаления фильтра ("-") внутри рамки фильтра и убрать скролл для блока фильтров."
+     (with DOM position details)
+        - "Задача: Переделать фильтры параметров в ParameterModal с открытого ввода на автозаполнение с выбором только
+     из существующих значений."
+        - "Белый экран при переходе в Timeline ParameterModal.tsx:89 Uncaught ReferenceError: availableTasks is not
+     defined" (with full stack trace)
+        - "Задача: Переделать логику drop-зон при перетаскивании строк параметров. Реализовать чувствительные зоны drop
+     с разным поведением." (with full technical spec)
+        - "торможение появилось, с чем может быть связано?"
+        - "верхний предел, измени с 15 на 25%"
+        - "Your task is to create a detailed summary..." (current message)
+
+     7. Pending Tasks:
+        - None explicitly pending. All requested tasks have been completed.
+
+     8. Current Work:
+        The last substantive work was changing the upper drop zone threshold from 15% to 25% in `TimelinePage.tsx`,
+     inside the `updateDropScenario` function:
+        ```tsx
+        // Changed from:
+        if (relY < 0.15) {
+        // To:
+        if (relY < 0.25) {
+        ```
+        This affects the boundary between the 'above' zone (insert before target at same level) and the 'reparent' zone
+     (nest under target). Before this change, the performance optimization task was completed (removing console.logs,
+     caching descendants, unified state, early exit).
+
+     9. Optional Next Step:
+        No pending tasks remain. The user's last explicit request — "верхний предел, измени с 15 на 25%" — has been
+     completed. No further steps are needed unless the user provides a new request.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you
+     generated), read the full transcript at: C:\Users\Георгий\.claude\projects\C--Users---------Desktop-prog-TimeLine-2
+     -15-02-2026\4dd0b475-3644-4ef5-8e2f-8a4ff1064c2f.jsonl
+
+
+
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file frontend\src\pages\Timeline\TimelinePage.tsx
+  ⎿  Referenced file frontend\src\store.ts
+  ⎿  Read frontend\src\pages\Timeline\ParameterModal.tsx (314 lines)
+  ⎿  Read frontend\src\components\ui\Autocomplete.tsx (86 lines)
