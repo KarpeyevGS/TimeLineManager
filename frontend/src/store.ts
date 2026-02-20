@@ -654,6 +654,68 @@ export const useAppStore = () => {
     []
   );
 
+  // Вставить активный параметр сразу после целевого (на том же уровне)
+  const insertAfterParameter = useCallback(
+    (configId: string, activeId: string, overId: string, newLevel: number, newParentId: string | undefined): void => {
+      const config = globalAppData.timelineConfigs.find(c => c.id === configId);
+      if (!config) return;
+      const params = [...config.parameters];
+      const activeIdx = params.findIndex(p => p.id === activeId);
+      const overIdx = params.findIndex(p => p.id === overId);
+      if (activeIdx === -1 || overIdx === -1) return;
+
+      const activeParam = params[activeIdx];
+      const levelDelta = newLevel - activeParam.level;
+
+      const getDescendantIds = (pid: string): string[] => {
+        const result: string[] = [];
+        params.forEach(p => {
+          if (p.parentId === pid) {
+            result.push(p.id);
+            result.push(...getDescendantIds(p.id));
+          }
+        });
+        return result;
+      };
+      const movedIds = new Set([activeId, ...getDescendantIds(activeId)]);
+
+      const movedBlock = params.filter(p => movedIds.has(p.id));
+      const remaining = params.filter(p => !movedIds.has(p.id));
+
+      const updatedBlock = movedBlock.map(p => ({
+        ...p,
+        level: p.id === activeId ? newLevel : p.level + levelDelta,
+        parentId: p.id === activeId ? newParentId : p.parentId,
+      }));
+
+      // Вставляем ПОСЛЕ цели (+1), а не перед
+      const insertIdx = remaining.findIndex(p => p.id === overId);
+      const finalIdx = insertIdx === -1 ? remaining.length : insertIdx + 1;
+
+      const result = [
+        ...remaining.slice(0, finalIdx),
+        ...updatedBlock,
+        ...remaining.slice(finalIdx),
+      ];
+
+      globalAppData = {
+        ...globalAppData,
+        timelineConfigs: globalAppData.timelineConfigs.map(cfg =>
+          cfg.id === configId ? { ...cfg, parameters: result } : cfg
+        ),
+      };
+      notifySubscribers();
+    },
+    []
+  );
+
+  // ===== Сброс данных =====
+  const clearAppData = useCallback((): void => {
+    localStorage.removeItem(STORAGE_KEY);
+    globalAppData = createInitialAppData();
+    notifySubscribers();
+  }, []);
+
   return {
     appData,
     tasks: {
@@ -682,11 +744,13 @@ export const useAppStore = () => {
       updateParameter: updateParameterInTimeline,
       reorderParameters,
       reorderAndReparent: reorderAndReparentParameter,
+      insertAfter: insertAfterParameter,
       liftAboveParent: liftAboveParentParameter,
       reparentUnder: reparentUnderParameter,
     },
     export: exportData,
     import: importData,
+    reset: clearAppData,
   };
 };
 

@@ -1,20 +1,24 @@
+# Экспорт в ГИТ
 # 1. Собрать все изменения в проектe
+git remote add origin https://github.com/KarpeyevGS/TimeLineManager.git
+
 git add .
 
 # 2. Создать локальное "сохранение" с описанием
 git commit -m "Краткое описание того, что сделал"
 
-# 3. Отправить всё в облако (на GitHub)
-   git push
+git push -u origin dev
+
+# Импортировать из ГИТ
+git fetch origin
+git reset --hard origin/dev
+
+
 # 4. Проверка
 git status
 
 # frontend run 
-<<<<<<< HEAD
-cd TimeLinePlanner\frontend
-=======
 cd frontend
->>>>>>> d8e44a7 (Много чего)
 
 npm run dev
 

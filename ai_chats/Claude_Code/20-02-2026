@@ -330,3 +330,302 @@ Compact summary
   ⎿  Referenced file frontend\src\store.ts
   ⎿  Read frontend\src\pages\Timeline\ParameterModal.tsx (314 lines)
   ⎿  Read frontend\src\components\ui\Autocomplete.tsx (86 lines)
+
+ Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+     Analysis:
+     Let me chronologically analyze the conversation:
+
+     1. **Context restoration** - The conversation resumed from a previous session. The summary indicated that a large task (remove checkboxes + implement
+     row/column selection) was in progress, with `toggleSelectParam` still needing replacement at lines 592, 1243, 1489.
+
+     2. **Completing checkbox removal + row/column selection task**:
+        - Replaced `toggleSelectParam` with `handleRowClick(id, ctrlKey)` and `handleColumnClick(dateStr, ctrlKey)`
+        - Removed checkbox from frozen rows, added onClick handler
+        - Updated SortableParamRow call from `onToggleSelect` to `onRowClick`
+        - Added column click to day header cells
+        - Added column highlight overlay in both main and frozen timeline grids
+        - Used `bg-app-accent/[0.12]` for column highlight, `bg-app-accent/20` for header
+
+     3. **Thin row click difficulty fix** - User said "теперь сложно попасть в одинарную строку 'тонкую'" (hard to click thin rows). Removed `onClick={(e)
+     => e.stopPropagation()}` from the drag handle in SortableParamRow so clicks on the drag handle also propagate to the row selection handler.
+
+     4. **Custom tooltip for task bars** - Large feature request:
+        - Remove native `title={task.name}` from both frozen and scrollable task bar divs
+        - Implement custom tooltip via `ReactDOM.createPortal` to `document.body`
+        - `TooltipState` interface with `task, x, y, placement: 'above' | 'below' | 'inside'`
+        - 150ms debounce via `tooltipTimerRef`
+        - Zone logic: left 30% splits into above/below based on relY; right 70% = 'inside'
+        - Position: 'above' uses `bottom` CSS, 'below'/'inside' uses `top` CSS
+        - `pointer-events: none` on tooltip element
+        - Shows task name + dates formatted as dd.MM.yyyy
+
+     5. **Tooltip zone clarification** - User corrected twice:
+        - First: "Правые 70%: всегда 'В'" → changed default to `'below'`
+        - Then: "наведение 'внутрь'!!!" → renamed placement to `'inside'`, added it as third type to the union
+
+     6. **DnD vertical axis restriction** - User requested adding `restrictToVerticalAxis` modifier to prevent horizontal shift of left panel during drag
+        - First attempt: imported from `@dnd-kit/modifiers` → Vite error: package not installed
+        - Fix: ran `npm install @dnd-kit/modifiers`, TypeScript confirmed clean
+
+     Let me now compile all details accurately.
+
+     Summary:
+     1. Primary Request and Intent:
+        The conversation continued from a previous session and involved multiple sequential tasks:
+
+        A. **Complete checkbox removal + row/column selection** (was in-progress from prior session): Replace `toggleSelectParam` with
+     `handleRowClick`/`handleColumnClick`, remove checkboxes from frozen rows, add onClick to rows, add column date selection via day header click, add
+     column highlight overlays in both timeline grid sections.
+
+        B. **Fix thin row click difficulty**: User reported "теперь сложно попасть в одинарную строку 'тонкую'" — resolved by removing `e.stopPropagation()`
+      from the drag handle so clicks propagate to the row.
+
+        C. **Custom tooltip for task bars**: Remove native `title={task.name}`, implement stable portal-based tooltip with: 150ms debounce, fixed position
+     from `getBoundingClientRect()`, zone-based placement (left 30% = above/below by relY; right 70% = 'inside' = below bar), `ReactDOM.createPortal` to
+     `document.body`, `pointer-events: none`.
+
+        D. **DnD vertical-only constraint**: Add `restrictToVerticalAxis` modifier from `@dnd-kit/modifiers` to `<DndContext>` to prevent horizontal shift
+     of left panel during row drag.
+
+     2. Key Technical Concepts:
+        - React 19 + TypeScript + Tailwind CSS v4
+        - `ReactDOM.createPortal` for rendering tooltip outside overflow:hidden containers
+        - `getBoundingClientRect()` for stable tooltip positioning (computed once on mouseEnter, not on mousemove)
+        - 150ms debounce via `useRef<ReturnType<typeof setTimeout>>` for tooltip show delay
+        - `pointer-events: none` on tooltip to prevent interfering with bar mouse events
+        - `position: fixed` with `bottom` (for 'above' placement) vs `top` (for 'below'/'inside' placement)
+        - `@dnd-kit/modifiers` — `restrictToVerticalAxis` modifier that constrains CSS transform to Y-axis only (does NOT affect `event.delta.x`, so
+     level-change logic stays intact)
+        - Row selection: single click = select only (deselect if already sole selection), Ctrl+click = multi-select
+        - Column selection (date): same logic, stored as `Set<string>` of ISO date strings (`'yyyy-MM-dd'`)
+        - Column highlight: `bg-app-accent/[0.12]` in grid, `bg-app-accent/20 text-app-accent` in day header
+        - Drop zone thresholds: above 0–20%, reparent 20–80%, below 80–100%
+
+     3. Files and Code Sections:
+
+        - **`frontend/src/pages/Timeline/TimelinePage.tsx`** — Main file, all changes applied here.
+
+          **New imports added:**
+          ```typescript
+          import ReactDOM from 'react-dom';
+          import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+          ```
+
+          **New interface:**
+          ```typescript
+          interface TooltipState {
+            task: Task;
+            x: number;        // left: horizontal center
+            y: number;        // bottom (above) или top (below/inside) в px от края viewport
+            placement: 'above' | 'below' | 'inside';
+          }
+          ```
+
+          **New state + ref (near line 268):**
+          ```typescript
+          const [hoveredTask, setHoveredTask] = useState<TooltipState | null>(null);
+          const tooltipTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+          ```
+
+          **`toggleSelectParam` replaced with `handleRowClick` + `handleColumnClick` (near line 592):**
+          ```typescript
+          const handleRowClick = useCallback((id: string, ctrlKey: boolean) => {
+            setSelectedParamIds(prev => {
+              if (ctrlKey) {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id); else next.add(id);
+                return next;
+              }
+              return prev.has(id) && prev.size === 1 ? new Set<string>() : new Set([id]);
+            });
+            setSelectedColumnDates(new Set());
+          }, []);
+
+          const handleColumnClick = useCallback((dateStr: string, ctrlKey: boolean) => {
+            setSelectedColumnDates(prev => {
+              if (ctrlKey) {
+                const next = new Set(prev);
+                if (next.has(dateStr)) next.delete(dateStr); else next.add(dateStr);
+                return next;
+              }
+              return prev.has(dateStr) && prev.size === 1 ? new Set<string>() : new Set([dateStr]);
+            });
+            setSelectedParamIds(new Set());
+          }, []);
+          ```
+
+          **Tooltip handlers (after `handleEditingCancel`):**
+          ```typescript
+          const handleTaskBarMouseEnter = useCallback((e: React.MouseEvent<HTMLDivElement>, task: Task) => {
+            const barRect = e.currentTarget.getBoundingClientRect();
+            const relX = (e.clientX - barRect.left) / barRect.width;
+            const relY = (e.clientY - barRect.top) / barRect.height;
+
+            let placement: 'above' | 'below' | 'inside' = 'inside';
+            if (relX < 0.3) {
+              // Левые 30%: вертикальная зона определяет направление
+              placement = relY < 0.5 ? 'above' : 'below';
+            }
+            // Правые 70%: наведение внутрь тела задачи (placement остаётся 'inside')
+
+            const x = barRect.left + barRect.width / 2;
+            const y = placement === 'above'
+              ? window.innerHeight - barRect.top + 4   // bottom distance
+              : barRect.bottom + 4;                    // top distance (below / inside)
+
+            if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current);
+            tooltipTimerRef.current = setTimeout(() => {
+              setHoveredTask({ task, x, y, placement });
+            }, 150);
+          }, []);
+
+          const handleTaskBarMouseLeave = useCallback(() => {
+            if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current);
+            setHoveredTask(null);
+          }, []);
+          ```
+
+          **Frozen rows**: checkbox removed, `onClick` added, highlight updated to `/15`:
+          ```tsx
+          className={`group flex items-center gap-1 ... ${selectedParamIds.has(param.id) ? 'bg-app-primary/15' : 'hover:bg-app-bg/10'}`}
+          onClick={(e) => { e.stopPropagation(); handleRowClick(param.id, e.ctrlKey); }}
+          ```
+
+          **SortableParamRow call** — `onToggleSelect` → `onRowClick`:
+          ```tsx
+          onRowClick={(ctrlKey) => handleRowClick(param.id, ctrlKey)}
+          ```
+
+          **Day header cells** — column click + highlight:
+          ```tsx
+          const dateStr = format(day, 'yyyy-MM-dd');
+          const isColSelected = selectedColumnDates.has(dateStr);
+          onClick={(e) => handleColumnClick(dateStr, e.ctrlKey)}
+          className={`... cursor-pointer select-none ${
+            isColSelected ? 'bg-app-accent/20 text-app-accent font-black' :
+            isTdy ? 'bg-pink-500/10 text-pink-600 font-black' :
+            isWknd ? 'bg-app-primary/10 text-app-primary font-bold' : 'hover:bg-app-primary/5'
+          }`}
+          ```
+
+          **Grid highlight layer** (both scrollable and frozen sections):
+          ```typescript
+          const isColSelected = selectedColumnDates.has(dateStr);
+          let bgColor = 'bg-transparent';
+          if (isColSelected) bgColor = 'bg-app-accent/[0.12]';
+          else if (isTdy) bgColor = 'bg-pink-500/[0.08]';
+          else if (isWknd) bgColor = 'bg-app-primary/[0.08]';
+          ```
+
+          **Both task bar divs** — `title` removed, mouse handlers added:
+          ```tsx
+          onMouseEnter={(e) => handleTaskBarMouseEnter(e, task)}
+          onMouseLeave={handleTaskBarMouseLeave}
+          // title={task.name}  ← removed
+          ```
+
+          **Portal tooltip JSX** (before closing `</div>`):
+          ```tsx
+          {hoveredTask && ReactDOM.createPortal(
+            <div
+              style={{
+                position: 'fixed',
+                left: hoveredTask.x,
+                transform: 'translateX(-50%)',
+                pointerEvents: 'none',
+                zIndex: 9999,
+                ...(hoveredTask.placement === 'above'
+                  ? { bottom: hoveredTask.y }
+                  : { top: hoveredTask.y }   // 'below' | 'inside'
+                ),
+              }}
+              className="bg-app-text-head text-white rounded-lg px-3 py-2 shadow-xl max-w-[260px] min-w-[120px]"
+            >
+              <div className="text-[11px] font-bold leading-tight truncate">{hoveredTask.task.name}</div>
+              <div className="text-[10px] text-white/65 mt-1 leading-tight">
+                {format(hoveredTask.task.startDate, 'dd.MM.yyyy')}
+                {' → '}
+                {format(hoveredTask.task.endDate, 'dd.MM.yyyy')}
+              </div>
+            </div>,
+            document.body
+          )}
+          ```
+
+          **DndContext** — `restrictToVerticalAxis` added:
+          ```tsx
+          <DndContext
+            sensors={dndSensors}
+            modifiers={[restrictToVerticalAxis]}
+            collisionDetection={closestCenter}
+          ```
+
+          **SortableParamRow drag handle** — `e.stopPropagation()` removed to allow thin row clicks:
+          ```tsx
+          <div
+            {...attributes}
+            {...listeners}
+            className="flex-shrink-0 w-3 h-full flex items-center justify-center cursor-grab ..."
+          >
+          ```
+
+     4. Errors and Fixes:
+        - **`@dnd-kit/modifiers` not installed**: Vite threw `Failed to resolve import "@dnd-kit/modifiers"`. Fixed by running `npm install
+     @dnd-kit/modifiers` in the frontend directory. TypeScript confirmed clean after install.
+        - **Tooltip placement for right 70% zone**: Initially set to `'above'` per original spec, user corrected to `'В'` (below), then corrected again to
+     `'inside'` (semantic name for "hovering inside the task body"). Updated `TooltipState.placement` union type to `'above' | 'below' | 'inside'`, updated
+     default in handler from `'above'` → `'inside'`, comment updated to "наведение внутрь тела задачи".
+
+     5. Problem Solving:
+        - **Checkbox removal + row/column selection**: Completed cleanly — all references to `toggleSelectParam` and `onToggleSelect` eliminated, replaced
+     with `handleRowClick`/`handleColumnClick` with Ctrl+click multi-select support and mutual exclusion (selecting a row clears column selection and vice
+     versa).
+        - **Thin row click difficulty**: Solved by removing `onClick={(e) => e.stopPropagation()}` from the drag handle. DnD activation still requires >5px
+     movement so clicks don't accidentally start drags.
+        - **Stable tooltip positioning**: Used `getBoundingClientRect()` on `mouseEnter` (not following cursor) and `ReactDOM.createPortal` to escape
+     `overflow: hidden` parent containers.
+        - **Horizontal DnD drift**: Solved with `restrictToVerticalAxis` modifier. The modifier only constrains the visual CSS transform — `event.delta.x`
+     used for level-change detection in `handleParamDragMove` is unaffected.
+
+     6. All User Messages:
+        - *(Session resumption — no explicit message, auto-continuation from summary)*
+        - "теперь сложно попасть в одинарную строку 'тонкую'"
+        - *(Large tooltip task specification — detailed requirements about zones, portal, debounce, placement logic)*
+        - "Правые 70%: всегда над баром - нет! Всегда 'В'."
+        - "// Правые 70%: всегда под баром (placement остаётся 'inside') - наведение 'внутрь'!!!"
+        - *(DnD vertical axis restriction task — detailed specification about restrictToVerticalAxis modifier)*
+        - "[plugin:vite:import-analysis] Failed to resolve import '@dnd-kit/modifiers'..." (error paste)
+        - *(Summary request)*
+
+     7. Pending Tasks:
+        - None explicitly pending. All requested tasks were completed.
+
+     8. Current Work:
+        The last completed task was adding the `restrictToVerticalAxis` modifier to `DndContext` in `TimelinePage.tsx` to prevent horizontal drift of the
+     left parameter panel during row drag-and-drop. The fix required installing the missing `@dnd-kit/modifiers` package and adding two code changes:
+        ```typescript
+        import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+        ```
+        ```tsx
+        <DndContext
+          sensors={dndSensors}
+          modifiers={[restrictToVerticalAxis]}
+          collisionDetection={closestCenter}
+        ```
+
+     9. Optional Next Step:
+        No pending tasks remain. The last user message was an error report about the missing package which was resolved. All explicitly requested features
+     have been implemented and TypeScript confirmed clean (`npx tsc --noEmit` returned no output/errors). Await new user instructions.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at:
+     C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--TimeLineManager-4-18-02-2026\015a6fc2-805c-4683-a4b6-66088636d505.jsonl
+
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file src\pages\Timeline\TimelinePage.tsx
+  ⎿  Read src\pages\Timeline\ParameterModal.tsx (314 lines)
+  ⎿  Read src\components\ui\Autocomplete.tsx (86 lines)
+  ⎿  Read src\components\layout\Sidebar.tsx (253 lines)

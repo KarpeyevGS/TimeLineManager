@@ -9,6 +9,7 @@ import {
   CalendarRange,
   Download,
   Upload,
+  RefreshCw,
   LucideIcon
 } from 'lucide-react';
 import { useAppStore } from '../../store';
@@ -55,6 +56,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  // Функция создания нового проекта
+  const handleNewProject = () => {
+    const wantSave = window.confirm('Сохранить текущий проект?');
+    if (wantSave) {
+      const confirmed = window.confirm('Вы точно уверены?');
+      if (!confirmed) return;
+      handleExport();
+      store.reset();
+      window.location.reload();
+    } else {
+      store.reset();
+      window.location.reload();
+    }
   };
 
   // Функция импорта данных
@@ -197,6 +213,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {isCollapsed && (
             <div className="absolute left-full ml-4 px-2 py-1 bg-app-text-head text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
               Экспорт
+            </div>
+          )}
+        </button>
+
+        {/* Кнопка Новый проект */}
+        <button
+          onClick={handleNewProject}
+          className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'p-3'} rounded-xl transition-all group relative text-app-text-main hover:bg-app-bg`}
+          title={isCollapsed ? 'Новый проект' : ''}
+        >
+          <RefreshCw
+            size={20}
+            className="min-w-[20px] transition-colors group-hover:text-app-primary"
+          />
+          {!isCollapsed && (
+            <span className="ml-3 font-semibold text-sm">Новый</span>
+          )}
+
+          {/* Кастомный Tooltip в свернутом виде */}
+          {isCollapsed && (
+            <div className="absolute left-full ml-4 px-2 py-1 bg-app-text-head text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+              Новый проект
             </div>
           )}
         </button>

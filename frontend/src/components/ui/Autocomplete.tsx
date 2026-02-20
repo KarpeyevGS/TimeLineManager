@@ -66,8 +66,8 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
         className="w-full h-7 px-2 text-xs rounded border border-app-border bg-white text-app-text-head placeholder:text-gray-300 outline-none focus:border-app-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       />
       {isOpen && filtered.length > 0 && (
-        <ul className="absolute z-[500] top-full mt-0.5 left-0 right-0 bg-white border border-app-border rounded shadow-md max-h-40 overflow-y-auto">
-          {filtered.map(opt => (
+        <ul className="absolute z-[500] top-full mt-0.5 left-0 right-0 bg-white border border-app-border rounded shadow-md max-h-[140px] overflow-y-auto">
+          {filtered.slice(0, 5).map(opt => (
             <li
               key={opt}
               onMouseDown={() => handleSelect(opt)}
