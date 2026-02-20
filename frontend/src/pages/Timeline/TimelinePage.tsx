@@ -113,6 +113,7 @@ interface SortableParamRowProps {
   isFrozen: boolean;
   previewLevel?: number;
   isDropTarget?: boolean;
+  dropZone?: 'reparent' | 'above';
   onToggleSelect: () => void;
   onToggleCollapse: () => void;
   onToggleFreeze: () => void;
@@ -123,6 +124,7 @@ const SortableParamRow: React.FC<SortableParamRowProps> = ({
   param, rowHeight, isSelected, isParent, isCollapsed, isFrozen,
   previewLevel,
   isDropTarget,
+  dropZone,
   onToggleSelect, onToggleCollapse, onToggleFreeze, onContextMenu,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -143,9 +145,12 @@ const SortableParamRow: React.FC<SortableParamRowProps> = ({
         opacity: isDragging ? 0.5 : 1,
         zIndex: isDragging ? 50 : undefined,
       }}
-      className={`group flex items-center gap-1 shadow-[0_1px_0_0_var(--color-app-border)] select-none relative px-0 py-0 leading-none
+      className={`group flex items-center gap-1 select-none relative px-0 py-0 leading-none
+        ${isDropTarget && dropZone === 'above'
+          ? 'border-t-2 border-app-accent shadow-[0_1px_0_0_var(--color-app-border)]'
+          : 'shadow-[0_1px_0_0_var(--color-app-border)]'}
         ${levelChanged ? 'ring-1 ring-inset ring-app-accent' : ''}
-        ${isDropTarget ? 'ring-2 ring-inset ring-app-primary bg-app-primary/15' : ''}
+        ${isDropTarget && dropZone === 'reparent' ? 'ring-2 ring-inset ring-app-primary bg-app-primary/15' : ''}
         ${isSelected ? 'bg-app-primary/10' : displayLevel === 0 ? 'bg-app-primary/5 hover:bg-app-primary/10' : 'hover:bg-app-bg/10'}
       `}
       onContextMenu={onContextMenu}
@@ -206,10 +211,8 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   timelineParameterModalOpen = false,
   onTimelineParameterModalChange
 }) => {
-  console.log('📊 TimelinePage rendering');
   // Store
   const store = useAppStore();
-  console.log('🎯 Store initialized:', store);
   const { viewState, updateViewState } = useTimelineViewState();
 
   // Рефы
@@ -597,15 +600,29 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
 
   const MAX_LEVEL = 5;
 
-  // Тип сценария drop
-  type DropScenario = 'reorder' | 'reparent' | 'lift';
-  const [dropScenario, setDropScenario] = useState<DropScenario | null>(null);
-  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  // 'reparent' — сделать дочерней целевой строки (зона: нижние 85%)
+  // 'above'    — вставить перед целевой строкой на её уровне (зона: верхние 15%)
+  type DropScenario = 'reparent' | 'above';
+
+  // Единый объект состояния — один setState вместо двух → вдвое меньше рендеров
+  const [dropState, setDropState] = useState<{ scenario: DropScenario | null; targetId: string | null }>(
+    { scenario: null, targetId: null }
+  );
+  const dropScenario = dropState.scenario;
+  const dropTargetId = dropState.targetId;
+
+  // Ref для кастомной стратегии сортировки (синхронный доступ без closure)
+  const dropScenarioRef = React.useRef<DropScenario | null>(null);
+  // Ref текущего targetId — для early exit без closure
+  const dropTargetIdRef = React.useRef<string | null>(null);
 
   // Отслеживаем Y-позицию курсора и кэшируем rect over-элемента
   const pointerYRef = React.useRef(0);
   const overRectRef = React.useRef<{ top: number; height: number } | null>(null);
   const overIdRef = React.useRef<string | null>(null);
+
+  // Кэш потомков активного узла — вычисляем один раз при начале перетаскивания
+  const activeDescendantsRef = React.useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const handler = (e: MouseEvent) => { pointerYRef.current = e.clientY; };
@@ -613,45 +630,49 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     return () => document.removeEventListener('mousemove', handler);
   }, []);
 
-  // Определяем сценарий на основе позиции курсора над over-элементом.
-  // Приоритет: reparent (основная зона строки) > lift (верхний край) > reorder
+  // Кастомная стратегия: при 'reparent' — не смещать строки, при 'above' — стандартная сортировка
+  const dndSortingStrategy = useCallback(
+    (args: Parameters<typeof verticalListSortingStrategy>[0]) => {
+      if (dropScenarioRef.current === 'reparent') return null;
+      return verticalListSortingStrategy(args);
+    },
+    []
+  );
+
+  const setScenario = useCallback((s: DropScenario | null, targetId: string | null) => {
+    // Early exit: не обновлять состояние если ничего не изменилось
+    if (dropScenarioRef.current === s && dropTargetIdRef.current === targetId) return;
+    dropScenarioRef.current = s;
+    dropTargetIdRef.current = targetId;
+    setDropState({ scenario: s, targetId });
+  }, []);
+
   const updateDropScenario = useCallback((
     overId: string,
     overRect: { top: number; height: number },
     activeId: string,
   ) => {
+    if (overId === activeId) { setScenario(null, null); return; }
+
     const activeParam = PARAMETERS.find(p => p.id === activeId);
-    if (!activeParam) return;
+    const overParam  = PARAMETERS.find(p => p.id === overId);
+    if (!activeParam || !overParam) { setScenario(null, null); return; }
 
     const relY = (pointerYRef.current - overRect.top) / overRect.height;
 
-    // 1. Основная зона строки (нижние 80%) → reparent (высший приоритет)
-    if (relY >= 0.2 && overId !== activeId) {
-      const overParam = PARAMETERS.find(p => p.id === overId);
-      // Не reparent если over-элемент уже является родителем active
-      if (overParam && overParam.id !== activeParam.parentId) {
-        setDropScenario('reparent');
-        setDropTargetId(overId);
-        return;
-      }
+    if (relY < 0.25) {
+      // Зона 2: верхние 15% — вставить перед целевой строкой на её уровне
+      setScenario('above', overId);
+    } else {
+      // Зона 1: нижние 85% — сделать дочерней целевой строки
+      // Нельзя: reparent под собственного потомка или под текущего родителя
+      if (activeDescendantsRef.current.has(overId)) { setScenario(null, null); return; }
+      if (overParam.id === activeParam.parentId) { setScenario('above', overId); return; }
+      // Нельзя: превышение MAX_LEVEL
+      if (overParam.level + 1 > MAX_LEVEL) { setScenario(null, null); return; }
+      setScenario('reparent', overId);
     }
-
-    // 2. Верхняя зона строки (верхние 20%) → lift, если применимо
-    if (relY < 0.2 && activeParam.parentId) {
-      const activeIdx = visibleRows.findIndex(p => p.id === activeId);
-      const overIdx = visibleRows.findIndex(p => p.id === overId);
-      const parentIdx = visibleRows.findIndex(p => p.id === activeParam.parentId);
-      if (parentIdx !== -1 && overIdx <= parentIdx && activeIdx > parentIdx) {
-        setDropScenario('lift');
-        setDropTargetId(null);
-        return;
-      }
-    }
-
-    // 3. Иначе → обычная перестановка
-    setDropScenario('reorder');
-    setDropTargetId(null);
-  }, [PARAMETERS, visibleRows]);
+  }, [PARAMETERS, setScenario]);
 
   const handleParamDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
@@ -660,31 +681,35 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
 
     setDragActiveId(null);
     setDragLevelDelta(0);
-    setDropScenario(null);
-    setDropTargetId(null);
+    setScenario(null, null);
     overIdRef.current = null;
     overRectRef.current = null;
+    activeDescendantsRef.current = new Set();
 
-    if (!over) return;
+    if (!over || !targetId) return;
     const activeId = active.id as string;
+    if (activeId === targetId) return;
 
-    if (scenario === 'lift') {
-      store.timelines.liftAboveParent(selectedTimelineId, activeId);
-    } else if (scenario === 'reparent' && targetId && targetId !== activeId) {
+    if (scenario === 'reparent') {
       store.timelines.reparentUnder(selectedTimelineId, activeId, targetId);
-    } else if (scenario === 'reorder' && over.id !== active.id) {
-      store.timelines.reorderParameters(selectedTimelineId, activeId, over.id as string);
+    } else if (scenario === 'above') {
+      const targetParam = PARAMETERS.find(p => p.id === targetId);
+      if (!targetParam) return;
+      store.timelines.reorderAndReparent(
+        selectedTimelineId, activeId, targetId,
+        targetParam.level, targetParam.parentId
+      );
     }
-  }, [dropScenario, dropTargetId, selectedTimelineId, store.timelines]);
+  }, [dropScenario, dropTargetId, selectedTimelineId, store.timelines, PARAMETERS, setScenario]);
 
   const handleParamDragOver = useCallback((event: DragMoveEvent) => {
-    if (!event.over) { setDropScenario(null); setDropTargetId(null); return; }
+    if (!event.over) { setScenario(null, null); return; }
     const overId = event.over.id as string;
     const rect = event.over.rect;
     overIdRef.current = overId;
     overRectRef.current = { top: rect.top, height: rect.height };
     updateDropScenario(overId, overRectRef.current, event.active.id as string);
-  }, [updateDropScenario]);
+  }, [updateDropScenario, setScenario]);
 
   const handleParamDragMove = useCallback((event: DragMoveEvent) => {
     if (!overIdRef.current || !overRectRef.current) return;
@@ -1338,15 +1363,28 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
             <DndContext
               sensors={dndSensors}
               collisionDetection={closestCenter}
-              onDragStart={(e) => { setDragActiveId(e.active.id as string); setDragLevelDelta(0); setDropScenario(null); setDropTargetId(null); }}
+              onDragStart={(e) => {
+                const activeId = e.active.id as string;
+                setDragActiveId(activeId);
+                setDragLevelDelta(0);
+                setScenario(null, null);
+                // Кэшируем потомков один раз — избегаем O(n²) на каждый mousemove
+                const descendants = new Set<string>();
+                const walk = (pid: string) => {
+                  PARAMETERS.forEach(p => { if (p.parentId === pid) { descendants.add(p.id); walk(p.id); } });
+                };
+                walk(activeId);
+                activeDescendantsRef.current = descendants;
+              }}
               onDragMove={handleParamDragMove}
               onDragOver={handleParamDragOver}
               onDragEnd={handleParamDragEnd}
             >
-              <SortableContext items={scrollableRows.map(r => r.id)} strategy={verticalListSortingStrategy}>
+              <SortableContext items={scrollableRows.map(r => r.id)} strategy={dndSortingStrategy}>
                 {scrollableRows.map((param) => {
                   const layers = getTaskLayers(param.id);
                   const rowHeight = Math.max(24, layers.length * 24);
+                  const isTarget = dropTargetId === param.id;
                   return (
                     <SortableParamRow
                       key={param.id}
@@ -1358,17 +1396,18 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                       isFrozen={frozenIds.has(param.id)}
                       previewLevel={(() => {
                         if (dragActiveId !== param.id) return undefined;
-                        if (dropScenario === 'lift') {
-                          const parent = PARAMETERS.find(p => p.id === param.parentId);
-                          return parent ? parent.level : 0;
-                        }
                         if (dropScenario === 'reparent' && dropTargetId) {
                           const target = PARAMETERS.find(p => p.id === dropTargetId);
                           return target ? Math.min(MAX_LEVEL, target.level + 1) : param.level;
                         }
+                        if (dropScenario === 'above' && dropTargetId) {
+                          const target = PARAMETERS.find(p => p.id === dropTargetId);
+                          return target ? target.level : param.level;
+                        }
                         return undefined;
                       })()}
-                      isDropTarget={dropScenario === 'reparent' && dropTargetId === param.id}
+                      isDropTarget={isTarget && dropScenario !== null}
+                      dropZone={isTarget ? (dropScenario ?? undefined) : undefined}
                       onToggleSelect={() => toggleSelectParam(param.id)}
                       onToggleCollapse={() => toggleCollapse(param.id)}
                       onToggleFreeze={() => toggleFreeze(param.id)}
