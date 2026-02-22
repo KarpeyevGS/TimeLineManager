@@ -128,7 +128,7 @@ interface SortableParamRowProps {
   isFrozen: boolean;
   previewLevel?: number;
   isDropTarget?: boolean;
-  dropZone?: 'reparent' | 'above' | 'below';
+  dropZone?: 'above' | 'below';
   onRowClick: (ctrlKey: boolean) => void;
   onToggleCollapse: () => void;
   onToggleFreeze: () => void;
@@ -168,8 +168,7 @@ const SortableParamRow: React.FC<SortableParamRowProps> = ({
           ? 'border-b-2 border-app-primary shadow-[0_1px_0_0_var(--color-app-border)]'
           : 'shadow-[0_1px_0_0_var(--color-app-border)]'}
         ${levelChanged ? 'ring-1 ring-inset ring-app-accent' : ''}
-        ${isDropTarget && dropZone === 'reparent' ? 'ring-2 ring-inset ring-app-primary bg-app-primary/15' : ''}
-        ${isSelected ? 'bg-app-primary/15' : displayLevel === 0 ? 'bg-app-primary/5 hover:bg-app-primary/10' : 'hover:bg-app-bg/10'}
+        ${isSelected ? 'bg-app-accent/[0.12]' : displayLevel === 0 ? 'bg-app-primary/5 hover:bg-app-primary/10' : 'hover:bg-app-bg/10'}
       `}
       onClick={(e) => { e.stopPropagation(); onRowClick(e.ctrlKey); }}
       onContextMenu={onContextMenu}
@@ -271,7 +270,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   const [selectedParamIds, setSelectedParamIds] = useState<Set<string>>(new Set());
   const [selectedColumnDates, setSelectedColumnDates] = useState<Set<string>>(new Set());
   const [dragActiveId, setDragActiveId] = useState<string | null>(null);
-  const [dragLevelDelta, setDragLevelDelta] = useState(0);
+  const [_dragLevelDelta, setDragLevelDelta] = useState(0);
   const [taskContextMenu, setTaskContextMenu] = useState<TaskContextMenuState | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTaskName, setEditingTaskName] = useState<string>('');
@@ -433,12 +432,14 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
           number: wNumber,
           months: new Set([format(day, 'LLLL', { locale: ru })]),
           daysCount: 0,
-          year: year
+          year: year,
+          dateStrings: [] as string[]
         });
       } else {
         weekMap.get(key).months.add(format(day, 'LLLL', { locale: ru }));
       }
       weekMap.get(key).daysCount += 1;
+      weekMap.get(key).dateStrings.push(format(day, 'yyyy-MM-dd'));
     });
 
     // Группировка по месяцам для верхней строки
@@ -449,10 +450,12 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         monthMap.set(monthKey, {
           year: day.getFullYear(),
           monthName: format(day, 'LLLL', { locale: ru }),
-          daysCount: 0
+          daysCount: 0,
+          dateStrings: [] as string[]
         });
       }
       monthMap.get(monthKey).daysCount += 1;
+      monthMap.get(monthKey).dateStrings.push(format(day, 'yyyy-MM-dd'));
     });
 
     // Группировка по кварталам для верхней строки (режим 2Q)
@@ -465,10 +468,12 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         quarterMap.set(key, {
           year,
           quarter,
-          daysCount: 0
+          daysCount: 0,
+          dateStrings: [] as string[]
         });
       }
       quarterMap.get(key).daysCount += 1;
+      quarterMap.get(key).dateStrings.push(format(day, 'yyyy-MM-dd'));
     });
 
     return {
@@ -608,30 +613,57 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
       }
       return prev.has(id) && prev.size === 1 ? new Set<string>() : new Set([id]);
     });
-    setSelectedColumnDates(new Set());
+    if (!ctrlKey) setSelectedColumnDates(new Set());
   }, []);
 
-  const handleColumnClick = useCallback((dateStr: string, ctrlKey: boolean) => {
+  const handleColumnClick = useCallback((dateStrings: string[], ctrlKey: boolean) => {
     setSelectedColumnDates(prev => {
       if (ctrlKey) {
         const next = new Set(prev);
-        if (next.has(dateStr)) next.delete(dateStr); else next.add(dateStr);
+        const allSelected = dateStrings.every(d => next.has(d));
+        if (allSelected) dateStrings.forEach(d => next.delete(d));
+        else dateStrings.forEach(d => next.add(d));
         return next;
       }
-      return prev.has(dateStr) && prev.size === 1 ? new Set<string>() : new Set([dateStr]);
+      const allSelected = dateStrings.every(d => prev.has(d)) && prev.size === dateStrings.length;
+      return allSelected ? new Set<string>() : new Set(dateStrings);
     });
-    setSelectedParamIds(new Set());
+    if (!ctrlKey) setSelectedParamIds(new Set());
   }, []);
+
+  // Клик по ячейке грида: без Ctrl — снять всё, с Ctrl — выделить строку + столбец
+  const handleCellClick = useCallback((e: React.MouseEvent, paramId: string) => {
+    e.stopPropagation();
+    if (!e.ctrlKey) {
+      setSelectedParamIds(new Set());
+      setSelectedColumnDates(new Set());
+      return;
+    }
+    const container = timelineRef.current ?? frozenTimelineRef.current;
+    if (!container || days.length === 0) return;
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX - rect.left + container.scrollLeft;
+    const dayIndex = Math.floor(x / dayWidth);
+    if (dayIndex < 0 || dayIndex >= days.length) return;
+    const dateStr = format(days[dayIndex], 'yyyy-MM-dd');
+    setSelectedParamIds(prev => {
+      const next = new Set(prev);
+      if (next.has(paramId)) next.delete(paramId); else next.add(paramId);
+      return next;
+    });
+    setSelectedColumnDates(prev => {
+      const next = new Set(prev);
+      if (next.has(dateStr)) next.delete(dateStr); else next.add(dateStr);
+      return next;
+    });
+  }, [dayWidth, days]);
 
   // ===== DnD для строк =====
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  const MAX_LEVEL = 5;
-
-  // 'above'    — вставить перед целевой строкой на её уровне (зона: верхние 20%)
-  // 'reparent' — сделать дочерней целевой строки (зона: средние 20-80%)
-  // 'below'    — вставить после целевой строки на её уровне (зона: нижние 20%)
-  type DropScenario = 'reparent' | 'above' | 'below';
+  // 'above' — вставить перед целевой строкой на её уровне (зона: верхние 50%)
+  // 'below' — вставить после целевой строки на её уровне (зона: нижние 50%)
+  type DropScenario = 'above' | 'below';
 
   // Единый объект состояния — один setState вместо двух → вдвое меньше рендеров
   const [dropState, setDropState] = useState<{ scenario: DropScenario | null; targetId: string | null }>(
@@ -659,10 +691,8 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     return () => document.removeEventListener('mousemove', handler);
   }, []);
 
-  // Кастомная стратегия: при 'reparent' — не смещать строки, при 'above'/'below' — стандартная сортировка
   const dndSortingStrategy = useCallback(
     (args: Parameters<typeof verticalListSortingStrategy>[0]) => {
-      if (dropScenarioRef.current === 'reparent') return null;
       return verticalListSortingStrategy(args);
     },
     []
@@ -683,25 +713,17 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   ) => {
     if (overId === activeId) { setScenario(null, null); return; }
 
-    const activeParam = PARAMETERS.find(p => p.id === activeId);
-    const overParam  = PARAMETERS.find(p => p.id === overId);
-    if (!activeParam || !overParam) { setScenario(null, null); return; }
+    if (!PARAMETERS.find(p => p.id === activeId) || !PARAMETERS.find(p => p.id === overId)) {
+      setScenario(null, null); return;
+    }
 
     const relY = (pointerYRef.current - overRect.top) / overRect.height;
 
-    if (relY < 0.20) {
-      // Верхние 20% — вставить перед целевой строкой на её уровне
+    if (relY < 0.50) {
+      // Верхние 50% — вставить перед целевой строкой на её уровне
       setScenario('above', overId);
-    } else if (relY < 0.80) {
-      // Средние 20-80% — сделать дочерней целевой строки
-      // Нельзя: reparent под собственного потомка или под текущего родителя
-      if (activeDescendantsRef.current.has(overId)) { setScenario(null, null); return; }
-      if (overParam.id === activeParam.parentId) { setScenario('above', overId); return; }
-      // Нельзя: превышение MAX_LEVEL
-      if (overParam.level + 1 > MAX_LEVEL) { setScenario(null, null); return; }
-      setScenario('reparent', overId);
     } else {
-      // Нижние 80-100% — вставить после целевой строки на её уровне
+      // Нижние 50% — вставить после целевой строки на её уровне
       setScenario('below', overId);
     }
   }, [PARAMETERS, setScenario]);
@@ -722,9 +744,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     const activeId = active.id as string;
     if (activeId === targetId) return;
 
-    if (scenario === 'reparent') {
-      store.timelines.reparentUnder(selectedTimelineId, activeId, targetId);
-    } else if (scenario === 'above') {
+    if (scenario === 'above') {
       const targetParam = PARAMETERS.find(p => p.id === targetId);
       if (!targetParam) return;
       store.timelines.reorderAndReparent(
@@ -791,24 +811,23 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     return param ? Object.keys(param.filters).length === 0 : false;
   };
 
-  // Определить цвет плашки задачи (приоритет: цвет задачи > статус > приоритет)
+  // Определить цвет плашки задачи (приоритет: done > blocker > цвет задачи > default)
   const getTaskBarColor = (task: Task): string => {
-    // Если у задачи задан свой цвет, использовать его
-    if (task.color) {
-      return `text-gray-800`;
-    }
     if (task.status === 'done') {
       return 'bg-green-200 text-green-900';
     }
     if (task.priority === 'blocker') {
       return 'bg-red-300 text-red-950';
     }
+    if (task.color) {
+      return 'text-gray-800';
+    }
     return 'bg-app-primary text-white';
   };
 
   // Получить стили для task bar (включая цвет фона)
   const getTaskBarStyle = (task: Task): React.CSSProperties => {
-    if (task.color) {
+    if (task.status !== 'done' && task.priority !== 'blocker' && task.color) {
       return { backgroundColor: task.color };
     }
     return {};
@@ -1088,39 +1107,47 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
           <span>Параметры</span>
           {/* Нижняя строка: кнопки уровней + стрелки навигации */}
           <div className="flex items-center justify-between pr-2">
-            {/* Кнопки уровней вложенности — динамически по max depth, выровнены с кнопками строк */}
-            {/* Отступ 28px = paddingLeft строки(4) + drag(12) + gap(4) + checkbox(12) + gap(4) - pl-2 хедера(8) */}
-            <div className="flex items-center gap-1" style={{ marginLeft: 28 }}>
-              {Array.from(
-                { length: Math.max(0, ...Array.from(parentIds).map(id => (PARAMETERS.find(p => p.id === id)?.level ?? 0))) + 1 },
-                (_, levelIdx) => {
-                  const levelParents = PARAMETERS.filter(p => parentIds.has(p.id) && p.level === levelIdx).map(p => p.id);
-                  const isCollapsed = levelParents.some(id => collapsedIds.has(id));
-                  return (
-                    <button
-                      key={levelIdx}
-                      onClick={() => {
-                        setCollapsedIds(prev => {
-                          const next = new Set(prev);
-                          if (isCollapsed) {
-                            PARAMETERS.forEach(p => {
-                              if (parentIds.has(p.id) && p.level <= levelIdx) next.delete(p.id);
-                            });
-                          } else {
-                            levelParents.forEach(id => next.add(id));
-                          }
-                          return next;
-                        });
-                      }}
-                      className="w-4 h-4 flex items-center justify-center text-app-text-muted hover:text-app-primary transition-colors"
-                      title={`${isCollapsed ? 'Развернуть' : 'Свернуть'} уровень ${levelIdx + 1}`}
-                    >
-                      {isCollapsed ? <Plus size={10} /> : <Minus size={10} />}
-                    </button>
-                  );
-                }
-              )}
-            </div>
+            {/* Кнопки уровней вложенности — абсолютное позиционирование для точного выравнивания с кнопками строк */}
+            {/* Кнопка уровня N: left = 12 + N*16 px (от края justify-between) = 8(pl-2) + 4(row-pl) + N*16 + 12(drag) + 4(gap) от края sidebar */}
+            {(() => {
+              const maxLevel = parentIds.size > 0
+                ? Math.max(...Array.from(parentIds).map(id => (PARAMETERS.find(p => p.id === id)?.level ?? 0)))
+                : -1;
+              if (maxLevel < 0) return <div />;
+              const containerWidth = 12 + maxLevel * 16 + 16;
+              return (
+                <div className="relative flex-shrink-0 h-4" style={{ width: containerWidth }}>
+                  {Array.from({ length: maxLevel + 1 }, (_, levelIdx) => {
+                    const levelParents = PARAMETERS.filter(p => parentIds.has(p.id) && p.level === levelIdx).map(p => p.id);
+                    if (levelParents.length === 0) return null;
+                    const isCollapsed = levelParents.some(id => collapsedIds.has(id));
+                    return (
+                      <button
+                        key={levelIdx}
+                        style={{ position: 'absolute', left: 12 + levelIdx * 16, top: 0 }}
+                        onClick={() => {
+                          setCollapsedIds(prev => {
+                            const next = new Set(prev);
+                            if (isCollapsed) {
+                              PARAMETERS.forEach(p => {
+                                if (parentIds.has(p.id) && p.level <= levelIdx) next.delete(p.id);
+                              });
+                            } else {
+                              levelParents.forEach(id => next.add(id));
+                            }
+                            return next;
+                          });
+                        }}
+                        className="w-4 h-4 flex items-center justify-center text-app-text-muted hover:text-app-primary transition-colors"
+                        title={`${isCollapsed ? 'Развернуть' : 'Свернуть'} уровень ${levelIdx + 1}`}
+                      >
+                        {isCollapsed ? <Plus size={10} /> : <Minus size={10} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
           </div>
         </div>
@@ -1223,20 +1250,24 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                 }}
               />
               {dayWidth < 12 ? (
-                weeks.map((w, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      width: dayWidth * w.daysCount,
-                      transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      fontSize: dayWidth <= 4 ? '7px' : dayWidth <= 6 ? '8px' : '9px',
-                      letterSpacing: dayWidth <= 4 ? '-0.05em' : undefined,
-                    }}
-                    className="flex-shrink-0 flex items-center justify-center font-bold bg-app-primary/5 relative z-10 overflow-hidden leading-none px-0"
-                  >
-                    {`W${w.number}`}
-                  </div>
-                ))
+                weeks.map((w, idx) => {
+                  const isWSelected = w.dateStrings.some((d: string) => selectedColumnDates.has(d));
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        width: dayWidth * w.daysCount,
+                        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        fontSize: dayWidth <= 4 ? '7px' : dayWidth <= 6 ? '8px' : '9px',
+                        letterSpacing: dayWidth <= 4 ? '-0.05em' : undefined,
+                      }}
+                      onClick={(e) => handleColumnClick(w.dateStrings, e.ctrlKey)}
+                      className={`flex-shrink-0 flex items-center justify-center font-bold relative z-10 overflow-hidden leading-none px-0 cursor-pointer select-none ${isWSelected ? 'bg-app-accent/20 text-app-accent' : 'bg-app-primary/5 hover:bg-app-accent/10'}`}
+                    >
+                      {`W${w.number}`}
+                    </div>
+                  );
+                })
               ) : (
                 days.map((day, idx) => {
                   const isWknd = isWeekend(day);
@@ -1251,7 +1282,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                         width: dayWidth,
                         transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                       }}
-                      onClick={(e) => handleColumnClick(dateStr, e.ctrlKey)}
+                      onClick={(e) => handleColumnClick([dateStr], e.ctrlKey)}
                       className={`flex-shrink-0 flex flex-col items-center justify-center text-[9px] leading-none relative z-10 cursor-pointer select-none ${
                         isColSelected ? 'bg-app-accent/20 text-app-accent font-black' :
                         isTdy ? 'bg-pink-500/10 text-pink-600 font-black' :
@@ -1283,7 +1314,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                 <div
                   key={param.id}
                   className={`group flex items-center gap-1 shadow-[0_1px_0_0_var(--color-app-border)] select-none relative border-l-2 border-app-primary px-0 py-0
-                    ${selectedParamIds.has(param.id) ? 'bg-app-primary/15' : 'hover:bg-app-bg/10'}
+                    ${selectedParamIds.has(param.id) ? 'bg-app-accent/[0.12]' : 'hover:bg-app-bg/10'}
                   `}
                   style={{
                     paddingLeft: `${4 + param.level * 16}px`,
@@ -1348,54 +1379,21 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                 }}
               />
 
-              {/* Слой подсветки (выходные и сегодня) */}
-              <div className="absolute inset-0 pointer-events-none flex">
-                {dayWidth < 12 ? (
-                  weeks.map((w, i) => {
-                    const today = new Date();
-                    const isCurrentWeek = w.number === getWeek(today, { weekStartsOn: 1, locale: ru }) && w.year === today.getFullYear();
-                    return (
-                      <div
-                        key={i}
-                        style={{ width: dayWidth * w.daysCount, transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
-                        className={`flex-shrink-0 ${isCurrentWeek ? 'bg-pink-500/[0.08]' : ''}`}
-                      />
-                    );
-                  })
-                ) : (
-                  days.map((day, i) => {
-                    const isTdy = isToday(day);
-                    const isWknd = isWeekend(day);
-                    const dateStr = format(day, 'yyyy-MM-dd');
-                    const isColSelected = selectedColumnDates.has(dateStr);
-                    let bgColor = 'bg-transparent';
-                    if (isColSelected) bgColor = 'bg-app-accent/[0.12]';
-                    else if (isTdy) bgColor = 'bg-pink-500/[0.08]';
-                    else if (isWknd) bgColor = 'bg-app-primary/[0.08]';
-                    return (
-                      <div
-                        key={i}
-                        style={{ width: dayWidth, transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
-                        className={`flex-shrink-0 ${bgColor}`}
-                      />
-                    );
-                  })
-                )}
-              </div>
-
               {/* Строки frozen параметров */}
               <div className="relative z-10">
                 {frozenRows.map((param) => {
                   const layers = getTaskLayers(param.id);
                   const rowHeight = Math.max(24, layers.length * 24);
+                  const isRowSelected = selectedParamIds.has(param.id);
 
                   return (
                     <div
                       key={param.id}
-                      className={`shadow-[0_1px_0_0_var(--color-app-border)] w-full hover:bg-app-bg/10 relative ${
-                        param.level === 0 ? 'bg-app-primary/5' : ''
+                      className={`shadow-[0_1px_0_0_var(--color-app-border)] w-full relative ${
+                        isRowSelected ? 'bg-app-accent/[0.12]' : param.level === 0 ? 'bg-app-primary/5' : ''
                       }`}
                       style={{ height: `${rowHeight}px`, minHeight: `${rowHeight}px` }}
+                      onClick={(e) => handleCellClick(e, param.id)}
                       onContextMenu={(e) => handleTimelineRowContextMenu(e, param.id)}
                     >
                       {/* Задачи по слоям */}
@@ -1411,6 +1409,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                           return (
                             <div
                               key={task.id}
+                              onClick={(e) => e.stopPropagation()}
                               onMouseDown={(e) => handleTaskMouseDown(e, task)}
                               onDoubleClick={(e) => handleTaskBarDoubleClick(e, task)}
                               onContextMenu={(e) => handleTaskBarContextMenu(e, task)}
@@ -1473,6 +1472,42 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Слой подсветки колонок и строк (поверх строк) */}
+              <div className="absolute inset-0 z-20 pointer-events-none flex">
+                {dayWidth < 12 ? (
+                  weeks.map((w, i) => {
+                    const today = new Date();
+                    const isCurrentWeek = w.number === getWeek(today, { weekStartsOn: 1, locale: ru }) && w.year === today.getFullYear();
+                    const isWkSelected = w.dateStrings.some((d: string) => selectedColumnDates.has(d));
+                    return (
+                      <div
+                        key={i}
+                        style={{ width: dayWidth * w.daysCount, transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                        className={`flex-shrink-0 ${isWkSelected ? 'bg-app-accent/[0.12]' : isCurrentWeek ? 'bg-pink-500/[0.08]' : ''}`}
+                      />
+                    );
+                  })
+                ) : (
+                  days.map((day, i) => {
+                    const isTdy = isToday(day);
+                    const isWknd = isWeekend(day);
+                    const dateStr = format(day, 'yyyy-MM-dd');
+                    const isColSelected = selectedColumnDates.has(dateStr);
+                    let bgColor = 'bg-transparent';
+                    if (isColSelected) bgColor = 'bg-app-accent/[0.12]';
+                    else if (isTdy) bgColor = 'bg-pink-500/[0.08]';
+                    else if (isWknd) bgColor = 'bg-app-primary/[0.08]';
+                    return (
+                      <div
+                        key={i}
+                        style={{ width: dayWidth, transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                        className={`flex-shrink-0 ${bgColor}`}
+                      />
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
@@ -1526,15 +1561,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                       isFrozen={frozenIds.has(param.id)}
                       previewLevel={(() => {
                         if (dragActiveId !== param.id) return undefined;
-                        if (dropScenario === 'reparent' && dropTargetId) {
-                          const target = PARAMETERS.find(p => p.id === dropTargetId);
-                          return target ? Math.min(MAX_LEVEL, target.level + 1) : param.level;
-                        }
-                        if (dropScenario === 'above' && dropTargetId) {
-                          const target = PARAMETERS.find(p => p.id === dropTargetId);
-                          return target ? target.level : param.level;
-                        }
-                        if (dropScenario === 'below' && dropTargetId) {
+                        if ((dropScenario === 'above' || dropScenario === 'below') && dropTargetId) {
                           const target = PARAMETERS.find(p => p.id === dropTargetId);
                           return target ? target.level : param.level;
                         }
@@ -1583,7 +1610,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
             className="flex flex-col min-h-full relative"
           >
             {/* СЕТКА */}
-            <div className="flex-1 relative bg-app-surface">
+            <div className="flex-1 relative bg-app-surface" onClick={() => { setSelectedParamIds(new Set()); setSelectedColumnDates(new Set()); }}>
               {/* Слой вертикальных линий */}
               <div
                 className="absolute inset-0 pointer-events-none"
@@ -1596,63 +1623,21 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                 }}
               />
 
-              {/* Слой подсветки (выходные и сегодня) */}
-              <div className="absolute inset-0 pointer-events-none flex">
-                {dayWidth < 12 ? (
-                  weeks.map((w, i) => {
-                    const today = new Date();
-                    const isCurrentWeek = w.number === getWeek(today, { weekStartsOn: 1, locale: ru }) && w.year === today.getFullYear();
-
-                    return (
-                      <div
-                        key={i}
-                        style={{
-                          width: dayWidth * w.daysCount,
-                          transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                        }}
-                        className={`flex-shrink-0 ${isCurrentWeek ? 'bg-pink-500/[0.08]' : ''}`}
-                      />
-                    );
-                  })
-                ) : (
-                  days.map((day, i) => {
-                    const isTdy = isToday(day);
-                    const isWknd = isWeekend(day);
-                    const dateStr = format(day, 'yyyy-MM-dd');
-                    const isColSelected = selectedColumnDates.has(dateStr);
-
-                    let bgColor = 'bg-transparent';
-                    if (isColSelected) bgColor = 'bg-app-accent/[0.12]';
-                    else if (isTdy) bgColor = 'bg-pink-500/[0.08]';
-                    else if (isWknd) bgColor = 'bg-app-primary/[0.08]';
-
-                    return (
-                      <div
-                        key={i}
-                        style={{
-                          width: dayWidth,
-                          transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                        }}
-                        className={`flex-shrink-0 ${bgColor}`}
-                      />
-                    );
-                  })
-                )}
-              </div>
-
               {/* Строки параметров */}
               <div className="relative z-10">
                 {scrollableRows.map((param) => {
                   const layers = getTaskLayers(param.id);
                   const rowHeight = Math.max(24, layers.length * 24);
+                  const isRowSelected = selectedParamIds.has(param.id);
 
                   return (
                     <div
                       key={param.id}
-                      className={`shadow-[0_1px_0_0_var(--color-app-border)] w-full hover:bg-app-bg/10 relative ${
-                        param.level === 0 ? 'bg-app-primary/5' : ''
+                      className={`shadow-[0_1px_0_0_var(--color-app-border)] w-full relative ${
+                        isRowSelected ? 'bg-app-accent/[0.12]' : param.level === 0 ? 'bg-app-primary/5' : ''
                       }`}
                       style={{ height: `${rowHeight}px`, minHeight: `${rowHeight}px` }}
+                      onClick={(e) => handleCellClick(e, param.id)}
                       onContextMenu={(e) => handleTimelineRowContextMenu(e, param.id)}
                     >
                       {/* Задачи по слоям */}
@@ -1668,6 +1653,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                           return (
                             <div
                               key={task.id}
+                              onClick={(e) => e.stopPropagation()}
                               onMouseDown={(e) => handleTaskMouseDown(e, task)}
                               onDoubleClick={(e) => handleTaskBarDoubleClick(e, task)}
                               onContextMenu={(e) => handleTaskBarContextMenu(e, task)}
@@ -1730,6 +1716,42 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Слой подсветки колонок и строк (поверх строк) */}
+              <div className="absolute inset-0 z-20 pointer-events-none flex">
+                {dayWidth < 12 ? (
+                  weeks.map((w, i) => {
+                    const today = new Date();
+                    const isCurrentWeek = w.number === getWeek(today, { weekStartsOn: 1, locale: ru }) && w.year === today.getFullYear();
+                    const isWkSelected = w.dateStrings.some((d: string) => selectedColumnDates.has(d));
+                    return (
+                      <div
+                        key={i}
+                        style={{ width: dayWidth * w.daysCount, transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                        className={`flex-shrink-0 ${isWkSelected ? 'bg-app-accent/[0.12]' : isCurrentWeek ? 'bg-pink-500/[0.08]' : ''}`}
+                      />
+                    );
+                  })
+                ) : (
+                  days.map((day, i) => {
+                    const isTdy = isToday(day);
+                    const isWknd = isWeekend(day);
+                    const dateStr = format(day, 'yyyy-MM-dd');
+                    const isColSelected = selectedColumnDates.has(dateStr);
+                    let bgColor = 'bg-transparent';
+                    if (isColSelected) bgColor = 'bg-app-accent/[0.12]';
+                    else if (isTdy) bgColor = 'bg-pink-500/[0.08]';
+                    else if (isWknd) bgColor = 'bg-app-primary/[0.08]';
+                    return (
+                      <div
+                        key={i}
+                        style={{ width: dayWidth, transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                        className={`flex-shrink-0 ${bgColor}`}
+                      />
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>

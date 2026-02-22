@@ -1,0 +1,583 @@
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+     Analysis:
+     Let me analyze the conversation chronologically:
+
+     1. **First task**: Simplify drag-and-drop zone logic for parameters in TimelinePage.tsx
+        - Remove 'reparent' zone, keep only 'above' (0-50%) and 'below' (50-100%)
+        - Changes in: SortableParamRowProps interface, visual indicators, updateDropScenario function, handleParamDragEnd function, dndSortingStrategy
+
+     2. **Second task**: Fix header level-collapse buttons positioning
+        - The buttons in the header should visually align with collapse buttons in parameter rows
+        - Changed marginLeft from 28 to 20
+        - Added condition to skip rendering buttons for levels with no parent params
+
+     3. **Third task**: The header buttons were still misaligned (screenshot showed shift)
+        - Full analysis of the layout math:
+          - Header has `pl-2` (8px) padding-left
+          - Row buttons are at: `4 + N*16 + 12 + 4 = 20 + N*16` from sidebar left
+          - In header (after 8px pl-2): button N should be at `20 - 8 + N*16 = 12 + N*16` from justify-between div left
+        - Solution: Switch from flex+gap to absolute positioning within relative container
+        - Also fixed leftover `dropScenario === 'reparent'` reference in previewLevel calculation (line ~1523)
+
+     4. **Fourth task**: Fix color priority for 'done' status and 'blocker' priority
+        - Currently: color > done > blocker (wrong)
+        - Required: done > blocker > color
+        - Changes:
+          - `getTaskBarColor` in TimelinePage.tsx: reorder checks
+          - `getTaskBarStyle` in TimelinePage.tsx: skip color for done/blocker
+          - Color picker button in TaskModal.tsx: visually disabled when done/blocker, shows preview of effective color
+
+     Let me now compile the detailed summary.
+
+     Summary:
+     1. Primary Request and Intent:
+        Four sequential refactoring/fix tasks on the TimeLine Manager project (React + TypeScript + Tailwind CSS v4):
+
+        **Task 1**: Simplify drag-and-drop drop zone logic for parameters. Remove the 'reparent' zone entirely. Change from 3 zones (above 0-20%, reparent
+     20-80%, below 80-100%) to 2 equal zones (above 0-50%, below 50-100%). Remove all reparent-related logic.
+
+        **Task 2**: Fix misalignment of level-collapse buttons in the param header. Recalculate `marginLeft` from 28px to 20px (removing checkbox
+     contribution: 12px + 4px gap). Also add guard so buttons only render for levels that actually have parent params.
+
+        **Task 3**: The buttons were still misaligned (visual screenshot evidence). Do deeper layout math accounting for `pl-2` (8px) on the header
+     container. Switch to absolute positioning so skipped levels don't cause offsets in adjacent buttons. Also found and fixed a leftover `dropScenario ===
+     'reparent'` reference.
+
+        **Task 4**: Fix color priority system. When `status === 'done'`, the task bar should always be green regardless of custom color. When `priority ===
+     'blocker'`, always red. Priority order: done > blocker > custom color > default. Visually disable the color picker button in TaskModal when
+     done/blocker, showing a preview of the effective color. Do NOT erase the stored color (so it reappears if status changes back).
+
+     2. Key Technical Concepts:
+        - React 19 + TypeScript, Tailwind CSS v4
+        - dnd-kit (`@dnd-kit/core`, `@dnd-kit/sortable`): DragEndEvent, DragMoveEvent, SortableContext, verticalListSortingStrategy
+        - Drop zone scenarios: `'above' | 'below'` (after removal of `'reparent'`)
+        - CSS absolute positioning vs flex+gap for precise pixel-level alignment
+        - React `useCallback`, `useState`, `useRef`, `useEffect`
+        - `createPortal` for color picker popover (z-index 360, above TaskModal)
+        - Header `pl-2` (8px) offset vs zero-padding row container — key alignment math
+        - Layout math: collapse button for level N in rows = `4 + N*16 + 12 + 4 = 20 + N*16` px from sidebar left
+        - In header (subtract 8px pl-2): `12 + N*16` px from `justify-between` div left
+        - Color priority chain: `task.status === 'done'` → `task.priority === 'blocker'` → `task.color` → default
+
+     3. Files and Code Sections:
+
+        **`frontend/src/pages/Timeline/TimelinePage.tsx`** — Main file, all 4 tasks involved changes here.
+
+        *Task 1 changes:*
+        - `SortableParamRowProps` interface: `dropZone?: 'above' | 'below'` (removed `'reparent'`)
+        - Removed reparent ring class from className string in SortableParamRow
+        - `DropScenario` type: `'above' | 'below'`
+        - `dndSortingStrategy`: removed `if (dropScenarioRef.current === 'reparent') return null`
+        - `updateDropScenario`: simplified to `if (relY < 0.50) setScenario('above') else setScenario('below')` — removed activeParam/overParam variables
+     entirely
+        - `handleParamDragEnd`: removed `if (scenario === 'reparent') { store.timelines.reparentUnder(...) }` branch
+
+        *Task 2 changes:*
+        - Header buttons container: `marginLeft: 20` (was 28)
+        - Added `if (levelParents.length === 0) return null`
+
+        *Task 3 changes:*
+        - Replaced flex+gap button container with absolute-positioned buttons in a relative div
+        - Container width: `12 + maxLevel * 16 + 16` px
+        - Each button: `style={{ position: 'absolute', left: 12 + levelIdx * 16, top: 0 }}`
+        - Fixed leftover `previewLevel` logic: removed `dropScenario === 'reparent'` branch, combined above/below into one condition
+
+        ```tsx
+        // Header collapse buttons - Task 3 final form
+        {(() => {
+          const maxLevel = parentIds.size > 0
+            ? Math.max(...Array.from(parentIds).map(id => (PARAMETERS.find(p => p.id === id)?.level ?? 0)))
+            : -1;
+          if (maxLevel < 0) return <div />;
+          const containerWidth = 12 + maxLevel * 16 + 16;
+          return (
+            <div className="relative flex-shrink-0 h-4" style={{ width: containerWidth }}>
+              {Array.from({ length: maxLevel + 1 }, (_, levelIdx) => {
+                const levelParents = PARAMETERS.filter(p => parentIds.has(p.id) && p.level === levelIdx).map(p => p.id);
+                if (levelParents.length === 0) return null;
+                const isCollapsed = levelParents.some(id => collapsedIds.has(id));
+                return (
+                  <button
+                    key={levelIdx}
+                    style={{ position: 'absolute', left: 12 + levelIdx * 16, top: 0 }}
+                    onClick={() => { ... }}
+                    className="w-4 h-4 flex items-center justify-center text-app-text-muted hover:text-app-primary transition-colors"
+                    title={`${isCollapsed ? 'Развернуть' : 'Свернуть'} уровень ${levelIdx + 1}`}
+                  >
+                    {isCollapsed ? <Plus size={10} /> : <Minus size={10} />}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })()}
+        ```
+
+        *Task 4 changes:*
+        ```tsx
+        // getTaskBarColor — new priority order: done > blocker > color > default
+        const getTaskBarColor = (task: Task): string => {
+          if (task.status === 'done') return 'bg-green-200 text-green-900';
+          if (task.priority === 'blocker') return 'bg-red-300 text-red-950';
+          if (task.color) return 'text-gray-800';
+          return 'bg-app-primary text-white';
+        };
+
+        // getTaskBarStyle — only apply custom color when not done/blocker
+        const getTaskBarStyle = (task: Task): React.CSSProperties => {
+          if (task.status !== 'done' && task.priority !== 'blocker' && task.color) {
+            return { backgroundColor: task.color };
+          }
+          return {};
+        };
+        ```
+
+        *Task 1 — previewLevel fix (Task 3):*
+        ```tsx
+        previewLevel={(() => {
+          if (dragActiveId !== param.id) return undefined;
+          if ((dropScenario === 'above' || dropScenario === 'below') && dropTargetId) {
+            const target = PARAMETERS.find(p => p.id === dropTargetId);
+            return target ? target.level : param.level;
+          }
+          return undefined;
+        })()}
+        ```
+
+        **`frontend/src/pages/Timeline/TaskModal.tsx`** — Task 4 changes:
+        - Color picker button: early return on click when `status === 'done' || priority === 'blocker'`
+        - `backgroundColor` shows effective color: green (`#86efac`) for done, red (`#fca5a5`) for blocker, else `color`
+        - `opacity: 0.5` and `cursor: not-allowed` when overridden
+        - Tooltip explains why picker is inactive
+
+        ```tsx
+        <button
+          ref={colorButtonRef}
+          type="button"
+          onClick={() => {
+            if (status === 'done' || priority === 'blocker') return;
+            if (!colorPickerOpen && colorButtonRef.current) {
+              const rect = colorButtonRef.current.getBoundingClientRect();
+              const popoverWidth = 256;
+              const spaceRight = window.innerWidth - rect.right;
+              const left = spaceRight >= popoverWidth + 8 ? rect.right + 8 : rect.left - popoverWidth - 8;
+              setPickerPosition({ top: rect.top, left });
+            }
+            setColorPickerOpen(!colorPickerOpen);
+          }}
+          className="w-5 h-5 rounded-full border border-app-border transition-all"
+          style={{
+            backgroundColor: status === 'done' ? '#86efac' : priority === 'blocker' ? '#fca5a5' : color,
+            opacity: status === 'done' || priority === 'blocker' ? 0.5 : 1,
+            cursor: status === 'done' || priority === 'blocker' ? 'not-allowed' : 'pointer',
+          }}
+          title={
+            status === 'done' ? 'Цвет переопределён: Завершено'
+            : priority === 'blocker' ? 'Цвет переопределён: Блокер'
+            : 'Выбрать цвет'
+          }
+        />
+        ```
+
+     4. Errors and fixes:
+        - **Task 1**: After simplifying `updateDropScenario`, `activeParam` and `overParam` variables were declared but unused. Fixed by removing both
+     declarations and simplifying the guard to check via `.find()` inline.
+        - **Task 2**: Initial marginLeft calculation of 20px was mathematically correct for the row structure alone, but did not account for `pl-2` (8px) on
+      the header container. This caused persistent visual misalignment.
+        - **Task 3**: Discovered the `pl-2` discrepancy by reading the header parent element at line 1073. Correct formula: `12 + N*16` within the header
+     div. Additionally, flex+gap approach inherently fails when levels are skipped (return null) — switched to absolute positioning to handle gaps
+     correctly. Also found lingering `dropScenario === 'reparent'` reference in previewLevel IIFE (line ~1523) — removed.
+        - **Task 4**: No errors; straightforward logic inversion.
+
+     5. Problem Solving:
+        - **DnD simplification**: Cleanly removed all 'reparent' code paths from 6 locations in TimelinePage.tsx. The 'reparent' functionality is now only
+     accessible via the ParameterModal (manual editing), not via drag-and-drop.
+        - **Header button alignment**: Required two iterations. The key insight was that the header container has `pl-2` (8px) while row containers have no
+     padding — meaning the two coordinate systems differ by 8px. Absolute positioning solved both the 8px offset and the level-skip problem.
+        - **Color priority**: Inverted the check order in both `getTaskBarColor` and `getTaskBarStyle`. Preserved stored color in state so user experience
+     is smooth when toggling status/priority back.
+
+     6. All user messages:
+        - **Message 1**: Detailed spec to simplify drop zone logic from 3 zones to 2, removing 'reparent' entirely. Listed exact file, line numbers,
+     interface changes, function changes, and visual indicator changes.
+        - **Message 2**: Fix header level-collapse button alignment after checkbox removal. Provided layout math (marginLeft 28→20), requested guard for
+     empty levels. Listed exact file and line number references.
+        - **Message 3**: Reported that buttons are still misaligned (with screenshot). Provided deeper layout analysis with red/blue visual markers.
+     Requested proper fix — noted pl-2 on header, sequential flex vs absolute positioning as a potential issue.
+        - **Message 4**: Fix color prioritization. Described the problem (color overrides done/blocker), stated desired priority order (done > blocker >
+     color), listed affected functions, and explicitly said "изучи проблему сам и прими решение" (investigate yourself and make the decision).
+
+     7. Pending Tasks:
+        - None explicitly pending. All four tasks were completed.
+
+     8. Current Work:
+        The most recently completed task was **Task 4**: fixing color priority for task bars in the Timeline view. Changes were made to:
+        - `frontend/src/pages/Timeline/TimelinePage.tsx`: Reordered checks in `getTaskBarColor` (done > blocker > color) and updated `getTaskBarStyle` to
+     skip custom color for done/blocker tasks.
+        - `frontend/src/pages/Timeline/TaskModal.tsx`: Color picker button now shows the effective color (green/red when overridden), is visually dimmed
+     (opacity 0.5), non-interactive (cursor: not-allowed), and shows an explanatory tooltip. The stored color value is preserved in state.
+
+     9. Optional Next Step:
+        No pending tasks remain. All four requested changes have been implemented and verified by reading back the modified code sections. The next step
+     would only be taken based on new user instructions.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at:
+     C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--TimeLineManager-4-18-02-2026\cfcea4ce-15a2-4ff9-8f5a-9a498603b445.jsonl
+
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file frontend\src\pages\Timeline\TaskModal.tsx
+  ⎿  Referenced file frontend\src\pages\Timeline\TimelinePage.tsx
+
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+     Analysis:
+     Let me chronologically analyze the conversation:
+
+     1. **Session start** - This is a continuation from a previous session (summarized at the top). The previous session covered: drag-and-drop
+     simplification (removing 'reparent'), header button alignment, and color priority (done > blocker > color).
+
+     2. **Task 1: Selection system unification** - User requested:
+        - Sync selection colors: rows use `bg-app-primary/15`, columns use `bg-app-accent/[0.12]` → change rows to match columns
+        - Add through-highlighting in the grid (both frozenRows and scrollableRows grids)
+        - Fix multi-selection: Ctrl+click should NOT reset the other selection type
+
+     3. **Task 2: Column selection for all zoom levels** - User requested:
+        - Add click handlers to week/month/quarter headers for small zoom
+        - Update `handleColumnClick` to accept `string[]` arrays
+        - Add `dateStrings` to weeks/months/quarters in useMemo
+        - Fix z-index: column highlight overlay should be ABOVE row backgrounds
+
+     4. **Task 3: Restrict header interactivity** - User requested to remove onClick/hover from Row 1 and Row 2 headers, leaving selection only in Row 3
+     (days/week numbers)
+
+     5. **Task 4: Grid cell click behaviors** - User requested:
+        - Plain LMB click in empty grid area → clear all selection
+        - Ctrl+LMB in a cell → select row + column at click position
+
+     6. **Task 5: Remove hover effect from grid rows** - User reported that `hover:bg-app-bg/10` on grid rows causes column selection highlight to disappear
+      on hover. Fix: remove the hover class.
+
+     Let me compile the technical details:
+
+     **Files modified**: Only `frontend/src/pages/Timeline/TimelinePage.tsx`
+
+     **Key changes by task**:
+
+     Task 1 (Selection unification):
+     - `handleRowClick`: only reset `selectedColumnDates` when `!ctrlKey`
+     - `handleColumnClick`: only reset `selectedParamIds` when `!ctrlKey`
+     - `SortableParamRow` className: `bg-app-primary/15` → `bg-app-accent/[0.12]`
+     - frozenRows sidebar className: same change
+     - frozenRows grid: add `isRowSelected ? 'bg-app-accent/[0.12]'` with local var
+     - scrollableRows grid: same
+
+     Task 2 (Column selection for all zooms):
+     - useMemo: added `dateStrings: [] as string[]` to weekMap, monthMap, quarterMap entries, with `.push(format(day, 'yyyy-MM-dd'))` in each loop
+     - `handleColumnClick`: signature changed from `(dateStr: string, ...)` to `(dateStrings: string[], ...)`; toggle logic updated for arrays
+     - Single-day click: wrapped in `[dateStr]`
+     - Quarter/month/week headers: added onClick + selection highlighting
+     - Column highlight overlay: moved AFTER rows div, added `z-20` in both frozenRows and scrollableRows grids
+     - Small zoom overlay: added `isWkSelected = w.dateStrings.some(...)`
+
+     TypeScript errors fixed:
+     - `dateStrings: [] as string[]` to type the arrays
+     - `(d: string)` explicit type annotation in `.some()` callbacks (replace_all)
+     - Removed unused `MAX_LEVEL` constant
+     - Renamed `dragLevelDelta` to `_dragLevelDelta` (but then needed to remove it differently)
+
+     Task 3 (Restrict header interactivity):
+     - Row 1 (quarters and months): reverted to plain `(item, idx) => (...)` without onClick/selection logic
+     - Row 2 (months small zoom and weeks large zoom): same revert
+     - Row 3 left unchanged (already had onClick + selection)
+
+     Task 4 (Cell click behaviors):
+     - Added `handleCellClick` useCallback
+     - Added `onClick={(e) => handleCellClick(e, param.id)}` to row divs in both grids (replace_all)
+     - Added `onClick={(e) => e.stopPropagation()}` to task bar divs in both grids (replace_all)
+     - Added `onClick={() => { setSelectedParamIds(new Set()); setSelectedColumnDates(new Set()); }}` to grid container for empty space below rows
+
+     Task 5 (Remove hover from grid rows):
+     - Removed `hover:bg-app-bg/10` from grid row divs (replace_all)
+
+     **Errors encountered**:
+     1. TypeScript `TS7006: Parameter 'd' implicitly has an 'any' type` - fixed with `(d: string)` annotation (replace_all)
+     2. TypeScript `TS6133: 'dragLevelDelta' is declared but its value is never read` - renamed to `_dragLevelDelta` (didn't work for MAX_LEVEL), then
+     deleted MAX_LEVEL entirely
+     3. TypeScript `TS6133: '_MAX_LEVEL' is declared but its value is never read` - underscore prefix doesn't suppress TS6133, so deleted the line entirely
+
+     **Current state**: All tasks completed, build passing.
+
+     Summary:
+     1. Primary Request and Intent:
+        Five sequential tasks on `frontend/src/pages/Timeline/TimelinePage.tsx`:
+
+        **Task 1 — Selection system unification**: Synchronize column and row selection colors to both use `bg-app-accent/[0.12]`. Add
+     "through-highlighting" of selected rows in the timeline grid (both frozenRows and scrollableRows grids). Fix multi-selection logic so Ctrl+click on a
+     row does NOT reset column selection and vice versa.
+
+        **Task 2 — Column selection for all zoom levels**: Add `dateStrings: string[]` to weeks/months/quarters in `useMemo`. Change `handleColumnClick` to
+     accept `string[]`. Add click handlers + selection highlighting to quarter (Row 1 small zoom), month (Row 1 large / Row 2 small), and week (Row 2 large
+     / Row 3 small) headers. Move the column highlight overlay AFTER the rows div and give it `z-20` so it renders visually above row backgrounds.
+
+        **Task 3 — Restrict header interactivity to Row 3 only**: Remove `onClick`, `isSelected` logic, `cursor-pointer`, `select-none`, and hover effects
+     from Row 1 and Row 2 headers. Leave Row 3 (days at large zoom / week numbers at small zoom) as the sole interactive selection tier.
+
+        **Task 4 — Grid cell click behaviors**: Plain LMB click in empty grid area clears all selection. Ctrl+LMB on a grid cell selects the row (param) AND
+      the column (day under cursor, computed from `clientX - containerLeft + scrollLeft / dayWidth`). Task bars should stop click propagation so they don't
+     interfere.
+
+        **Task 5 — Remove row hover from grid**: `hover:bg-app-bg/10` on grid row divs was causing the column selection overlay (`bg-app-accent/[0.12]` at
+     z-20) to appear to disappear on hover. Fix: remove the hover class from both frozenRows and scrollableRows grid row divs.
+
+     2. Key Technical Concepts:
+        - React 19 + TypeScript, Tailwind CSS v4
+        - `useState<Set<string>>` for `selectedParamIds` and `selectedColumnDates`
+        - `useCallback` for `handleRowClick`, `handleColumnClick`, `handleCellClick`
+        - CSS stacking contexts: `z-20` overlay (pointer-events-none) above `z-10` rows
+        - `format(day, 'yyyy-MM-dd')` for date string keys
+        - `e.stopPropagation()` to prevent click bubbling from task bars and row divs
+        - `replace_all: true` in Edit tool to update both frozenRows and scrollableRows simultaneously
+        - TypeScript `as string[]` cast for untyped Map value arrays
+        - `getBoundingClientRect().left + scrollLeft` for computing column from mouse position
+
+     3. Files and Code Sections:
+        - **`frontend/src/pages/Timeline/TimelinePage.tsx`** — sole modified file throughout all tasks.
+
+        **useMemo — dateStrings added to all three maps:**
+        ```ts
+        weekMap.set(key, { number: wNumber, months: new Set([...]), daysCount: 0, year, dateStrings: [] as string[] });
+        weekMap.get(key).daysCount += 1;
+        weekMap.get(key).dateStrings.push(format(day, 'yyyy-MM-dd'));
+
+        monthMap.set(monthKey, { year: ..., monthName: ..., daysCount: 0, dateStrings: [] as string[] });
+        monthMap.get(monthKey).daysCount += 1;
+        monthMap.get(monthKey).dateStrings.push(format(day, 'yyyy-MM-dd'));
+
+        quarterMap.set(key, { year, quarter, daysCount: 0, dateStrings: [] as string[] });
+        quarterMap.get(key).daysCount += 1;
+        quarterMap.get(key).dateStrings.push(format(day, 'yyyy-MM-dd'));
+        ```
+
+        **handleRowClick and handleColumnClick (Ctrl multi-selection fix):**
+        ```tsx
+        const handleRowClick = useCallback((id: string, ctrlKey: boolean) => {
+          setSelectedParamIds(prev => {
+            if (ctrlKey) { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; }
+            return prev.has(id) && prev.size === 1 ? new Set<string>() : new Set([id]);
+          });
+          if (!ctrlKey) setSelectedColumnDates(new Set());  // only reset when no Ctrl
+        }, []);
+
+        const handleColumnClick = useCallback((dateStrings: string[], ctrlKey: boolean) => {
+          setSelectedColumnDates(prev => {
+            if (ctrlKey) {
+              const next = new Set(prev);
+              const allSelected = dateStrings.every(d => next.has(d));
+              if (allSelected) dateStrings.forEach(d => next.delete(d));
+              else dateStrings.forEach(d => next.add(d));
+              return next;
+            }
+            const allSelected = dateStrings.every(d => prev.has(d)) && prev.size === dateStrings.length;
+            return allSelected ? new Set<string>() : new Set(dateStrings);
+          });
+          if (!ctrlKey) setSelectedParamIds(new Set());  // only reset when no Ctrl
+        }, []);
+        ```
+
+        **handleCellClick (new — Task 4):**
+        ```tsx
+        const handleCellClick = useCallback((e: React.MouseEvent, paramId: string) => {
+          e.stopPropagation();
+          if (!e.ctrlKey) {
+            setSelectedParamIds(new Set());
+            setSelectedColumnDates(new Set());
+            return;
+          }
+          const container = timelineRef.current ?? frozenTimelineRef.current;
+          if (!container || days.length === 0) return;
+          const rect = container.getBoundingClientRect();
+          const x = e.clientX - rect.left + container.scrollLeft;
+          const dayIndex = Math.floor(x / dayWidth);
+          if (dayIndex < 0 || dayIndex >= days.length) return;
+          const dateStr = format(days[dayIndex], 'yyyy-MM-dd');
+          setSelectedParamIds(prev => { const next = new Set(prev); if (next.has(paramId)) next.delete(paramId); else next.add(paramId); return next; });
+          setSelectedColumnDates(prev => { const next = new Set(prev); if (next.has(dateStr)) next.delete(dateStr); else next.add(dateStr); return next; });
+        }, [dayWidth, days]);
+        ```
+
+        **SortableParamRow selection color (Task 1):**
+        ```tsx
+        ${isSelected ? 'bg-app-accent/[0.12]' : displayLevel === 0 ? 'bg-app-primary/5 hover:bg-app-primary/10' : 'hover:bg-app-bg/10'}
+        ```
+
+        **frozenRows sidebar selection color (Task 1):**
+        ```tsx
+        ${selectedParamIds.has(param.id) ? 'bg-app-accent/[0.12]' : 'hover:bg-app-bg/10'}
+        ```
+
+        **Grid row divs — both frozenRows and scrollableRows (Tasks 1, 4, 5):**
+        ```tsx
+        const isRowSelected = selectedParamIds.has(param.id);
+        <div
+          className={`shadow-[0_1px_0_0_var(--color-app-border)] w-full relative ${
+            isRowSelected ? 'bg-app-accent/[0.12]' : param.level === 0 ? 'bg-app-primary/5' : ''
+          }`}
+          style={{ height: `${rowHeight}px`, minHeight: `${rowHeight}px` }}
+          onClick={(e) => handleCellClick(e, param.id)}
+          onContextMenu={(e) => handleTimelineRowContextMenu(e, param.id)}
+        >
+        ```
+        Note: `hover:bg-app-bg/10` removed (Task 5).
+
+        **Task bar — stopPropagation (Task 4, both grids, replace_all):**
+        ```tsx
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => handleTaskMouseDown(e, task)}
+        onDoubleClick={(e) => handleTaskBarDoubleClick(e, task)}
+        onContextMenu={(e) => handleTaskBarContextMenu(e, task)}
+        ```
+
+        **Column highlight overlay — moved after rows, z-20 (Task 2):**
+        ```tsx
+        {/* Строки параметров */}
+        <div className="relative z-10">
+          {scrollableRows.map(...)}
+        </div>
+
+        {/* Слой подсветки колонок и строк (поверх строк) */}
+        <div className="absolute inset-0 z-20 pointer-events-none flex">
+          {dayWidth < 12 ? (
+            weeks.map((w, i) => {
+              const isCurrentWeek = ...;
+              const isWkSelected = w.dateStrings.some((d: string) => selectedColumnDates.has(d));
+              return <div key={i} style={{ width: dayWidth * w.daysCount, ... }}
+                className={`flex-shrink-0 ${isWkSelected ? 'bg-app-accent/[0.12]' : isCurrentWeek ? 'bg-pink-500/[0.08]' : ''}`} />;
+            })
+          ) : (
+            days.map((day, i) => {
+              const isColSelected = selectedColumnDates.has(format(day, 'yyyy-MM-dd'));
+              let bgColor = 'bg-transparent';
+              if (isColSelected) bgColor = 'bg-app-accent/[0.12]';
+              else if (isTdy) bgColor = 'bg-pink-500/[0.08]';
+              else if (isWknd) bgColor = 'bg-app-primary/[0.08]';
+              return <div key={i} style={{ width: dayWidth, ... }} className={`flex-shrink-0 ${bgColor}`} />;
+            })
+          )}
+        </div>
+        ```
+        (Identical structure applied to both frozenRows and scrollableRows grids)
+
+        **Grid container — clear selection for empty space (Task 4):**
+        ```tsx
+        <div className="flex-1 relative bg-app-surface"
+          onClick={() => { setSelectedParamIds(new Set()); setSelectedColumnDates(new Set()); }}>
+        ```
+
+        **Row 3 header — week numbers (small zoom), with onClick (Task 2, kept in Task 3):**
+        ```tsx
+        weeks.map((w, idx) => {
+          const isWSelected = w.dateStrings.some((d: string) => selectedColumnDates.has(d));
+          return (
+            <div key={idx} style={{ width: dayWidth * w.daysCount, ... fontSize, letterSpacing }}
+              onClick={(e) => handleColumnClick(w.dateStrings, e.ctrlKey)}
+              className={`flex-shrink-0 flex items-center justify-center font-bold relative z-10 overflow-hidden leading-none px-0 cursor-pointer
+     select-none ${
+                isWSelected ? 'bg-app-accent/20 text-app-accent' : 'bg-app-primary/5 hover:bg-app-accent/10'
+              }`}>
+              {`W${w.number}`}
+            </div>
+          );
+        })
+        ```
+
+        **Row 1 and Row 2 — plain headers, no interactivity (Task 3):**
+        ```tsx
+        // Row 1 quarters (small zoom) — no onClick, no selection
+        quarters.map((q, idx) => (
+          <div key={idx} style={{ width: dayWidth * q.daysCount, ... }}
+            className="shadow-[inset_-1px_0_0_0_var(--color-app-border)] flex-shrink-0 flex items-center justify-center px-2 text-[10px] font-bold uppercase
+      tracking-wider relative z-10">
+            {q.year}
+          </div>
+        ))
+
+        // Row 2 weeks (large zoom) — no onClick, no selection
+        weeks.map((w, idx) => (
+          <div key={idx} style={{ width: dayWidth * w.daysCount, ... }}
+            className="flex-shrink-0 flex items-center justify-center px-2 text-[10px] font-bold relative z-10">
+            W{w.number}{dayWidth >= 40 && <span className="capitalize ml-1">— {w.monthLabel}</span>}
+          </div>
+        ))
+        ```
+
+        **Removed unused variables (TS fixes):**
+        - `const MAX_LEVEL = 5;` — deleted entirely
+        - `const [dragLevelDelta, ...]` → `const [_dragLevelDelta, ...]`
+
+     4. Errors and fixes:
+        - **TS7006 `Parameter 'd' implicitly has an 'any' type`**: Caused by untyped Map values. `dateStrings: []` inferred as `never[]`. Fixed by: (a) `[]
+     as string[]` in Map initializations, (b) `replace_all: true` to change all `.some(d =>` to `.some((d: string) =>` in render section.
+        - **TS6133 `'MAX_LEVEL' is declared but its value is never read`**: Pre-existing unused constant. Tried `_MAX_LEVEL` prefix — TS6133 is NOT
+     suppressed by underscore prefix (unlike `noUnusedLocals` with some configs). Fixed by deleting the line entirely.
+        - **TS6133 `'dragLevelDelta' is declared but its value is never read`**: Renamed to `_dragLevelDelta` (the setter `setDragLevelDelta` is still used
+     so the declaration itself is needed).
+        - **Column highlight invisible when row hovered**: `hover:bg-app-bg/10` on grid row divs had higher CSS specificity than the overlay's
+     semi-transparent `bg-app-accent/[0.12]`. Fixed by removing `hover:bg-app-bg/10` from all grid row divs using `replace_all: true`.
+
+     5. Problem Solving:
+        - **Z-index overlay**: Moving the column highlight div AFTER the rows div AND adding `z-20` ensures it renders above the `z-10` rows. The
+     `pointer-events-none` class ensures no interaction is blocked. This pattern is applied in both frozenRows and scrollableRows grid sections.
+        - **Coordinate calculation for cell click**: Used `e.clientX - container.getBoundingClientRect().left + container.scrollLeft` divided by `dayWidth`
+     to compute the day index from a mouse click position in the scrollable grid.
+        - **Distinguishing frozenRows vs scrollableRows edits**: Used `replace_all: true` for changes that apply identically to both sections (row div
+     onClick, task bar onClick, hover class removal). Used unique surrounding context for section-specific changes.
+        - **Task 3 revert**: After Task 2 added interactivity to all header rows, Task 3 required reverting Rows 1 and 2 back to plain non-interactive divs.
+      Row 3 retained its click handlers.
+
+     6. All user messages:
+        - **Message 1**: Requested selection system unification — sync colors to `bg-app-accent/[0.12]` for rows, add grid row highlighting, fix Ctrl
+     multi-selection to not reset opposite selection type. References: `handleRowClick` (~601), `handleColumnClick` (~613), `SortableParamRow` (~121),
+     `frozenRows` (~1268), `scrollableRows` (~1630).
+        - **Message 2**: Requested column selection for all zoom levels — add `dateStrings[]` to useMemo objects, update `handleColumnClick` to accept
+     arrays, add onClick to week/month/quarter headers, fix z-index so column overlay shows above row backgrounds. References: useMemo (~405), header rows
+     (~1128, 1176, 1219).
+        - **Message 3**: Requested restricting header interactivity to Row 3 only — remove onClick/hover/selection from Rows 1 and 2, keep Row 3
+     interactive.
+        - **Message 4**: "Добавь логику при клике ЛКМ в пустое поле, весь выбор снимается. При ctrl+ЛКМ в клетку выделяется строка + столбик ячейки" — add
+     clear-all on plain click, add row+column selection on Ctrl+click in grid.
+        - **Message 5**: "отлично! Убери mouseover реакцию, при наведении на выделенный день выделение пропадает. Либо это из-за того, что подсветка
+     mouseover строки приоритетней выбанного. Так быть не должно." — remove hover background from grid row divs.
+
+     7. Pending Tasks:
+        - None explicitly pending. All five tasks completed successfully with passing build.
+
+     8. Current Work:
+        The most recently completed task was **Task 5**: removing `hover:bg-app-bg/10` from grid row divs in both frozenRows and scrollableRows grids. The
+     user reported that hovering over a selected column day caused the selection highlight to disappear. The fix was a single `replace_all: true` edit:
+        ```
+        Old: className={`shadow-[0_1px_0_0_var(--color-app-border)] w-full hover:bg-app-bg/10 relative ${`
+        New: className={`shadow-[0_1px_0_0_var(--color-app-border)] w-full relative ${`
+        ```
+        Build confirmed passing after this change.
+
+     9. Optional Next Step:
+        No pending tasks remain. All five requested changes have been implemented and verified with a successful production build. The next step would be
+     determined by new user instructions.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at:
+     C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--TimeLineManager-4-18-02-2026\cfcea4ce-15a2-4ff9-8f5a-9a498603b445.jsonl
+
+
+
+
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file src\pages\Timeline\TimelinePage.tsx
+
+─────────────────────────────────────────────────────────────────────────────

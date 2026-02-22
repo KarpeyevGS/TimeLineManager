@@ -298,6 +298,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     ref={colorButtonRef}
                     type="button"
                     onClick={() => {
+                      if (status === 'done' || priority === 'blocker') return;
                       if (!colorPickerOpen && colorButtonRef.current) {
                         const rect = colorButtonRef.current.getBoundingClientRect();
                         const popoverWidth = 256; // w-64 = 256px
@@ -309,9 +310,17 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       }
                       setColorPickerOpen(!colorPickerOpen);
                     }}
-                    className="w-5 h-5 rounded-full border border-app-border hover:ring-2 hover:ring-app-primary transition-all"
-                    style={{ backgroundColor: color }}
-                    title="Выбрать цвет"
+                    className="w-5 h-5 rounded-full border border-app-border transition-all"
+                    style={{
+                      backgroundColor: status === 'done' ? '#86efac' : priority === 'blocker' ? '#fca5a5' : color,
+                      opacity: status === 'done' || priority === 'blocker' ? 0.5 : 1,
+                      cursor: status === 'done' || priority === 'blocker' ? 'not-allowed' : 'pointer',
+                    }}
+                    title={
+                      status === 'done' ? 'Цвет переопределён: Завершено'
+                      : priority === 'blocker' ? 'Цвет переопределён: Блокер'
+                      : 'Выбрать цвет'
+                    }
                   />
                   {colorPickerOpen && createPortal(
                     <>
