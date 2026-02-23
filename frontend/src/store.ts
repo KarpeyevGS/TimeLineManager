@@ -731,6 +731,41 @@ export const useAppStore = () => {
     return newConfig;
   }, []);
 
+  const deleteTimelineConfig = useCallback((id: string): void => {
+    globalAppData = {
+      ...globalAppData,
+      timelineConfigs: globalAppData.timelineConfigs.filter(cfg => cfg.id !== id),
+    };
+    notifySubscribers();
+  }, []);
+
+  const updateTimelineConfig = useCallback((id: string, updates: Partial<TimelineConfig>): void => {
+    globalAppData = {
+      ...globalAppData,
+      timelineConfigs: globalAppData.timelineConfigs.map(cfg =>
+        cfg.id === id ? { ...cfg, ...updates } : cfg
+      ),
+    };
+    notifySubscribers();
+  }, []);
+
+  const duplicateTimelineConfig = useCallback((id: string): TimelineConfig | undefined => {
+    const original = globalAppData.timelineConfigs.find(cfg => cfg.id === id);
+    if (!original) return undefined;
+    const newConfig: TimelineConfig = {
+      ...original,
+      id: `timeline_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      name: `${original.name} (копия)`,
+      parameters: original.parameters.map(p => ({ ...p })),
+    };
+    globalAppData = {
+      ...globalAppData,
+      timelineConfigs: [...globalAppData.timelineConfigs, newConfig],
+    };
+    notifySubscribers();
+    return newConfig;
+  }, []);
+
   return {
     appData,
     tasks: {
@@ -755,6 +790,9 @@ export const useAppStore = () => {
       getConfigs: getTimelineConfigs,
       getConfig: getTimelineConfig,
       addConfig: addTimelineConfig,
+      deleteConfig: deleteTimelineConfig,
+      updateConfig: updateTimelineConfig,
+      duplicateConfig: duplicateTimelineConfig,
       groupTasksForTimeline,
       addParameter: addParameterToTimeline,
       deleteParameter: deleteParameterFromTimeline,

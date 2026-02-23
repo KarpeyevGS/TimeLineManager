@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 // Импорт иконок из библиотеки Lucide (LucideIcon — тип для компонентов иконок)
 import {
@@ -11,6 +11,9 @@ import {
   Download,
   Upload,
   RefreshCw,
+  SquarePen,
+  Copy,
+  Trash2,
   LucideIcon
 } from 'lucide-react';
 import { useAppStore } from '../../store';
@@ -47,8 +50,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Состояние для управления шириной панели
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
   const [timelinePopupOpen, setTimelinePopupOpen] = useState(false);
+  const [isDrawerCollapsed, setIsDrawerCollapsed] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; cfgId: string } | null>(null);
   const store = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [contextMenu]);
+
+  const handleRenameConfig = (cfgId: string) => {
+    const cfg = store.appData.timelineConfigs.find(c => c.id === cfgId);
+    if (!cfg) return;
+    const newName = window.prompt('Введите новое название:', cfg.name);
+    if (newName && newName.trim() && newName.trim() !== cfg.name) {
+      store.timelines.updateConfig(cfgId, { name: newName.trim() });
+    }
+    setContextMenu(null);
+  };
+
+  const handleDuplicateConfig = (cfgId: string) => {
+    store.timelines.duplicateConfig(cfgId);
+    setContextMenu(null);
+  };
+
+  const handleDeleteConfig = (cfgId: string) => {
+    const confirmed = window.confirm('Удалить Timeline?');
+    if (!confirmed) { setContextMenu(null); return; }
+    const remaining = store.appData.timelineConfigs.filter(c => c.id !== cfgId);
+    store.timelines.deleteConfig(cfgId);
+    if (activeTimelineId === cfgId) {
+      onTimelineSelect(remaining.length > 0 ? remaining[0].id : '');
+    }
+    setContextMenu(null);
+  };
 
   // Функция экспорта данных
   const handleExport = () => {
@@ -138,7 +176,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               key={item.id}
               onClick={() => {
                 if (isTimeline) {
-                  setTimelinePopupOpen(prev => !prev);
+                  const isEffectivelyHidden = !timelinePopupOpen || isDrawerCollapsed;
+                  if (isEffectivelyHidden) {
+                    setTimelinePopupOpen(true);
+                    setIsDrawerCollapsed(false);
+                  } else {
+                    setTimelinePopupOpen(false);
+                  }
                 } else {
                   setTimelinePopupOpen(false);
                   onPageChange(item.id);
@@ -268,7 +312,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div
         onClick={() => setTimelinePopupOpen(false)}
         style={{ left: sidebarWidth }}
-        className={`fixed top-0 bottom-0 right-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-200 ${
+        className={`fixed top-0 bottom-0 right-0 z-40 transition-opacity duration-200 ${
           timelinePopupOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       />
@@ -276,52 +320,94 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Timeline Drawer */}
       <div
         style={{ left: sidebarWidth }}
-        className={`fixed top-0 h-screen w-64 bg-app-surface border-r border-app-border z-50 flex flex-col shadow-xl transition-all duration-200 ease-out ${
-          timelinePopupOpen
+        className={`fixed top-0 h-screen w-56 bg-app-surface border-r border-app-border z-50 flex flex-col shadow-xl transition-all duration-200 ease-out ${
+          timelinePopupOpen && !isDrawerCollapsed
             ? 'opacity-100 translate-x-0 pointer-events-auto'
             : 'opacity-0 -translate-x-3 pointer-events-none'
         }`}
       >
         {/* Заголовок drawer */}
-        <div className="h-16 flex items-center px-5 border-b border-app-border flex-shrink-0">
-          <span className="font-bold text-app-text-head text-base">Мои Timeline</span>
+        <div className="h-16 flex items-center justify-between px-3 border-b border-app-border flex-shrink-0">
+          {!isDrawerCollapsed && (
+            <span className="font-bold text-app-text-head text-base">Мои Timeline</span>
+          )}
+          <button
+            onClick={() => setIsDrawerCollapsed(prev => !prev)}
+            className={`p-1.5 hover:bg-app-bg rounded-lg text-app-text-muted transition-colors ${isDrawerCollapsed ? 'mx-auto' : ''}`}
+            aria-label={isDrawerCollapsed ? 'Развернуть' : 'Свернуть'}
+          >
+            {isDrawerCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
         </div>
 
         {/* Список конфигураций */}
-        <div className="flex-1 overflow-y-auto py-2">
-          {store.appData.timelineConfigs.map(cfg => (
+        {!isDrawerCollapsed && (
+          <div className="flex-1 overflow-y-auto py-2">
+            {store.appData.timelineConfigs.map(cfg => (
+              <button
+                key={cfg.id}
+                onClick={() => {
+                  setTimelinePopupOpen(false);
+                  onTimelineSelect(cfg.id);
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setContextMenu({ x: e.clientX, y: e.clientY, cfgId: cfg.id });
+                }}
+                className={`w-full text-left px-2 py-2 text-sm font-medium transition-colors ${
+                  activeTimelineId === cfg.id
+                    ? 'text-app-primary bg-app-primary/10'
+                    : 'text-app-text-main hover:bg-app-bg'
+                }`}
+              >
+                {cfg.name}
+              </button>
+            ))}
             <button
-              key={cfg.id}
               onClick={() => {
+                const newCfg = store.timelines.addConfig('Новая Timeline');
                 setTimelinePopupOpen(false);
-                onTimelineSelect(cfg.id);
+                onTimelineSelect(newCfg.id);
               }}
-              className={`w-full text-left px-5 py-2.5 text-sm font-medium transition-colors ${
-                activeTimelineId === cfg.id
-                  ? 'text-app-primary bg-app-primary/10'
-                  : 'text-app-text-main hover:bg-app-bg'
-              }`}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-app-text-main hover:text-app-primary transition-colors sticky bottom-0 bg-app-surface"
             >
-              {cfg.name}
+              +
+              Добавить Timeline
             </button>
-          ))}
-        </div>
-
-        {/* Кнопка добавить — прилипает к низу */}
-        <div className="flex-shrink-0 border-t border-app-border p-3">
+          </div>
+        )}
+      </div>
+      {/* Контекстное меню */}
+      {contextMenu && (
+        <div
+          onMouseDown={(e) => e.stopPropagation()}
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          className="fixed z-[200] bg-app-surface border border-app-border rounded-xl shadow-2xl py-1 min-w-[160px]"
+        >
           <button
-            onClick={() => {
-              const newCfg = store.timelines.addConfig('Новая Timeline');
-              setTimelinePopupOpen(false);
-              onTimelineSelect(newCfg.id);
-            }}
-            className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-app-text-muted hover:text-app-primary hover:bg-app-bg transition-colors"
+            onClick={() => handleRenameConfig(contextMenu.cfgId)}
+            className="w-full text-left flex items-center gap-2 px-4 py-2 text-xs font-semibold text-app-text-main hover:bg-app-bg transition-colors"
           >
-            <span className="text-lg leading-none">+</span>
-            Добавить Timeline
+            <SquarePen size={12} />
+            Переименовать
+          </button>
+          <button
+            onClick={() => handleDuplicateConfig(contextMenu.cfgId)}
+            className="w-full text-left flex items-center gap-2 px-4 py-2 text-xs font-semibold text-app-text-main hover:bg-app-bg transition-colors"
+          >
+            <Copy size={12} />
+            Копировать
+          </button>
+          <div className="border-t border-app-border my-1" />
+          <button
+            onClick={() => handleDeleteConfig(contextMenu.cfgId)}
+            className="w-full text-left flex items-center gap-2 px-4 py-2 text-xs font-semibold text-app-error hover:bg-app-error/10 transition-colors"
+          >
+            <Trash2 size={12} />
+            Удалить
           </button>
         </div>
-      </div>
+      )}
     </>,
     document.body
   );
