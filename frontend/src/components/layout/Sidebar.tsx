@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import ReactDOM from 'react-dom';
 // Импорт иконок из библиотеки Lucide (LucideIcon — тип для компонентов иконок)
 import {
   ListTodo,
@@ -32,15 +33,20 @@ const MENU_ITEMS: MenuItem[] = [
 interface SidebarProps {
   activePage: string;
   onPageChange: (id: string) => void;
+  activeTimelineId?: string;
+  onTimelineSelect: (id: string) => void;
 }
 
 // Типизация компонента как React.FC (Functional Component)
 export const Sidebar: React.FC<SidebarProps> = ({
   activePage,
-  onPageChange
+  onPageChange,
+  activeTimelineId,
+  onTimelineSelect,
 }) => {
   // Состояние для управления шириной панели
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [timelinePopupOpen, setTimelinePopupOpen] = useState(false);
   const store = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -97,8 +103,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     event.target.value = '';
   };
 
-  return (
-    <aside 
+  const aside = (
+    <aside
       // Динамические классы: меняем ширину w-16/w-64 и фиксируем панель по высоте экрана
       className={`bg-app-surface border-r border-app-border transition-all duration-300 flex flex-col h-screen sticky top-0 ${
         isCollapsed ? 'w-16' : 'w-48'
@@ -124,34 +130,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* --- Секция Навигации --- */}
       <nav className="flex-1 p-3 space-y-2">
         {MENU_ITEMS.map((item) => {
-          // Вычисляем, является ли данный пункт активным прямо при рендере
           const isActive = activePage === item.id;
-          
+          const isTimeline = item.id === 'timeline';
+
           return (
             <button
               key={item.id}
-              onClick={() => onPageChange(item.id)} // Установка активного ID через пропс
-              // Условные стили: подсветка фона и текста для активного состояния
+              onClick={() => {
+                if (isTimeline) {
+                  setTimelinePopupOpen(prev => !prev);
+                } else {
+                  setTimelinePopupOpen(false);
+                  onPageChange(item.id);
+                }
+              }}
               className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'p-3'} rounded-xl transition-all group relative ${
-                isActive 
-                  ? 'bg-app-primary/10 text-app-primary' 
+                isActive
+                  ? 'bg-app-primary/10 text-app-primary'
                   : 'text-app-text-main hover:bg-app-bg'
               }`}
-              title={isCollapsed ? item.label : ''} // Нативная подсказка при сворачивании
+              title={isCollapsed ? item.label : ''}
             >
-              {/* Рендеринг иконки (динамический цвет при активности или наведении) */}
-              <item.icon 
-                size={24} 
+              <item.icon
+                size={24}
                 className={`min-w-[24px] transition-colors ${
                   isActive ? 'text-app-primary' : 'group-hover:text-app-primary'
-                }`} 
+                }`}
               />
-              {/* Текст отображается только в развернутом виде */}
               {!isCollapsed && (
                 <span className="ml-3 font-semibold text-sm">{item.label}</span>
               )}
-              
-              {/* Кастомный Tooltip: появляется только в свернутом виде при hover */}
               {isCollapsed && (
                 <div className="absolute left-full ml-4 px-2 py-1 bg-app-text-head text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
                   {item.label}
@@ -248,6 +256,75 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </p>
         </div>
       )}
+
     </aside>
   );
+
+  const sidebarWidth = isCollapsed ? '4rem' : '12rem';
+
+  const portal = ReactDOM.createPortal(
+    <>
+      {/* Backdrop — только правее сайдбара, не накрывает его */}
+      <div
+        onClick={() => setTimelinePopupOpen(false)}
+        style={{ left: sidebarWidth }}
+        className={`fixed top-0 bottom-0 right-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-200 ${
+          timelinePopupOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      />
+
+      {/* Timeline Drawer */}
+      <div
+        style={{ left: sidebarWidth }}
+        className={`fixed top-0 h-screen w-64 bg-app-surface border-r border-app-border z-50 flex flex-col shadow-xl transition-all duration-200 ease-out ${
+          timelinePopupOpen
+            ? 'opacity-100 translate-x-0 pointer-events-auto'
+            : 'opacity-0 -translate-x-3 pointer-events-none'
+        }`}
+      >
+        {/* Заголовок drawer */}
+        <div className="h-16 flex items-center px-5 border-b border-app-border flex-shrink-0">
+          <span className="font-bold text-app-text-head text-base">Мои Timeline</span>
+        </div>
+
+        {/* Список конфигураций */}
+        <div className="flex-1 overflow-y-auto py-2">
+          {store.appData.timelineConfigs.map(cfg => (
+            <button
+              key={cfg.id}
+              onClick={() => {
+                setTimelinePopupOpen(false);
+                onTimelineSelect(cfg.id);
+              }}
+              className={`w-full text-left px-5 py-2.5 text-sm font-medium transition-colors ${
+                activeTimelineId === cfg.id
+                  ? 'text-app-primary bg-app-primary/10'
+                  : 'text-app-text-main hover:bg-app-bg'
+              }`}
+            >
+              {cfg.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Кнопка добавить — прилипает к низу */}
+        <div className="flex-shrink-0 border-t border-app-border p-3">
+          <button
+            onClick={() => {
+              const newCfg = store.timelines.addConfig('Новая Timeline');
+              setTimelinePopupOpen(false);
+              onTimelineSelect(newCfg.id);
+            }}
+            className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-app-text-muted hover:text-app-primary hover:bg-app-bg transition-colors"
+          >
+            <span className="text-lg leading-none">+</span>
+            Добавить Timeline
+          </button>
+        </div>
+      </div>
+    </>,
+    document.body
+  );
+
+  return <>{aside}{portal}</>;
 };

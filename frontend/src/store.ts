@@ -716,6 +716,21 @@ export const useAppStore = () => {
     notifySubscribers();
   }, []);
 
+  // Создать новую конфигурацию Timeline
+  const addTimelineConfig = useCallback((name: string): TimelineConfig => {
+    const newConfig: TimelineConfig = {
+      id: `timeline_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      name,
+      parameters: [],
+    };
+    globalAppData = {
+      ...globalAppData,
+      timelineConfigs: [...globalAppData.timelineConfigs, newConfig],
+    };
+    notifySubscribers();
+    return newConfig;
+  }, []);
+
   return {
     appData,
     tasks: {
@@ -732,12 +747,14 @@ export const useAppStore = () => {
     resources: {
       getAll: getResources,
     },
+
     projects: {
       getAll: getProjects,
     },
     timelines: {
       getConfigs: getTimelineConfigs,
       getConfig: getTimelineConfig,
+      addConfig: addTimelineConfig,
       groupTasksForTimeline,
       addParameter: addParameterToTimeline,
       deleteParameter: deleteParameterFromTimeline,

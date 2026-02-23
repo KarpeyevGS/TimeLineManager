@@ -8,9 +8,10 @@ import { ResourcesPage } from './pages/Resources/ResourcesPage';
 function App() {
   console.log('🚀 App component rendering');
   const [activePage, setActivePage] = useState('tasks');
+  const [activeTimelineId, setActiveTimelineId] = useState<string | undefined>(undefined);
   const [timelineParameterModalOpen, setTimelineParameterModalOpen] = useState(false);
   console.log('📄 Current page:', activePage);
- 
+
   // Функция для отрисовки активной страницы
   const renderPage = () => {
     switch (activePage) {
@@ -18,6 +19,7 @@ function App() {
         return <TasksPage />;
       case 'timeline':
         return <TimelinePage
+          activeTimelineId={activeTimelineId}
           timelineParameterModalOpen={timelineParameterModalOpen}
           onTimelineParameterModalChange={setTimelineParameterModalOpen}
         />;
@@ -34,7 +36,12 @@ function App() {
     <div className="flex h-screen w-screen bg-app-surface font-sans overflow-hidden">
 
       {/* 1. Боковое меню */}
-      <Sidebar activePage={activePage} onPageChange={setActivePage} />
+      <Sidebar
+        activePage={activePage}
+        onPageChange={setActivePage}
+        activeTimelineId={activeTimelineId}
+        onTimelineSelect={(id) => { setActiveTimelineId(id); setActivePage('timeline'); }}
+      />
 
       {/* 2. Основная контентная область */}
       <main className="flex-1 relative overflow-hidden">

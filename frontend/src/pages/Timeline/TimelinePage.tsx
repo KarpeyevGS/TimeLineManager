@@ -10,7 +10,7 @@ import {
   isToday
 } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { Plus, Minus, Pin, Pencil, Trash2, Copy, Globe, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Minus, Pin, Pencil, Trash2, Copy, Globe, GripVertical, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragMoveEvent,
 } from '@dnd-kit/core';
@@ -90,6 +90,7 @@ interface ResizeState {
 }
 
 interface TimelinePageProps {
+  activeTimelineId?: string;
   timelineParameterModalOpen?: boolean;
   onTimelineParameterModalChange?: (open: boolean) => void;
 }
@@ -223,6 +224,7 @@ const SortableParamRow: React.FC<SortableParamRowProps> = ({
 };
 
 export const TimelinePage: React.FC<TimelinePageProps> = ({
+  activeTimelineId,
   timelineParameterModalOpen = false,
   onTimelineParameterModalChange
 }) => {
@@ -254,8 +256,8 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         ? { from: range.from.toISOString(), to: range.to.toISOString() }
         : null,
     });
-  // Выбранная конфигурация timeline — берём первую из store
-  const selectedTimelineId = store.appData.timelineConfigs?.[0]?.id ?? 'timeline_default';
+  // Выбранная конфигурация timeline — из пропса или первая из store
+  const selectedTimelineId = activeTimelineId ?? store.appData.timelineConfigs?.[0]?.id ?? 'timeline_default';
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [frozenIds, setFrozenIds] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -1104,7 +1106,44 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
       {/* ШАПКА ДАТ + ПАРАМЕТРЫ (72px, flex-row, z-40) */}
       <div className="flex flex-row flex-shrink-0 border-b border-app-border bg-app-surface z-40">
         <div className="flex-shrink-0 border-r border-app-border h-[72px] flex flex-col justify-between pl-2 font-semibold text-app-text-main py-2" style={{ width: sidebarWidth, minWidth: sidebarWidth }}>
-          <span>Параметры</span>
+          <div className="flex items-center gap-1">
+            <span>Параметры</span>
+            {selectedParamIds.size === 1 && (() => {
+              const selectedId = Array.from(selectedParamIds)[0];
+              const selectedParam = PARAMETERS.find(p => p.id === selectedId);
+              const canLift = !!selectedParam?.parentId;
+              const prevSibling = (() => {
+                if (!selectedParam) return null;
+                const idx = PARAMETERS.findIndex(p => p.id === selectedId);
+                for (let i = idx - 1; i >= 0; i--) {
+                  const p = PARAMETERS[i];
+                  if (p.level === selectedParam.level && p.parentId === selectedParam.parentId) return p;
+                }
+                return null;
+              })();
+              return (
+                <div className="flex items-center gap-0.5 ml-1">
+                  <button
+                    disabled={!canLift}
+                    onClick={() => canLift && store.timelines.liftAboveParent(selectedTimelineId, selectedId)}
+                    className="w-5 h-5 flex items-center justify-center text-app-text-muted hover:text-app-primary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Поднять на уровень выше"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  {prevSibling && (
+                    <button
+                      onClick={() => store.timelines.reparentUnder(selectedTimelineId, selectedId, prevSibling.id)}
+                      className="w-5 h-5 flex items-center justify-center text-app-text-muted hover:text-app-primary transition-colors"
+                      title="Вложить в предыдущий элемент"
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
           {/* Нижняя строка: кнопки уровней + стрелки навигации */}
           <div className="flex items-center justify-between pr-2">
             {/* Кнопки уровней вложенности — абсолютное позиционирование для точного выравнивания с кнопками строк */}
