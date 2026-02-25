@@ -52,6 +52,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [timelinePopupOpen, setTimelinePopupOpen] = useState(false);
   const [isDrawerCollapsed, setIsDrawerCollapsed] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; cfgId: string } | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
   const store = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,11 +67,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleRenameConfig = (cfgId: string) => {
     const cfg = store.appData.timelineConfigs.find(c => c.id === cfgId);
     if (!cfg) return;
-    const newName = window.prompt('Введите новое название:', cfg.name);
-    if (newName && newName.trim() && newName.trim() !== cfg.name) {
-      store.timelines.updateConfig(cfgId, { name: newName.trim() });
-    }
+    setRenameValue(cfg.name);
+    setRenamingId(cfgId);
     setContextMenu(null);
+  };
+
+  const commitRename = (cfgId: string) => {
+    const trimmed = renameValue.trim();
+    const cfg = store.appData.timelineConfigs.find(c => c.id === cfgId);
+    if (trimmed && cfg && trimmed !== cfg.name) {
+      store.timelines.updateConfig(cfgId, { name: trimmed });
+    }
+    setRenamingId(null);
   };
 
   const handleDuplicateConfig = (cfgId: string) => {
@@ -344,24 +353,41 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {!isDrawerCollapsed && (
           <div className="flex-1 overflow-y-auto py-2">
             {store.appData.timelineConfigs.map(cfg => (
-              <button
-                key={cfg.id}
-                onClick={() => {
-                  setTimelinePopupOpen(false);
-                  onTimelineSelect(cfg.id);
-                }}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  setContextMenu({ x: e.clientX, y: e.clientY, cfgId: cfg.id });
-                }}
-                className={`w-full text-left px-2 py-2 text-sm font-medium transition-colors ${
-                  activeTimelineId === cfg.id
-                    ? 'text-app-primary bg-app-primary/10'
-                    : 'text-app-text-main hover:bg-app-bg'
-                }`}
-              >
-                {cfg.name}
-              </button>
+              <div key={cfg.id}>
+                {renamingId === cfg.id ? (
+                  <div className={`w-full px-2 py-1.5 ${activeTimelineId === cfg.id ? 'bg-app-primary/10' : ''}`}>
+                    <input
+                      autoFocus
+                      value={renameValue}
+                      onChange={e => setRenameValue(e.target.value)}
+                      onBlur={() => commitRename(cfg.id)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') { e.preventDefault(); commitRename(cfg.id); }
+                        if (e.key === 'Escape') { setRenamingId(null); }
+                      }}
+                      className="w-full text-sm font-medium bg-app-bg border border-app-primary rounded px-1 py-0.5 text-app-text-main outline-none focus:ring-1 focus:ring-app-primary"
+                    />
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setTimelinePopupOpen(false);
+                      onTimelineSelect(cfg.id);
+                    }}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setContextMenu({ x: e.clientX, y: e.clientY, cfgId: cfg.id });
+                    }}
+                    className={`w-full text-left px-2 py-2 text-sm font-medium transition-colors ${
+                      activeTimelineId === cfg.id
+                        ? 'text-app-primary bg-app-primary/10'
+                        : 'text-app-text-main hover:bg-app-bg'
+                    }`}
+                  >
+                    {cfg.name}
+                  </button>
+                )}
+              </div>
             ))}
             <button
               onClick={() => {

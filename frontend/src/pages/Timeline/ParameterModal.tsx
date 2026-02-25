@@ -238,6 +238,27 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
                 </p>
               ) : (
                 Object.entries(filterFields).map(([fieldKey, fieldValue]) => {
+                  // Специальный случай: фильтр по ID задачи (Ганта)
+                  if (fieldKey === 'id') {
+                    return (
+                      <div key={fieldKey} className="flex gap-2 items-center">
+                        <div className="flex-1 h-7 px-2 text-xs flex items-center border border-app-border rounded bg-white text-app-text-head select-none font-medium">
+                          ID задачи
+                        </div>
+                        <div className="flex-1 h-7 px-2 text-xs flex items-center border border-app-border rounded bg-white text-app-text-head truncate font-mono" title={fieldValue}>
+                          {fieldValue}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFilter(fieldKey)}
+                          className="flex-shrink-0 px-2 h-7 text-xs font-semibold text-app-error rounded border border-app-error/30 hover:bg-app-error/10 transition-colors"
+                        >
+                          −
+                        </button>
+                      </div>
+                    );
+                  }
+
                   // Определяем отображаемое имя поля (для autocomplete)
                   const fieldName = fieldIdToName[fieldKey] ?? '';
                   // Доступные значения для выбранного поля

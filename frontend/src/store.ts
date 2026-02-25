@@ -145,6 +145,7 @@ export const matchesTaskFilters = (task: Task, filters: Record<string, string>):
   }
 
   return Object.entries(filters).every(([key, value]) => {
+    if (key === 'id') return task.id === value;
     const taskValue = task.customFields?.[key];
     return taskValue === value;
   });

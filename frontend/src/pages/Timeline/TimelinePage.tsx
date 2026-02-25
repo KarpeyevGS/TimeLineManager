@@ -41,6 +41,7 @@ interface TaskModalState {
   paramId?: string;  // ← Теперь строка (ID параметра)
   initialDate?: Date;
   hasEmptyFilters?: boolean;  // ← Флаг для параметра без фильтров
+  isGanttMode?: boolean;  // ← Создание задачи как Gantt-объекта (авто-строка)
 }
 
 interface ParameterModalState {
@@ -278,6 +279,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   const [editingTaskName, setEditingTaskName] = useState<string>('');
   const [hoveredTask, setHoveredTask] = useState<TooltipState | null>(null);
   const tooltipTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [ganttNotification, setGanttNotification] = useState<string | null>(null);
 
   const dayWidth = ZOOM_CONFIG[zoomIndex] || 56;
 
@@ -913,7 +915,16 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     if (taskModal?.mode === 'edit' && data.id) {
       store.tasks.update(data.id, data);
     } else {
-      store.tasks.add(data);
+      const newTask = store.tasks.add(data);
+      if (taskModal?.isGanttMode) {
+        store.timelines.addParameter(selectedTimelineId, {
+          name: newTask.name,
+          level: 0,
+          filters: { id: newTask.id },
+        });
+        setGanttNotification(`Задача "${newTask.name}" создана. Строка добавлена в Timeline.`);
+        setTimeout(() => setGanttNotification(null), 4000);
+      }
     }
     setTaskModal(null);
   };
@@ -1291,6 +1302,8 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
               {dayWidth < 12 ? (
                 weeks.map((w, idx) => {
                   const isWSelected = w.dateStrings.some((d: string) => selectedColumnDates.has(d));
+                  const today = new Date();
+                  const isCurrentWeek = w.number === getWeek(today, { weekStartsOn: 1, locale: ru }) && w.year === today.getFullYear();
                   return (
                     <div
                       key={idx}
@@ -1301,7 +1314,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                         letterSpacing: dayWidth <= 4 ? '-0.05em' : undefined,
                       }}
                       onClick={(e) => handleColumnClick(w.dateStrings, e.ctrlKey)}
-                      className={`flex-shrink-0 flex items-center justify-center font-bold relative z-10 overflow-hidden leading-none px-0 cursor-pointer select-none ${isWSelected ? 'bg-app-accent/20 text-app-accent' : 'bg-app-primary/5 hover:bg-app-accent/10'}`}
+                      className={`flex-shrink-0 flex items-center justify-center font-bold relative z-10 overflow-hidden leading-none px-0 cursor-pointer select-none ${isWSelected ? 'bg-app-accent/20 text-app-accent' : isCurrentWeek ? 'bg-pink-500/20 text-pink-600 hover:bg-pink-500/25' : 'hover:bg-app-accent/10'}`}
                     >
                       {`W${w.number}`}
                     </div>
@@ -1324,7 +1337,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                       onClick={(e) => handleColumnClick([dateStr], e.ctrlKey)}
                       className={`flex-shrink-0 flex flex-col items-center justify-center text-[9px] leading-none relative z-10 cursor-pointer select-none ${
                         isColSelected ? 'bg-app-accent/20 text-app-accent font-black' :
-                        isTdy ? 'bg-pink-500/10 text-pink-600 font-black' :
+                        isTdy ? 'bg-pink-500/20 text-pink-600 font-black' :
                         isWknd ? 'bg-app-primary/10 text-app-primary font-bold' : 'hover:bg-app-primary/5'
                       }`}
                     >
@@ -1524,7 +1537,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                       <div
                         key={i}
                         style={{ width: dayWidth * w.daysCount, transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
-                        className={`flex-shrink-0 ${isWkSelected ? 'bg-app-accent/[0.12]' : isCurrentWeek ? 'bg-pink-500/[0.08]' : ''}`}
+                        className={`flex-shrink-0 ${isWkSelected ? 'bg-app-accent/[0.12]' : isCurrentWeek ? 'bg-pink-500/[0.15]' : ''}`}
                       />
                     );
                   })
@@ -1536,7 +1549,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                     const isColSelected = selectedColumnDates.has(dateStr);
                     let bgColor = 'bg-transparent';
                     if (isColSelected) bgColor = 'bg-app-accent/[0.12]';
-                    else if (isTdy) bgColor = 'bg-pink-500/[0.08]';
+                    else if (isTdy) bgColor = 'bg-pink-500/[0.15]';
                     else if (isWknd) bgColor = 'bg-app-primary/[0.08]';
                     return (
                       <div
@@ -1619,19 +1632,6 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
             </DndContext>
             {/* Компенсатор скроллбара */}
             <div className="h-[13px] min-h-[13px] w-full bg-app-surface shadow-[0_1px_0_0_var(--color-app-border)]" />
-
-            {/* Кнопка Добавить строку */}
-            <button
-              onClick={() => {
-                console.log('🔘 Добавить строку button clicked');
-                onTimelineParameterModalChange?.(true);
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-app-text-main hover:text-app-primary transition-colors sticky bottom-0 bg-app-surface"
-              title="Добавить новую строку параметра"
-            >
-              <Plus size={14} />
-              Добавить строку
-            </button>
           </div>
         </div>
 
@@ -1768,7 +1768,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                       <div
                         key={i}
                         style={{ width: dayWidth * w.daysCount, transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
-                        className={`flex-shrink-0 ${isWkSelected ? 'bg-app-accent/[0.12]' : isCurrentWeek ? 'bg-pink-500/[0.08]' : ''}`}
+                        className={`flex-shrink-0 ${isWkSelected ? 'bg-app-accent/[0.12]' : isCurrentWeek ? 'bg-pink-500/[0.15]' : ''}`}
                       />
                     );
                   })
@@ -1780,7 +1780,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                     const isColSelected = selectedColumnDates.has(dateStr);
                     let bgColor = 'bg-transparent';
                     if (isColSelected) bgColor = 'bg-app-accent/[0.12]';
-                    else if (isTdy) bgColor = 'bg-pink-500/[0.08]';
+                    else if (isTdy) bgColor = 'bg-pink-500/[0.15]';
                     else if (isWknd) bgColor = 'bg-app-primary/[0.08]';
                     return (
                       <div
@@ -1795,6 +1795,26 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* FOOTER: Добавить строку + Добавить задачу */}
+      <div className="flex flex-shrink-0 bg-app-surface">
+        <button
+          onClick={() => { onTimelineParameterModalChange?.(true); }}
+          className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-app-text-main hover:text-app-primary transition-colors"
+          title="Добавить новую строку параметра"
+        >
+          <Plus size={14} />
+          Добавить строку
+        </button>
+        <button
+          onClick={() => setTaskModal({ mode: 'add', isGanttMode: true })}
+          className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-app-text-main hover:text-app-primary transition-colors"
+          title="Создать задачу как объект диаграммы Ганта"
+        >
+          <Plus size={14} />
+          Добавить задачу
+        </button>
       </div>
 
       {/* КОНТЕКСТНОЕ МЕНЮ */}
@@ -1936,6 +1956,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
           paramId={taskModal.paramId}
           initialDate={taskModal.initialDate}
           hasEmptyFilters={taskModal.hasEmptyFilters}
+          ganttMode={taskModal.isGanttMode}
           customFieldTypes={store.customFieldTypes.getAll()}
           onAddCustomFieldType={(name) => store.customFieldTypes.add(name)}
           onSave={handleSaveTask}
@@ -1966,6 +1987,14 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         onSave={parameterModal.mode === 'edit' ? handleUpdateParameter : handleSaveParameter}
         onClose={handleCloseParameterModal}
       />
+
+      {/* УВЕДОМЛЕНИЕ GANTT MODE (portal) */}
+      {ganttNotification && ReactDOM.createPortal(
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] bg-app-text-head text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-2xl whitespace-nowrap">
+          {ganttNotification}
+        </div>,
+        document.body
+      )}
 
       {/* TOOLTIP ЗАДАЧИ (portal) */}
       {hoveredTask && ReactDOM.createPortal(

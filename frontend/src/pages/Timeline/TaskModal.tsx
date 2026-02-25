@@ -17,6 +17,7 @@ interface TaskModalProps {
   paramId?: string;
   initialDate?: Date;
   hasEmptyFilters?: boolean;
+  ganttMode?: boolean;
   customFieldTypes: CustomFieldTypeDef[];
   onAddCustomFieldType: (name: string) => CustomFieldTypeDef;
   onSave: (data: Omit<Task, 'id'> & { id?: string }) => void;
@@ -31,6 +32,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   paramId,
   initialDate,
   hasEmptyFilters,
+  ganttMode,
   customFieldTypes,
   onAddCustomFieldType,
   onSave,
@@ -233,6 +235,15 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
         {/* Body */}
         <div className="px-5 py-4 flex flex-col gap-3">
+
+          {/* Warning: Gantt mode */}
+          {!!ganttMode && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-xs text-blue-900 leading-relaxed">
+                <span className="font-semibold">Режим диаграммы Ганта:</span> Задача создана в режиме диаграммы Ганта. Чтобы переключиться на Timeline, измените фильтр строки.
+              </p>
+            </div>
+          )}
 
           {/* Warning: Empty Filters */}
           {hasEmptyFilters && mode === 'add' && (
