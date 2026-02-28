@@ -1,0 +1,593 @@
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the
+     earlier portion of the conversation.
+
+     Analysis:
+     Let me analyze the conversation chronologically:
+
+     1. **First user message (from local command/stdout)**: The user showed an ASCII mockup and requested changes to the
+      footer in `frontend/src/pages/Timeline/TimelinePage.tsx` (lines 1800-1818). Requirements:
+        - Split footer into two columns: left (sidebarWidth) for "Добавить строку", right (flex-1) for "Добавить задачу"
+        - Add a 13px compensator div between list and footer, visible only when no vertical scroll on timelineRef
+        - After footer — div flex-1 (empty rows), stretches remaining space
+
+     2. **My approach to first request**:
+        - Added `showCompensator` state
+        - Added ResizeObserver useEffect to track when scrollHeight <= clientHeight on timelineRef
+        - Split footer into two columns with sidebarWidth and flex-1
+        - Added flex-1 empty div after footer
+
+     3. **Second user message**: Reported two problems:
+        - Horizontal scrollbar "torn away from bottom" (detached)
+        - Footer buttons not aligned to their respective columns
+        Required behavior: scrollbar always at bottom, buttons under correct columns, empty space between buttons and
+     scrollbar when few rows, compensator 13px visible only if no vertical scroll
+
+        Technical guidance: Use sidebarWidth for left button container, restructure flex containers so empty space is
+     between buttons and scrollbar, likely need custom scrollbar in separate container
+
+     4. **My approach to second request**: Major restructuring:
+        - Added `scrollbarRef` ref
+        - Changed `syncFromTimeline` to only sync vertical (removed horizontal sync)
+        - Added `syncFromScrollbar` function for horizontal sync
+        - Changed `syncFromFrozenTimeline` to use scrollbarRef
+        - Updated scroll restore on mount to use scrollbarRef
+        - Split middle section into left strip and right strip (each flex-col with rows + compensator + button + flex-1)
+        - Added custom horizontal scrollbar panel at bottom
+        - Key insight: sidebarRef and timelineRef use `min-h-0 shrink` so content-height sizing, flex-1 empty div fills
+     remaining space
+
+     5. **Third user message**: Reported two new problems:
+        - Opaque flex-1 in left column covers empty space next to timeline
+        - Opaque flex-1 in right column covers the timeline grid when few tasks
+
+        Requested correct structure: footer and scrollbar OUTSIDE both columns, as siblings of the scrollable section.
+     Structure:
+        ```
+        div.flex-col
+        ├── шапка
+        ├── div.flex-1.flex.min-h-0 (только список и грид)
+        │   ├── левая колонка [width: sidebarWidth]
+        │   └── правая колонка flex-1
+        ├── div.flex.flex-shrink-0 (FOOTER)
+        │   ├── div [width: sidebarWidth] → "Добавить строку"
+        │   └── div.flex-1 → "Добавить задачу"
+        └── div.flex.flex-shrink-0 (scrollbar)
+        ```
+        Remove showCompensator and flex-1 bg-app-surface inside columns.
+
+     6. **My approach to third request**:
+        - Removed `showCompensator` state declaration
+        - Removed showCompensator useEffect
+        - Left column: removed `flex flex-col`, sidebarRef became `h-full` (no shrink/min-h-0)
+        - Left column: removed compensator, button, flex-1 from inside
+        - Right column: removed wrapper div, timelineRef became direct `flex-1` child with `overflow-y-auto
+     overflow-x-hidden`
+        - Restored `min-h-full` on inner width wrapper div
+        - Added FOOTER block between ПРОКРУЧИВАЕМЫЙ РАЗДЕЛ and НИЖНЯЯ ПАНЕЛЬ with both buttons
+        - TypeScript compilation: clean
+
+     Key files: `frontend/src/pages/Timeline/TimelinePage.tsx`
+     Key refs: `sidebarRef`, `timelineRef`, `timeHeaderRef`, `frozenTimelineRef`, `scrollbarRef`
+     Key sync functions: `syncFromTimeline` (vertical only), `syncFromScrollbar` (horizontal), `syncFromSidebar`
+     (vertical), `syncFromFrozenTimeline` (horizontal)
+
+     Summary:
+     1. Primary Request and Intent:
+        The conversation involved three iterative improvement requests to the footer/scrollbar area of
+     `frontend/src/pages/Timeline/TimelinePage.tsx`:
+
+        **Request 1**: Split the footer (lines ~1800-1818) into two columns aligned with the left panel (`sidebarWidth`)
+      and timeline. Add a 13px compensator div (visible only when no vertical scroll) between the list and footer. Add
+     `flex-1` empty space after footer to push it against the content.
+
+        **Request 2**: The first implementation broke the horizontal scrollbar (detached from bottom) and misaligned
+     buttons. Required: scrollbar always pinned to bottom of viewport, "Добавить строку" under left panel, "Добавить
+     задачу" under timeline, empty space (`flex-1`) between buttons and scrollbar when rows are few, compensator 13px
+     above buttons only when no vertical scroll.
+
+        **Request 3**: The second implementation placed opaque `flex-1 bg-app-surface` divs inside left/right columns
+     that covered the timeline grid and adjacent space. The correct fix was to move footer and scrollbar entirely
+     **outside** both columns as siblings of the scrollable section:
+        ```
+        div.flex-col
+        ├── шапка
+        ├── div.flex-1.flex.min-h-0  (прокручиваемый раздел — только список и грид)
+        │   ├── левая колонка [width: sidebarWidth]
+        │   └── правая колонка flex-1
+        ├── div.flex.flex-shrink-0  (FOOTER)
+        │   ├── div [width: sidebarWidth] → "+ Добавить строку"
+        │   └── div.flex-1 → "+ Добавить задачу"
+        └── div.flex.flex-shrink-0  (скроллбар)
+            ├── div [width: sidebarWidth] (заглушка)
+            └── div.flex-1.overflow-x-auto (scrollbarRef)
+        ```
+        Remove `showCompensator` state/effect and all `flex-1 bg-app-surface` inside columns.
+
+     2. Key Technical Concepts:
+        - React 19 + TypeScript with Tailwind CSS v4
+        - Flexbox layout: `flex-1`, `flex-shrink-0`, `min-h-0`, `shrink`, `h-full`
+        - Custom horizontal scrollbar pattern (separate div with `overflow-x-auto` driven by ref)
+        - Multi-panel synchronized scroll (sidebarRef ↔ timelineRef vertical; scrollbarRef →
+     timelineRef/timeHeaderRef/frozenTimelineRef horizontal)
+        - ResizeObserver for detecting vertical overflow (added and then removed)
+        - `isSyncing` ref flag to prevent scroll event loops
+        - `min-h-full` on inner timeline content div to fill viewport when rows are few
+        - `overflow-x-hidden` on timelineRef (horizontal scroll driven exclusively via scrollbarRef)
+
+     3. Files and Code Sections:
+        - **`frontend/src/pages/Timeline/TimelinePage.tsx`**
+          - Central file for all changes. Contains Gantt/Timeline view with synchronized left sidebar (parameter rows)
+     and right grid (task bars).
+
+          **Added ref (line ~243)**:
+          ```tsx
+          const scrollbarRef = React.useRef<HTMLDivElement>(null);
+          ```
+
+          **Replaced sync functions** — `syncFromTimeline` now only syncs vertical scroll; new `syncFromScrollbar`
+     drives horizontal:
+          ```tsx
+          const syncFromTimeline = () => {
+            if (isSyncing.current) return;
+            isSyncing.current = true;
+            const tl = timelineRef.current;
+            if (sidebarRef.current && tl) sidebarRef.current.scrollTop = tl.scrollTop;
+            isSyncing.current = false;
+          };
+
+          const syncFromScrollbar = () => {
+            if (isSyncing.current) return;
+            isSyncing.current = true;
+            const sb = scrollbarRef.current;
+            if (timelineRef.current && sb) timelineRef.current.scrollLeft = sb.scrollLeft;
+            if (timeHeaderRef.current && sb) timeHeaderRef.current.scrollLeft = sb.scrollLeft;
+            if (frozenTimelineRef.current && sb) frozenTimelineRef.current.scrollLeft = sb.scrollLeft;
+            isSyncing.current = false;
+            if (scrollSaveTimer.current) clearTimeout(scrollSaveTimer.current);
+            scrollSaveTimer.current = setTimeout(() => {
+              if (scrollbarRef.current) updateViewState({ scrollLeft: scrollbarRef.current.scrollLeft });
+            }, 300);
+          };
+
+          const syncFromFrozenTimeline = () => {
+            if (isSyncing.current) return;
+            isSyncing.current = true;
+            const ft = frozenTimelineRef.current;
+            if (scrollbarRef.current && ft) scrollbarRef.current.scrollLeft = ft.scrollLeft;
+            if (timelineRef.current && ft) timelineRef.current.scrollLeft = ft.scrollLeft;
+            if (timeHeaderRef.current && ft) timeHeaderRef.current.scrollLeft = ft.scrollLeft;
+            isSyncing.current = false;
+          };
+          ```
+
+          **Mount restore** — now also restores scrollbarRef:
+          ```tsx
+          useEffect(() => {
+            const savedScroll = viewState.scrollLeft;
+            if (savedScroll > 0) {
+              if (scrollbarRef.current) scrollbarRef.current.scrollLeft = savedScroll;
+              if (timelineRef.current) timelineRef.current.scrollLeft = savedScroll;
+              if (timeHeaderRef.current) timeHeaderRef.current.scrollLeft = savedScroll;
+              if (frozenTimelineRef.current) frozenTimelineRef.current.scrollLeft = savedScroll;
+            }
+          // eslint-disable-next-line react-hooks/exhaustive-deps
+          }, []);
+          ```
+
+          **Final JSX structure** (from request 3):
+          ```tsx
+          {/* ПРОКРУЧИВАЕМЫЙ РАЗДЕЛ */}
+          <div className="flex-1 flex overflow-hidden min-h-0">
+            {/* ЛЕВАЯ КОЛОНКА */}
+            <div className="flex-shrink-0 border-r border-app-border" style={{ width: sidebarWidth, minWidth:
+     sidebarWidth }}>
+              <div
+                ref={sidebarRef}
+                onScroll={syncFromSidebar}
+                className="h-full bg-app-surface overflow-y-auto overflow-x-hidden hide-scrollbar select-none"
+              >
+                <DndContext ...>
+                  <SortableContext>...</SortableContext>
+                </DndContext>
+              </div>
+            </div>
+
+            {/* ПРАВАЯ КОЛОНКА - TIMELINE GRID */}
+            <div
+              ref={timelineRef}
+              onScroll={syncFromTimeline}
+              className="flex-1 overflow-y-auto overflow-x-hidden bg-app-surface relative"
+            >
+              <div
+                style={{ width: totalWidth, transition: '...' }}
+                className="flex flex-col min-h-full relative"
+              >
+                {/* СЕТКА */}
+                <div className="flex-1 relative bg-app-surface">
+                  ...timeline rows and tasks...
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* FOOTER: Добавить строку + Добавить задачу */}
+          <div className="flex flex-shrink-0 border-t border-app-border bg-app-surface">
+            <div className="flex-shrink-0 border-r border-app-border" style={{ width: sidebarWidth, minWidth:
+     sidebarWidth }}>
+              <button onClick={() => { onTimelineParameterModalChange?.(true); }} ...>
+                <Plus size={14} /> Добавить строку
+              </button>
+            </div>
+            <div className="flex-1">
+              <button onClick={() => setTaskModal({ mode: 'add', isGanttMode: true })} ...>
+                <Plus size={14} /> Добавить задачу
+              </button>
+            </div>
+          </div>
+
+          {/* НИЖНЯЯ ПАНЕЛЬ: горизонтальный скроллбар */}
+          <div className="flex flex-shrink-0 border-t border-app-border">
+            <div className="flex-shrink-0 border-r border-app-border bg-app-surface" style={{ width: sidebarWidth,
+     minWidth: sidebarWidth }} />
+            <div
+              ref={scrollbarRef}
+              onScroll={syncFromScrollbar}
+              className="flex-1 overflow-x-auto"
+              style={{ height: 13 }}
+            >
+              <div style={{ width: totalWidth, height: 1 }} />
+            </div>
+          </div>
+          ```
+
+          **Removed** (request 3):
+          - `const [showCompensator, setShowCompensator] = useState(false);`
+          - The entire `// Компенсатор: показываем когда нет вертикального скролла` useEffect with ResizeObserver
+          - All `{showCompensator && <div .../>}` JSX occurrences
+          - All `<div className="flex-1 bg-app-surface" />` inside columns
+          - Old compensator inside left sidebarRef: `<div className="h-[13px] min-h-[13px] w-full bg-app-surface
+     shadow-[0_1px_0_0_var(--color-app-border)]" />`
+
+     4. Errors and fixes:
+        - **Horizontal scrollbar detached from bottom** (after request 1 implementation): Caused by placing `flex-1
+     bg-app-surface` after the footer inside the root `flex-col h-full overflow-hidden`, which compressed the scrollable
+      section. Fixed in request 2 by completely restructuring — extracting the horizontal scrollbar to a dedicated
+     bottom panel and making it a custom `overflow-x-auto` div driven by `scrollbarRef`.
+        - **Opaque flex-1 covering timeline grid** (after request 2 implementation): Placing `flex-1 bg-app-surface`
+     inside the right column covered the timeline grid background when rows were few. Fixed in request 3 by moving
+     footer entirely outside the columns — no `flex-1` spacers needed inside columns.
+        - **TypeScript compilation**: Passed cleanly after all changes (`npx tsc -b --noEmit` produced no
+     output/errors).
+        - **Pre-existing ESLint warnings/errors** (not introduced by changes): `_dragLevelDelta` unused var, `_id`
+     unused var, `dateRange` conditional in hook deps.
+
+     5. Problem Solving:
+        - **Custom horizontal scrollbar**: Solved by creating a separate `scrollbarRef` div with `overflow-x-auto` and
+     an inner div of `width: totalWidth, height: 1px`. The scrollbar drives all horizontal positions via
+     `syncFromScrollbar`. The `timelineRef` uses `overflow-x-hidden` so horizontal scroll is only controllable via
+     `scrollbarRef`.
+        - **Scroll sync loop prevention**: `isSyncing.current` ref flag prevents events from bouncing between scroll
+     handlers.
+        - **Empty space below footer**: Solved organically — `flex-1` on the ПРОКРУЧИВАЕМЫЙ РАЗДЕЛ makes it expand to
+     fill all available height, while footer and scrollbar are `flex-shrink-0`. When rows are few, the timeline grid
+     doesn't fill the scrollable section height, leaving visual empty space naturally.
+        - **min-h-full on inner timeline div**: Restored after request 3 changes so the grid background fills the
+     visible scrollable area even when rows are fewer than viewport height.
+
+     6. All user messages:
+        - **(From local command stdout)**: ASCII mockup of footer layout. Request: footer split into two columns (left =
+      sidebarWidth for "Добавить строку", right = flex-1 for "Добавить задачу"), compensator 13px visible only when no
+     vertical scroll, flex-1 empty after footer.
+        - **"В frontend/src/pages/Timeline/TimelinePage.tsx предыдущая доработка..."**: Described two problems
+     (scrollbar detached, buttons not column-aligned). Detailed ASCII schematics for few-rows and many-rows cases.
+     Technical guidance: use sidebarWidth for left container, restructure so empty space is between buttons and
+     scrollbar, likely need custom scrollbar in separate container with `overflow-x-auto`.
+        - **"В frontend/src/pages/Timeline/TimelinePage.tsx предыдущая доработка расположила кнопки..."**: Two problems
+     reported: (1) opaque flex-1 in left column covers space next to timeline, (2) opaque flex-1 in right column covers
+     grid. Provided target tree structure with footer/scrollbar as siblings outside both columns. Explicitly said:
+     remove `showCompensator`, remove `flex-1 bg-app-surface` inside columns.
+        - **"Your task is to create a detailed summary..."**: Summary request (current message).
+
+     7. Pending Tasks:
+        - None explicitly pending. All three requested changes have been implemented and verified with TypeScript
+     compilation.
+
+     8. Current Work:
+        The final completed work was implementing the third and final structural refactor of the TimelinePage
+     footer/scrollbar layout. The key changes made immediately before the summary request:
+        - Removed `showCompensator` state and its ResizeObserver useEffect entirely
+        - Simplified left column: removed `flex flex-col` from wrapper, changed sidebarRef to `h-full` (no `min-h-0
+     shrink`)
+        - Removed compensator div, "Добавить строку" button, and `flex-1 bg-app-surface` from inside left column
+        - Simplified right column: removed the `flex-1 flex flex-col overflow-hidden min-h-0` wrapper div, made
+     timelineRef the direct `flex-1` child of ПРОКРУЧИВАЕМЫЙ РАЗДЕЛ with `overflow-y-auto overflow-x-hidden`
+        - Restored `min-h-full` on inner timeline width wrapper div
+        - Removed compensator div, "Добавить задачу" button, and `flex-1 bg-app-surface` from right column
+        - Added FOOTER block as a sibling div (`flex flex-shrink-0 border-t border-app-border bg-app-surface`) between
+     ПРОКРУЧИВАЕМЫЙ РАЗДЕЛ and НИЖНЯЯ ПАНЕЛЬ (scrollbar)
+        - TypeScript compilation confirmed clean
+
+     9. Optional Next Step:
+        No pending tasks remain. All three requested changes have been completed. The layout now matches the user's
+     specification:
+        > "footer и скроллбар должны быть снаружи обеих колонок, на уровне их общего родителя... Пустое пространство под
+      footer-ом когда задач мало — появляется само, так как div.flex-1.flex (прокручиваемый раздел) растягивается...
+     Компенсатор (showCompensator) и flex-1 bg-app-surface внутри колонок — убрать."
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you
+     generated), read the full transcript at: C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--T
+     imeLineManager-4-18-02-2026\d2b17a09-da42-43aa-95df-b6061349e1ca.jsonl
+
+
+
+
+
+
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file src\pages\Timeline\TimelinePage.tsx
+
+
+
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the
+     earlier portion of the conversation.
+
+     Analysis:
+     Let me chronologically analyze the conversation:
+
+     1. First message: User provided context about footer buttons in TimelinePage.tsx (lines 1809-1830) and asked to
+     remove border-t, border-app-border, bg-app-surface from outer div, and border-r border-app-border from inner div.
+
+     2. I read the file and made the edit successfully.
+
+     3. Second message: User asked to remove wrapper divs entirely, keeping buttons side-by-side directly in a flex
+     container. I removed both nested divs, placing buttons directly in the flex container.
+
+     4. Third message: User confirmed the changes (showed diff) - just confirmation, no new request.
+
+     5. Fourth message: User asked to make buttons more compact (smaller padding, font), add a divider between last
+     parameter row and footer buttons, place buttons immediately below the divider. I changed py-2→py-1, gap-2→gap-1.5,
+     icon size 14→12, added border-t border-app-border to container.
+
+     6. Fifth message: User said buttons need to be placed INSIDE the rows container, attached to the last row via a
+     divider (not a separate footer).
+
+     7. I moved buttons inside the scrollable sidebar container after </DndContext>, added border-t border-app-border.
+     Removed the old FOOTER section.
+
+     8. Sixth message: User reported two problems: (1) sidebar column scrolls separately from timeline, (2) buttons fall
+      off the edge - should be static at bottom for long lists. I changed left column to flex flex-col, scrollable div
+     to flex-1 min-h-0, moved buttons outside scrollable div (static footer at bottom of left column).
+
+     9. Seventh message: User said buttons are now permanently pinned to bottom - they should stick to the last row when
+      list is short, but remain visible when list overflows. I reverted the flex-col approach, put buttons back inside
+     scroll container with sticky bottom-0 bg-app-surface.
+
+     10. Eighth message: User said now only the sidebar column scrolls (not timeline), some rows fall behind buttons. I
+     identified the height mismatch: sidebar.scrollHeight = rows + buttons, timeline.scrollHeight = rows. Added
+     paddingBottom: 26 to timeline inner div to equalize scroll heights.
+
+     11. Ninth message: User said "almost" but buttons text needs smaller font to fit on one line. I changed font-size
+     to 10px (inline style), icon to size={10}, reduced padding to px-2 gap-1.
+
+     12. Tenth message: Bug report - vertical row misalignment on horizontal scroll end. I investigated: found
+     updateViewState called after 300ms debounce triggers re-render. Fixed by importing saveTimelineViewState +
+     loadTimelineViewState and bypassing setState for scroll persistence.
+
+     13. Eleventh message: User said problem persists. I did deeper analysis: identified the real bug -
+     isSyncing.current is reset to false immediately after programmatic scrollTop/scrollLeft assignment, but browser
+     fires the resulting scroll event ASYNCHRONOUSLY, so the other sync function sees isSyncing=false and creates a
+     ping-pong effect. Also: horizontal scrolling fires scroll event on timeline which unnecessarily triggers
+     syncFromTimeline (copying scrollTop even though only scrollLeft changed). Fixed with: (1) scrollTop === scrollTop
+     guard to skip syncing when only horizontal changed, (2) requestAnimationFrame to delay isSyncing reset so async
+     scroll events are caught.
+
+     Key files: frontend/src/pages/Timeline/TimelinePage.tsx, frontend/src/store.ts
+
+     Summary:
+     1. Primary Request and Intent:
+        The user made a series of incremental UI improvements to the footer area of `TimelinePage.tsx`, specifically
+     around two buttons ("+ Добавить строку" and "+ Добавить задачу"), followed by fixing a scroll synchronization bug:
+        - Remove border/background styles from the footer container and its left sub-container
+        - Remove wrapper divs entirely, placing buttons directly side-by-side in a flex container
+        - Make buttons more compact (smaller padding/font), add a divider line between the last parameter row and the
+     buttons
+        - Move buttons inside the rows (sidebar) scroll container, attached directly after the last row via a divider —
+     not a separate footer section
+        - Buttons should behave "sticky": appear right after the last row when list is short, but remain pinned/visible
+     at bottom when list overflows the viewport
+        - Fix vertical row misalignment (jumping) that occurs when horizontal scroll ends
+
+     2. Key Technical Concepts:
+        - `position: sticky; bottom: 0` inside an `overflow-y: auto` scroll container — allows elements to "follow" the
+     last row when short, and stick to the visible bottom when overflowing
+        - Scroll synchronization between two parallel scroll containers (sidebar + timeline) using `isSyncing` ref flag
+        - Asynchronous `scroll` event dispatch: programmatic `.scrollTop = x` assignment queues a `scroll` event
+     asynchronously — `isSyncing` must not be reset before that event fires
+        - `requestAnimationFrame` used to delay `isSyncing = false` until after async scroll events fire
+        - `scrollTop === scrollTop` guard: skips vertical sync when only `scrollLeft` changed (horizontal scroll should
+     not trigger vertical sync)
+        - `scrollHeight` mismatch between sidebar (rows + sticky buttons height) and timeline (rows only) — fixed by
+     adding matching `paddingBottom` to the timeline inner div
+        - Bypassing React `setState` for scroll persistence (saving `scrollLeft` to localStorage directly via
+     `saveTimelineViewState` + `loadTimelineViewState`) to avoid re-renders that cause layout jumps
+
+     3. Files and Code Sections:
+        - **`frontend/src/pages/Timeline/TimelinePage.tsx`**
+          - Main file modified throughout the conversation
+          - **Footer buttons** — final state inside scroll container with `sticky bottom-0`:
+            ```tsx
+            <div className="flex sticky bottom-0 border-t border-app-border bg-app-surface">
+              <button
+                onClick={() => { onTimelineParameterModalChange?.(true); }}
+                className="flex items-center gap-1 px-2 py-1 font-semibold text-app-text-main hover:text-app-primary
+     transition-colors"
+                style={{ fontSize: 10 }}
+                title="Добавить новую строку параметра"
+              >
+                <Plus size={10} />
+                Добавить строку
+              </button>
+              <button
+                onClick={() => setTaskModal({ mode: 'add', isGanttMode: true })}
+                className="flex items-center gap-1 px-2 py-1 font-semibold text-app-text-main hover:text-app-primary
+     transition-colors"
+                style={{ fontSize: 10 }}
+                title="Создать задачу как объект диаграммы Ганта"
+              >
+                <Plus size={10} />
+                Добавить задачу
+              </button>
+            </div>
+            ```
+          - **Sidebar scroll container** — unchanged class (`h-full bg-app-surface overflow-y-auto overflow-x-hidden
+     hide-scrollbar select-none`), left column div unchanged (`flex-shrink-0 border-r border-app-border`)
+          - **Timeline inner div** — `paddingBottom: 26` added to match sidebar scrollHeight:
+            ```tsx
+            <div
+              style={{
+                width: totalWidth,
+                transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                paddingBottom: 26
+              }}
+              className="flex flex-col min-h-full relative"
+            >
+            ```
+          - **Scroll sync functions** — final fixed version:
+            ```tsx
+            const syncFromTimeline = () => {
+              if (isSyncing.current) return;
+              const tl = timelineRef.current;
+              const sb = sidebarRef.current;
+              if (!tl || !sb || sb.scrollTop === tl.scrollTop) return;
+              isSyncing.current = true;
+              sb.scrollTop = tl.scrollTop;
+              requestAnimationFrame(() => { isSyncing.current = false; });
+            };
+
+            const syncFromScrollbar = () => {
+              if (isSyncing.current) return;
+              isSyncing.current = true;
+              const sb = scrollbarRef.current;
+              if (timelineRef.current && sb) timelineRef.current.scrollLeft = sb.scrollLeft;
+              if (timeHeaderRef.current && sb) timeHeaderRef.current.scrollLeft = sb.scrollLeft;
+              if (frozenTimelineRef.current && sb) frozenTimelineRef.current.scrollLeft = sb.scrollLeft;
+              requestAnimationFrame(() => { isSyncing.current = false; });
+              // debounced save without setState
+              if (scrollSaveTimer.current) clearTimeout(scrollSaveTimer.current);
+              scrollSaveTimer.current = setTimeout(() => {
+                if (scrollbarRef.current) {
+                  saveTimelineViewState({ ...loadTimelineViewState(), scrollLeft: scrollbarRef.current.scrollLeft });
+                }
+              }, 300);
+            };
+
+            const syncFromSidebar = () => {
+              if (isSyncing.current) return;
+              const tl = timelineRef.current;
+              const sb = sidebarRef.current;
+              if (!tl || !sb || tl.scrollTop === sb.scrollTop) return;
+              isSyncing.current = true;
+              tl.scrollTop = sb.scrollTop;
+              requestAnimationFrame(() => { isSyncing.current = false; });
+            };
+            ```
+          - **Import** updated to include `saveTimelineViewState` and `loadTimelineViewState`:
+            ```tsx
+            import { useAppStore, useTimelineViewState, saveTimelineViewState, loadTimelineViewState, type Task, type
+     TimelineParameter } from '../../store';
+            ```
+
+        - **`frontend/src/store.ts`**
+          - Read to confirm `saveTimelineViewState` and `loadTimelineViewState` are exported (lines 22 and 32)
+          - `useTimelineViewState` hook identified — uses local `useState`, so every `updateViewState` call triggers a
+     full component re-render
+
+     4. Errors and fixes:
+        - **Buttons inside scroll container broke vertical scroll sync**: Sticky buttons added `~26px` to sidebar
+     `scrollHeight` but timeline `scrollHeight` was unchanged → mismatch caused rows to fall behind buttons. Fixed by
+     adding `paddingBottom: 26` to timeline inner div.
+        - **Buttons static at bottom (wrong UX)**: When using `flex flex-col` + `flex-1 min-h-0` on sidebar, buttons
+     were always pinned at the bottom regardless of list length. User wanted them to "follow" the last row. Fixed by
+     reverting to `h-full` on scroll div and placing buttons inside with `sticky bottom-0`.
+        - **300ms re-render causing layout jump**: `updateViewState({ scrollLeft })` was being called after a 300ms
+     debounce, triggering a full React re-render. Fixed by replacing with direct `saveTimelineViewState({
+     ...loadTimelineViewState(), scrollLeft })` — no state update, no re-render.
+        - **Horizontal scroll causing vertical misalignment (ping-pong sync bug)**: Root cause: `isSyncing.current` was
+     reset synchronously to `false` immediately after `scrollLeft`/`scrollTop` assignment, but the browser fires
+     resulting `scroll` events asynchronously. When `syncFromScrollbar` set `timelineRef.scrollLeft`, the timeline's
+     `scroll` event fired later with `isSyncing=false`, triggering `syncFromTimeline` which unnecessarily modified
+     `sidebarRef.scrollTop`. Fixed with two changes: (1) `scrollTop === scrollTop` guard in both vertical sync functions
+      to skip when only horizontal position changed, (2) `requestAnimationFrame(() => { isSyncing.current = false; })`
+     to delay reset until after async scroll events have been consumed.
+
+     5. Problem Solving:
+        - Solved: Compact footer buttons with divider, placed inside scroll container using `sticky bottom-0`
+        - Solved: `scrollHeight` mismatch between sidebar and timeline via `paddingBottom: 26`
+        - Solved: Re-render-on-scroll-end via direct localStorage persistence
+        - In progress (user confirmed still broken after first fix attempt): Vertical row misalignment on horizontal
+     scroll — addressed with `requestAnimationFrame` + `scrollTop` equality guard in sync functions
+
+     6. All user messages:
+        - "Вот актуальный контекст по кнопкам в футере (строки 1809–1830)... Что нужно убрать: С внешнего div: убрать
+     border-t border-app-border bg-app-surface. С внутреннего div: убрать border-r border-app-border"
+        - "Файл: frontend/src/pages/Timeline/TimelinePage.tsx (строки 1808–1830) Проблема: ... Требуемое поведение:
+     Убрать визуально видимые контейнеры — оставить только кнопки" (remove wrapper divs)
+        - Shows diff output confirming changes — no new request
+        - "Файл: frontend/src/pages/Timeline/TimelinePage.tsx (строки 1808–1826) Проблема: кнопки громоздки... Требуемое
+      поведение: Сделать кнопки компактнее... Добавить разделитель между последней строкой параметров и кнопками"
+        - "нет нужно две кнопки... посместить в контейнер строк приклееть к последней созданной строке через
+     разделитель"
+        - "проблема, теперь столбик со строками скролится отдельно от timeline. 2e - кноки западают за край. Они должны
+     быть статичны внизу, если большой список."
+        - "нет, теперь они приклеены постоянно к низу, а должны быть приклеены к краю списка, в случае если список
+     переростает, они упираются в границу браузера и остаются видимыми"
+        - "всё отлично, но теперь скроллится только столбик. Скролл должен делаться с timeline - возможно нужно добавить
+      какой-то ограничитель. Сейчас пару строк западают за кнопки, и скролл работает некорректно"
+        - "почти. попробуй кнопки... уменьшить шрифт, чтобы уместить их в одну строку"
+        - Bug Report: Vertical Row Misalignment on Scroll End (detailed technical report about horizontal scroll causing
+      vertical jump)
+        - "нет, проблема остаётся"
+
+     7. Pending Tasks:
+        - Verify that the vertical row misalignment bug is fully resolved by the `requestAnimationFrame` + `scrollTop`
+     equality guard fix (user confirmed the previous fix attempt did not solve it)
+
+     8. Current Work:
+        Fixing the vertical row misalignment bug in `frontend/src/pages/Timeline/TimelinePage.tsx`. The bug: horizontal
+     scrolling (via the bottom scrollbar) causes the timeline's `scroll` event to fire, which triggers
+     `syncFromTimeline`, which unnecessarily syncs `scrollTop` to the sidebar. Combined with `isSyncing` being reset too
+      early (before async scroll events fire), this creates a ping-pong effect causing visible row jumps.
+
+        Applied fix in `syncFromTimeline`, `syncFromScrollbar`, and `syncFromSidebar`:
+        - Added `if (!tl || !sb || sb.scrollTop === tl.scrollTop) return;` guard
+        - Replaced `isSyncing.current = false` with `requestAnimationFrame(() => { isSyncing.current = false; })`
+
+     9. Optional Next Step:
+        The user's last message was "нет, проблема остаётся" (the problem persists) in response to the first fix attempt
+      (removing the re-render via `updateViewState`). The second fix (requestAnimationFrame + scrollTop guard) was
+     applied but not yet confirmed by the user. The next step is to await user confirmation that the
+     `requestAnimationFrame` fix resolves the vertical misalignment, or investigate further if the problem still
+     persists (e.g., examining whether the `paddingBottom: 26` exactly matches the rendered button height, or whether
+     there are other scroll event sources causing the misalignment).
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you
+     generated), read the full transcript at: C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--T
+     imeLineManager-4-18-02-2026\f96ac127-d7c2-4517-91ea-d306857deaa0.jsonl
+
+
+
+
+
+
+
+
+
+
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file frontend\src\pages\Timeline\TimelinePage.tsx

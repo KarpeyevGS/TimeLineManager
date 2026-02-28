@@ -20,7 +20,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { DateRangePicker } from '../../components/ui/DateRangePicker';
 import { TaskModal } from './TaskModal';
 import { ParameterModal } from './ParameterModal';
-import { useAppStore, useTimelineViewState, type Task, type TimelineParameter } from '../../store';
+import { useAppStore, useTimelineViewState, saveTimelineViewState, loadTimelineViewState, type Task, type TimelineParameter } from '../../store';
 
 interface ContextMenuState {
   x: number;
@@ -239,6 +239,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   const timeHeaderRef = React.useRef<HTMLDivElement>(null);
   const frozenTimelineRef = React.useRef<HTMLDivElement>(null);
   const isSyncing = React.useRef(false);
+  const scrollbarRef = React.useRef<HTMLDivElement>(null);
   const contextMenuRef = React.useRef<HTMLDivElement>(null);
   const timelineRowMenuRef = React.useRef<HTMLDivElement>(null);
   const taskContextMenuRef = React.useRef<HTMLDivElement>(null);
@@ -501,8 +502,9 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   // Восстанавливаем горизонтальный scroll при монтировании
   useEffect(() => {
     const savedScroll = viewState.scrollLeft;
-    if (savedScroll > 0 && timelineRef.current) {
-      timelineRef.current.scrollLeft = savedScroll;
+    if (savedScroll > 0) {
+      if (scrollbarRef.current) scrollbarRef.current.scrollLeft = savedScroll;
+      if (timelineRef.current) timelineRef.current.scrollLeft = savedScroll;
       if (timeHeaderRef.current) timeHeaderRef.current.scrollLeft = savedScroll;
       if (frozenTimelineRef.current) frozenTimelineRef.current.scrollLeft = savedScroll;
     }
@@ -512,35 +514,47 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   // Синхронизация скролла
   const syncFromTimeline = () => {
     if (isSyncing.current) return;
-    isSyncing.current = true;
     const tl = timelineRef.current;
-    if (sidebarRef.current && tl) sidebarRef.current.scrollTop = tl.scrollTop;
-    if (timeHeaderRef.current && tl) timeHeaderRef.current.scrollLeft = tl.scrollLeft;
-    if (frozenTimelineRef.current && tl) frozenTimelineRef.current.scrollLeft = tl.scrollLeft;
-    isSyncing.current = false;
+    const sb = sidebarRef.current;
+    if (!tl || !sb || sb.scrollTop === tl.scrollTop) return;
+    isSyncing.current = true;
+    sb.scrollTop = tl.scrollTop;
+    requestAnimationFrame(() => { isSyncing.current = false; });
+  };
 
-    // Дебаунс сохранения scrollLeft
+  const syncFromScrollbar = () => {
+    if (isSyncing.current) return;
+    isSyncing.current = true;
+    const sb = scrollbarRef.current;
+    if (timelineRef.current && sb) timelineRef.current.scrollLeft = sb.scrollLeft;
+    if (timeHeaderRef.current && sb) timeHeaderRef.current.scrollLeft = sb.scrollLeft;
+    if (frozenTimelineRef.current && sb) frozenTimelineRef.current.scrollLeft = sb.scrollLeft;
+    requestAnimationFrame(() => { isSyncing.current = false; });
+
+    // Дебаунс сохранения scrollLeft — без setState, чтобы не вызывать ре-рендер
     if (scrollSaveTimer.current) clearTimeout(scrollSaveTimer.current);
     scrollSaveTimer.current = setTimeout(() => {
-      if (timelineRef.current) {
-        updateViewState({ scrollLeft: timelineRef.current.scrollLeft });
+      if (scrollbarRef.current) {
+        saveTimelineViewState({ ...loadTimelineViewState(), scrollLeft: scrollbarRef.current.scrollLeft });
       }
     }, 300);
   };
 
   const syncFromSidebar = () => {
     if (isSyncing.current) return;
+    const tl = timelineRef.current;
+    const sb = sidebarRef.current;
+    if (!tl || !sb || tl.scrollTop === sb.scrollTop) return;
     isSyncing.current = true;
-    if (timelineRef.current && sidebarRef.current) {
-      timelineRef.current.scrollTop = sidebarRef.current.scrollTop;
-    }
-    isSyncing.current = false;
+    tl.scrollTop = sb.scrollTop;
+    requestAnimationFrame(() => { isSyncing.current = false; });
   };
 
   const syncFromFrozenTimeline = () => {
     if (isSyncing.current) return;
     isSyncing.current = true;
     const ft = frozenTimelineRef.current;
+    if (scrollbarRef.current && ft) scrollbarRef.current.scrollLeft = ft.scrollLeft;
     if (timelineRef.current && ft) timelineRef.current.scrollLeft = ft.scrollLeft;
     if (timeHeaderRef.current && ft) timeHeaderRef.current.scrollLeft = ft.scrollLeft;
     isSyncing.current = false;
@@ -1567,15 +1581,14 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
       )}
 
       {/* ПРОКРУЧИВАЕМЫЙ РАЗДЕЛ */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* ЛЕВАЯ ПАНЕЛЬ - ПАРАМЕТРЫ */}
-        <div
-          ref={sidebarRef}
-          onScroll={syncFromSidebar}
-          className="flex-shrink-0 bg-app-surface border-r border-app-border flex flex-col overflow-y-auto overflow-x-hidden hide-scrollbar select-none"
-          style={{ width: sidebarWidth, minWidth: sidebarWidth }}
-        >
-          <div>
+      <div className="flex-1 flex overflow-hidden min-h-0">
+        {/* ЛЕВАЯ КОЛОНКА */}
+        <div className="flex-shrink-0 border-r border-app-border" style={{ width: sidebarWidth, minWidth: sidebarWidth }}>
+          <div
+            ref={sidebarRef}
+            onScroll={syncFromSidebar}
+            className="h-full bg-app-surface overflow-y-auto overflow-x-hidden hide-scrollbar select-none"
+          >
             <DndContext
               sensors={dndSensors}
               modifiers={[restrictToVerticalAxis]}
@@ -1630,21 +1643,40 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                 })}
               </SortableContext>
             </DndContext>
-            {/* Компенсатор скроллбара */}
-            <div className="h-[13px] min-h-[13px] w-full bg-app-surface shadow-[0_1px_0_0_var(--color-app-border)]" />
+            <div className="flex sticky bottom-0 border-t border-app-border bg-app-surface">
+              <button
+                onClick={() => { onTimelineParameterModalChange?.(true); }}
+                className="flex items-center gap-1 px-2 py-1 font-semibold text-app-text-main hover:text-app-primary transition-colors"
+                style={{ fontSize: 10 }}
+                title="Добавить новую строку параметра"
+              >
+                <Plus size={10} />
+                Добавить строку
+              </button>
+              <button
+                onClick={() => setTaskModal({ mode: 'add', isGanttMode: true })}
+                className="flex items-center gap-1 px-2 py-1 font-semibold text-app-text-main hover:text-app-primary transition-colors"
+                style={{ fontSize: 10 }}
+                title="Создать задачу как объект диаграммы Ганта"
+              >
+                <Plus size={10} />
+                Добавить задачу
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* ПРАВАЯ ПАНЕЛЬ - TIMELINE GRID */}
+        {/* ПРАВАЯ КОЛОНКА - TIMELINE GRID */}
         <div
           ref={timelineRef}
           onScroll={syncFromTimeline}
-          className="flex-1 overflow-auto bg-app-surface relative"
+          className="flex-1 overflow-y-auto overflow-x-hidden bg-app-surface relative"
         >
           <div
             style={{
               width: totalWidth,
-              transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              paddingBottom: 26
             }}
             className="flex flex-col min-h-full relative"
           >
@@ -1794,27 +1826,20 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
               </div>
             </div>
           </div>
-        </div>
+          </div>
       </div>
 
-      {/* FOOTER: Добавить строку + Добавить задачу */}
-      <div className="flex flex-shrink-0 bg-app-surface">
-        <button
-          onClick={() => { onTimelineParameterModalChange?.(true); }}
-          className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-app-text-main hover:text-app-primary transition-colors"
-          title="Добавить новую строку параметра"
+      {/* НИЖНЯЯ ПАНЕЛЬ: горизонтальный скроллбар */}
+      <div className="flex flex-shrink-0 border-t border-app-border">
+        <div className="flex-shrink-0 border-r border-app-border bg-app-surface" style={{ width: sidebarWidth, minWidth: sidebarWidth }} />
+        <div
+          ref={scrollbarRef}
+          onScroll={syncFromScrollbar}
+          className="flex-1 overflow-x-auto"
+          style={{ height: 13 }}
         >
-          <Plus size={14} />
-          Добавить строку
-        </button>
-        <button
-          onClick={() => setTaskModal({ mode: 'add', isGanttMode: true })}
-          className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-app-text-main hover:text-app-primary transition-colors"
-          title="Создать задачу как объект диаграммы Ганта"
-        >
-          <Plus size={14} />
-          Добавить задачу
-        </button>
+          <div style={{ width: totalWidth, height: 1 }} />
+        </div>
       </div>
 
       {/* КОНТЕКСТНОЕ МЕНЮ */}

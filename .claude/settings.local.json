@@ -14,7 +14,9 @@
       "Bash(dir:*)",
       "Bash(cmd /c \"type \"\"C:\\\\Users\\\\Георгий\\\\Desktop\\\\prog\\\\TimeLine\\\\2_15-02-2026\\\\frontend\\\\src\\\\store.ts\"\"\")",
       "Bash(cmd /c \"dir \"\"C:\\\\Users\\\\Георгий\\\\Desktop\\\\prog\\\\TimeLine\\\\2_15-02-2026\\\\frontend\\\\src\"\"\")",
-      "Bash(bash --version)"
+      "Bash(bash --version)",
+      "Bash(cd C:\\\\Users\\\\Georgy\\\\Desktop\\\\prog\\\\_Projects\\\\_TimeLineManager\\\\4_18-02-2026:*)",
+      "Bash(head:*)"
     ]
   }
 }
