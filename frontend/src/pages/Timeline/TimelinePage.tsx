@@ -236,6 +236,8 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   // Рефы
   const sidebarRef = React.useRef<HTMLDivElement>(null);
   const timelineRef = React.useRef<HTMLDivElement>(null);
+  const addButtonRef = React.useRef<HTMLDivElement>(null);
+  const [addButtonHeight, setAddButtonHeight] = useState(26);
   const timeHeaderRef = React.useRef<HTMLDivElement>(null);
   const frozenTimelineRef = React.useRef<HTMLDivElement>(null);
   const isSyncing = React.useRef(false);
@@ -511,6 +513,35 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // После рендера контекстного меню корректируем позицию по фактическому размеру
+  useEffect(() => {
+    if (!contextMenu || !contextMenuRef.current) return;
+    const el = contextMenuRef.current;
+    const rect = el.getBoundingClientRect();
+    const MARGIN = 8;
+    let { top, left } = rect;
+    if (rect.bottom > window.innerHeight - MARGIN) {
+      top = Math.max(MARGIN, contextMenu.y - rect.height);
+      el.style.top = `${top}px`;
+    }
+    if (rect.right > window.innerWidth - MARGIN) {
+      left = Math.max(MARGIN, contextMenu.x - rect.width);
+      el.style.left = `${left}px`;
+    }
+  }, [contextMenu]);
+
+  // Измеряем высоту кнопок «Добавить» и синхронизируем с paddingBottom правой панели,
+  // чтобы maxScrollTop обеих панелей был одинаков и скролл не расходился снизу.
+  useEffect(() => {
+    const el = addButtonRef.current;
+    if (!el) return;
+    const update = () => setAddButtonHeight(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // Синхронизация скролла
   const syncFromTimeline = () => {
     if (isSyncing.current) return;
@@ -606,19 +637,8 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
 
   const handleContextMenu = (e: React.MouseEvent, paramId: string) => {
     e.preventDefault();
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const relY = (e.clientY - rect.top) / rect.height;
-    let menuY: number;
-    if (relY < 0.20) {
-      // Курсор в верхней зоне — меню над строкой (оценка высоты меню ~180px)
-      menuY = Math.max(8, rect.top - 180);
-    } else if (relY >= 0.80) {
-      // Курсор в нижней зоне — меню под строкой
-      menuY = rect.bottom + 4;
-    } else {
-      menuY = e.clientY;
-    }
-    setContextMenu({ x: e.clientX, y: menuY, paramId });
+    // Начальная позиция — под курсором; useEffect скорректирует если выйдет за экран
+    setContextMenu({ x: e.clientX, y: e.clientY, paramId });
   };
 
   // ===== Выбор строк / столбцов =====
@@ -1643,7 +1663,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                 })}
               </SortableContext>
             </DndContext>
-            <div className="flex sticky bottom-0 border-t border-app-border bg-app-surface">
+            <div ref={addButtonRef} className="flex sticky bottom-0 z-10 border-t border-app-border bg-app-surface">
               <button
                 onClick={() => { onTimelineParameterModalChange?.(true); }}
                 className="flex items-center gap-1 px-2 py-1 font-semibold text-app-text-main hover:text-app-primary transition-colors"
@@ -1676,7 +1696,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
             style={{
               width: totalWidth,
               transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              paddingBottom: 26
+              paddingBottom: addButtonHeight
             }}
             className="flex flex-col min-h-full relative"
           >
