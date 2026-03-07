@@ -48,7 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onTimelineSelect,
 }) => {
   // Состояние для управления шириной панели
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(true);
   const [timelinePopupOpen, setTimelinePopupOpen] = useState(false);
   const [isDrawerCollapsed, setIsDrawerCollapsed] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; cfgId: string } | null>(null);
@@ -56,6 +56,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [renameValue, setRenameValue] = useState('');
   const store = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [tooltip, setTooltip] = useState<{ label: string; x: number; y: number } | null>(null);
+
+  const showTooltip = (e: React.MouseEvent<HTMLElement>, label: string) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltip({ label, x: rect.right + 8, y: rect.top + rect.height / 2 });
+  };
+  const hideTooltip = () => setTooltip(null);
 
   useEffect(() => {
     if (!contextMenu) return;
@@ -202,7 +210,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   ? 'bg-app-primary/10 text-app-primary'
                   : 'text-app-text-main hover:bg-app-bg'
               }`}
-              title={isCollapsed ? item.label : ''}
+              onMouseEnter={isCollapsed ? (e) => showTooltip(e, item.label) : undefined}
+              onMouseLeave={isCollapsed ? hideTooltip : undefined}
             >
               <item.icon
                 size={24}
@@ -212,11 +221,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               />
               {!isCollapsed && (
                 <span className="ml-3 font-semibold text-sm">{item.label}</span>
-              )}
-              {isCollapsed && (
-                <div className="absolute left-full ml-4 px-2 py-1 bg-app-text-head text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
-                  {item.label}
-                </div>
               )}
             </button>
           );
@@ -229,7 +233,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => fileInputRef.current?.click()}
           className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'p-3'} rounded-xl transition-all group relative text-app-text-main hover:bg-app-bg`}
-          title={isCollapsed ? 'Импорт' : ''}
+          onMouseEnter={isCollapsed ? (e) => showTooltip(e, 'Импорт') : undefined}
+          onMouseLeave={isCollapsed ? hideTooltip : undefined}
         >
           <Upload
             size={20}
@@ -237,13 +242,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
           {!isCollapsed && (
             <span className="ml-3 font-semibold text-sm">Импорт</span>
-          )}
-
-          {/* Кастомный Tooltip в свернутом виде */}
-          {isCollapsed && (
-            <div className="absolute left-full ml-4 px-2 py-1 bg-app-text-head text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
-              Импорт
-            </div>
           )}
         </button>
 
@@ -260,7 +258,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={handleExport}
           className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'p-3'} rounded-xl transition-all group relative text-app-text-main hover:bg-app-bg`}
-          title={isCollapsed ? 'Экспорт' : ''}
+          onMouseEnter={isCollapsed ? (e) => showTooltip(e, 'Экспорт') : undefined}
+          onMouseLeave={isCollapsed ? hideTooltip : undefined}
         >
           <Download
             size={20}
@@ -269,20 +268,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!isCollapsed && (
             <span className="ml-3 font-semibold text-sm">Экспорт</span>
           )}
-
-          {/* Кастомный Tooltip в свернутом виде */}
-          {isCollapsed && (
-            <div className="absolute left-full ml-4 px-2 py-1 bg-app-text-head text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
-              Экспорт
-            </div>
-          )}
         </button>
 
         {/* Кнопка Новый проект */}
         <button
           onClick={handleNewProject}
           className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'p-3'} rounded-xl transition-all group relative text-app-text-main hover:bg-app-bg`}
-          title={isCollapsed ? 'Новый проект' : ''}
+          onMouseEnter={isCollapsed ? (e) => showTooltip(e, 'Новый проект') : undefined}
+          onMouseLeave={isCollapsed ? hideTooltip : undefined}
         >
           <RefreshCw
             size={20}
@@ -290,13 +283,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
           {!isCollapsed && (
             <span className="ml-3 font-semibold text-sm">Новый</span>
-          )}
-
-          {/* Кастомный Tooltip в свернутом виде */}
-          {isCollapsed && (
-            <div className="absolute left-full ml-4 px-2 py-1 bg-app-text-head text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
-              Новый проект
-            </div>
           )}
         </button>
       </div>
@@ -371,8 +357,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 ) : (
                   <button
                     onClick={() => {
-                      setTimelinePopupOpen(false);
-                      onTimelineSelect(cfg.id);
+                      if (clickTimerRef.current) return;
+                      clickTimerRef.current = setTimeout(() => {
+                        clickTimerRef.current = null;
+                        onTimelineSelect(cfg.id);
+                      }, 220);
+                    }}
+                    onDoubleClick={() => {
+                      if (clickTimerRef.current) {
+                        clearTimeout(clickTimerRef.current);
+                        clickTimerRef.current = null;
+                      }
+                      handleRenameConfig(cfg.id);
                     }}
                     onContextMenu={(e) => {
                       e.preventDefault();
@@ -392,7 +388,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               onClick={() => {
                 const newCfg = store.timelines.addConfig('Новая Timeline');
-                setTimelinePopupOpen(false);
                 onTimelineSelect(newCfg.id);
               }}
               className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-app-text-main hover:text-app-primary transition-colors sticky bottom-0 bg-app-surface"
@@ -438,5 +433,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
     document.body
   );
 
-  return <>{aside}{portal}</>;
+  const tooltipPortal = tooltip && ReactDOM.createPortal(
+    <div
+      style={{ position: 'fixed', left: tooltip.x, top: tooltip.y, transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 9999 }}
+      className="px-3 py-2 bg-app-text-head text-white text-[11px] font-bold leading-tight rounded-lg shadow-xl whitespace-nowrap"
+    >
+      {tooltip.label}
+    </div>,
+    document.body
+  );
+
+  return <>{aside}{portal}{tooltipPortal}</>;
 };

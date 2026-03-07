@@ -281,6 +281,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTaskName, setEditingTaskName] = useState<string>('');
   const [hoveredTask, setHoveredTask] = useState<TooltipState | null>(null);
+  const [copyToTimelineModal, setCopyToTimelineModal] = useState<{ rootIds: string[] } | null>(null);
   const tooltipTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [ganttNotification, setGanttNotification] = useState<string | null>(null);
 
@@ -997,6 +998,62 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     setContextMenu(null);
   };
 
+  // Открыть модалку выбора целевого timeline для копирования
+  const handleOpenCopyToTimeline = () => {
+    if (!contextMenu) return;
+    const isMultiSelect = selectedParamIds.size > 1 && selectedParamIds.has(contextMenu.paramId);
+    const rootIds = isMultiSelect ? Array.from(selectedParamIds) : [contextMenu.paramId];
+    setCopyToTimelineModal({ rootIds });
+    setContextMenu(null);
+  };
+
+  // Выполнить копирование строк в целевой timeline
+  const handleCopyToTimeline = (targetConfigId: string) => {
+    if (!copyToTimelineModal) return;
+    const idMap = new Map<string, string>();
+
+    // Собираем список (param, levelOffset) в иерархическом порядке
+    const toCopy: Array<{ param: TimelineParameter; levelOffset: number }> = [];
+    const seenIds = new Set<string>();
+
+    for (const rootId of copyToTimelineModal.rootIds) {
+      if (seenIds.has(rootId)) continue;
+      const rootParam = PARAMETERS.find(p => p.id === rootId);
+      if (!rootParam) continue;
+      const levelOffset = rootParam.level;
+      seenIds.add(rootId);
+      toCopy.push({ param: rootParam, levelOffset });
+
+      if (collapsedIds.has(rootId)) {
+        const descendants = getAllDescendants(rootId);
+        for (const descId of descendants) {
+          if (!seenIds.has(descId)) {
+            const descParam = PARAMETERS.find(p => p.id === descId);
+            if (descParam) {
+              seenIds.add(descId);
+              toCopy.push({ param: descParam, levelOffset });
+            }
+          }
+        }
+      }
+    }
+
+    for (const { param, levelOffset } of toCopy) {
+      const newParentId = param.parentId && idMap.has(param.parentId)
+        ? idMap.get(param.parentId)
+        : undefined;
+      const newParam = store.timelines.addParameter(targetConfigId, {
+        name: param.name,
+        level: param.level - levelOffset,
+        parentId: newParentId,
+        filters: { ...param.filters },
+      });
+      idMap.set(param.id, newParam.id);
+    }
+
+    setCopyToTimelineModal(null);
+  };
+
   // Импорт данных из JSON файла
 
   // Обработчики drag and drop
@@ -1114,7 +1171,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
       {/* Заголовок страницы - фиксирован */}
       <div className="px-4 py-2 bg-app-surface z-50 flex-shrink-0 border-b border-app-border flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold text-app-text-head">График Timeline</h2>
+          <h2 className="text-xl font-bold text-app-text-head">{timelineConfig?.name ?? 'Timeline'}</h2>
         </div>
 
         <div className="flex items-center gap-6">
@@ -1901,6 +1958,15 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
             Добавить строку
           </button>
           <button
+            onClick={handleOpenCopyToTimeline}
+            className="w-full text-left px-4 py-2 text-xs font-semibold text-app-text-main hover:bg-app-bg/50 transition-colors flex items-center gap-2"
+          >
+            <Copy size={12} />
+            {selectedParamIds.size > 1 && selectedParamIds.has(contextMenu.paramId)
+              ? 'Копировать строки'
+              : 'Копировать строку'}
+          </button>
+          <button
             onClick={() => handleDeleteParameter(contextMenu.paramId)}
             className="w-full text-left px-4 py-2 text-xs font-semibold text-app-error hover:bg-app-error/10 transition-colors flex items-center gap-2"
           >
@@ -2032,6 +2098,59 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         onSave={parameterModal.mode === 'edit' ? handleUpdateParameter : handleSaveParameter}
         onClose={handleCloseParameterModal}
       />
+
+      {/* МОДАЛ КОПИРОВАНИЯ СТРОК В ДРУГОЙ TIMELINE */}
+      {copyToTimelineModal && ReactDOM.createPortal(
+        <div
+          className="fixed inset-0 z-[9990] flex items-center justify-center"
+          onMouseDown={() => setCopyToTimelineModal(null)}
+        >
+          <div
+            className="bg-app-surface border border-app-border rounded-2xl shadow-2xl p-5 min-w-[260px] max-w-xs w-full"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-bold text-app-text-head mb-3">
+              Копировать в Timeline
+            </p>
+            <div className="space-y-1 max-h-64 overflow-y-auto">
+              {(() => {
+                const currentCfg = store.appData.timelineConfigs.find(c => c.id === selectedTimelineId);
+                return currentCfg ? (
+                  <>
+                    <button
+                      onClick={() => handleCopyToTimeline(selectedTimelineId)}
+                      className="w-full text-left px-3 py-2 text-xs font-semibold text-app-primary hover:bg-app-primary/10 rounded-lg transition-colors"
+                    >
+                      {currentCfg.name} (текущий)
+                    </button>
+                    {store.appData.timelineConfigs.filter(cfg => cfg.id !== selectedTimelineId).length > 0 && (
+                      <div className="border-t border-app-border my-1" />
+                    )}
+                  </>
+                ) : null;
+              })()}
+              {store.appData.timelineConfigs
+                .filter(cfg => cfg.id !== selectedTimelineId)
+                .map(cfg => (
+                  <button
+                    key={cfg.id}
+                    onClick={() => handleCopyToTimeline(cfg.id)}
+                    className="w-full text-left px-3 py-2 text-xs font-semibold text-app-text-main hover:bg-app-bg rounded-lg transition-colors"
+                  >
+                    {cfg.name}
+                  </button>
+                ))}
+            </div>
+            <button
+              onClick={() => setCopyToTimelineModal(null)}
+              className="mt-3 w-full text-center text-xs font-semibold text-app-text-muted hover:text-app-text-main transition-colors"
+            >
+              Отмена
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* УВЕДОМЛЕНИЕ GANTT MODE (portal) */}
       {ganttNotification && ReactDOM.createPortal(

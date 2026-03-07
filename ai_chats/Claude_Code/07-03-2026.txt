@@ -226,3 +226,231 @@
      If you need specific details from before compaction (like exact code snippets, error messages, or content you
      generated), read the full transcript at: C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--T
      imeLineManager-4-18-02-2026\d8d2833b-233e-42cb-9cd1-f6a7397ed2c9.jsonl
+
+● feat: улучшения Sidebar и TimelinePage
+
+  - Sidebar свёрнут по умолчанию
+  - Заголовок страницы Timeline показывает имя активного timeline
+  - Двойной клик по названию timeline в drawer открывает inline-переименование
+  - Tooltip у элементов навигации sidebar через portal (единый стиль с taskbar)
+  - Drawer "Мои Timeline" не закрывается при выборе timeline
+  - Добавлено копирование строк в другой timeline через контекстное меню:
+    подпись зависит от выбора, вложенные строки копируются если свёрнуты,
+    иерархия и фильтры сохраняются
+ Conversation compacted (ctrl+o for history)
+
+
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the
+     earlier portion of the conversation.
+
+     Analysis:
+     Let me chronologically analyze all the changes made in this session:
+
+     1. **Sidebar collapsed by default** - Changed `useState<boolean>(false)` to `useState<boolean>(true)` in
+     Sidebar.tsx
+
+     2. **Copy rows to another timeline** - Added context menu item in TimelinePage for copying rows. Involved:
+        - Adding `copyToTimelineModal` state
+        - `handleOpenCopyToTimeline` handler
+        - `handleCopyToTimeline` handler with ID remapping
+        - Modal UI with portal
+        - Logic: collapsed rows include descendants, level normalization
+
+     3. **"Copy to current timeline" option** - Added current timeline as first item in copy modal with "(текущий)"
+     label
+
+     4. **Timeline name in header** - Changed static "График Timeline" to `{timelineConfig?.name ?? 'Timeline'}`
+
+     5. **Double-click rename in drawer** - Added `onDoubleClick` to timeline buttons in Sidebar, but first attempt
+     didn't work because single-click was closing the drawer before double-click fired
+
+     6. **Fix double-click** - Implemented timer-based delay for single click (220ms), double-click cancels the timer
+
+     7. **Sidebar tooltips via portal** - Replaced absolute-positioned tooltip divs (clipped by `overflow-hidden`
+     parent) with portal-based rendering using hover state
+
+     8. **Drawer stays open on timeline select** - Removed `setTimelinePopupOpen(false)` from timeline item click and
+     "Добавить Timeline" click handlers
+
+     Summary:
+     1. Primary Request and Intent:
+        - **Sidebar default state**: Make the main sidebar collapsed by default
+        - **Copy rows to another timeline**: Add context menu item to copy rows (with filters, hierarchy, collapsed
+     children) to another timeline config
+        - **Copy to current timeline**: Add option to copy rows into the currently active timeline
+        - **Dynamic header**: Replace static "График Timeline" header with the current active timeline's name
+        - **Double-click rename**: Allow double-clicking a timeline name in the drawer to enter inline rename mode
+        - **Sidebar tooltip style**: Match sidebar nav tooltips to the taskbar tooltip style (same visual format)
+        - **Drawer persistence**: Fix drawer closing when selecting a timeline — it should only close via backdrop click
+      or the Timeline nav button toggle
+
+     2. Key Technical Concepts:
+        - React `useState`, `useCallback`, `useMemo` patterns
+        - `ReactDOM.createPortal` for rendering tooltips and modals above `overflow-hidden` parents
+        - Timer-based single/double-click disambiguation (220ms delay)
+        - ID remapping when copying hierarchical structures (old ID → new ID map)
+        - Level normalization when copying rows (root rows start at level 0)
+        - Tailwind CSS v4 with custom theme (`bg-app-text-head`, `text-app-primary`, etc.)
+        - `getBoundingClientRect()` for portal tooltip positioning
+
+     3. Files and Code Sections:
+        - **`frontend/src/components/layout/Sidebar.tsx`**
+          - Changed `useState<boolean>(false)` → `useState<boolean>(true)` for `isCollapsed`
+          - Added `clickTimerRef` for double-click handling
+          - Added `tooltip` state + `showTooltip`/`hideTooltip` helpers for portal tooltips
+          - Replaced all `absolute` tooltip divs with `onMouseEnter`/`onMouseLeave` handlers
+          - Added `tooltipPortal` rendered via `ReactDOM.createPortal` into `document.body`
+          - Added `onDoubleClick` handler calling `handleRenameConfig` on timeline buttons
+          - Removed `setTimelinePopupOpen(false)` from timeline item click and "Добавить Timeline" click
+          - Key tooltip portal code:
+            ```tsx
+            const tooltipPortal = tooltip && ReactDOM.createPortal(
+              <div
+                style={{ position: 'fixed', left: tooltip.x, top: tooltip.y, transform: 'translateY(-50%)',
+     pointerEvents: 'none', zIndex: 9999 }}
+                className="px-3 py-2 bg-app-text-head text-white text-[11px] font-bold leading-tight rounded-lg
+     shadow-xl whitespace-nowrap"
+              >
+                {tooltip.label}
+              </div>,
+              document.body
+            );
+            return <>{aside}{portal}{tooltipPortal}</>;
+            ```
+          - Key double-click code:
+            ```tsx
+            onClick={() => {
+              if (clickTimerRef.current) return;
+              clickTimerRef.current = setTimeout(() => {
+                clickTimerRef.current = null;
+                onTimelineSelect(cfg.id);
+              }, 220);
+            }}
+            onDoubleClick={() => {
+              if (clickTimerRef.current) {
+                clearTimeout(clickTimerRef.current);
+                clickTimerRef.current = null;
+              }
+              handleRenameConfig(cfg.id);
+            }}
+            ```
+
+        - **`frontend/src/pages/Timeline/TimelinePage.tsx`**
+          - Added `copyToTimelineModal` state: `useState<{ rootIds: string[] } | null>(null)`
+          - Added `handleOpenCopyToTimeline`: determines rootIds (multi-select or single), opens modal
+          - Added `handleCopyToTimeline(targetConfigId)`: collects params to copy, handles collapsed descendants, level
+     normalization, ID remapping, calls `store.timelines.addParameter`
+          - Added copy button in context menu between "Добавить строку" and "Удалить параметр"
+          - Added copy modal portal (z-9990) with current timeline first (blue, "(текущий)"), separator, then others
+          - Changed `<h2>График Timeline</h2>` → `<h2>{timelineConfig?.name ?? 'Timeline'}</h2>`
+          - Key copy handler:
+            ```tsx
+            const handleCopyToTimeline = (targetConfigId: string) => {
+              if (!copyToTimelineModal) return;
+              const idMap = new Map<string, string>();
+              const toCopy: Array<{ param: TimelineParameter; levelOffset: number }> = [];
+              const seenIds = new Set<string>();
+
+              for (const rootId of copyToTimelineModal.rootIds) {
+                if (seenIds.has(rootId)) continue;
+                const rootParam = PARAMETERS.find(p => p.id === rootId);
+                if (!rootParam) continue;
+                const levelOffset = rootParam.level;
+                seenIds.add(rootId);
+                toCopy.push({ param: rootParam, levelOffset });
+                if (collapsedIds.has(rootId)) {
+                  const descendants = getAllDescendants(rootId);
+                  for (const descId of descendants) {
+                    if (!seenIds.has(descId)) {
+                      const descParam = PARAMETERS.find(p => p.id === descId);
+                      if (descParam) { seenIds.add(descId); toCopy.push({ param: descParam, levelOffset }); }
+                    }
+                  }
+                }
+              }
+
+              for (const { param, levelOffset } of toCopy) {
+                const newParentId = param.parentId && idMap.has(param.parentId)
+                  ? idMap.get(param.parentId) : undefined;
+                const newParam = store.timelines.addParameter(targetConfigId, {
+                  name: param.name, level: param.level - levelOffset,
+                  parentId: newParentId, filters: { ...param.filters },
+                });
+                idMap.set(param.id, newParam.id);
+              }
+              setCopyToTimelineModal(null);
+            };
+            ```
+
+     4. Errors and fixes:
+        - **Double-click not working**: First attempt added `onDoubleClick` directly but single-click fired
+     `setTimelinePopupOpen(false)` which caused the element to unmount before double-click registered. Fixed by adding
+     `clickTimerRef` — single click delayed 220ms, double click cancels the timer.
+        - **Sidebar tooltip not visible**: Initial implementation used `absolute` positioned divs inside buttons. These
+     were clipped by `overflow-hidden` on the root `App.tsx` container (`<div className="flex h-screen w-screen
+     bg-app-surface font-sans overflow-hidden">`). Fixed by switching to `ReactDOM.createPortal` with `position: fixed`
+     on `document.body`, using `getBoundingClientRect()` for positioning.
+
+     5. Problem Solving:
+        - **Tooltip clipping**: Diagnosed root cause as `overflow-hidden` on `App.tsx` root div. Solution: portal to
+     `document.body` with fixed positioning — same pattern already used by taskbar tooltip in TimelinePage.
+        - **Double-click disambiguation**: Used a 220ms timer pattern — standard browser double-click detection
+     approach. Single click is delayed; if double-click fires within that window, timer is cancelled.
+        - **Hierarchy copy with level normalization**: When copying mid-level rows, subtract the root's original level
+     so copied rows start at level 0. Descendants maintain relative levels using the same `levelOffset` per copy group.
+        - **Drawer closing on timeline select**: Traced `setTimelinePopupOpen(false)` calls in timeline item click
+     handler and "Добавить Timeline" button — removed both. Backdrop click remains as the close mechanism.
+
+     6. All user messages:
+        - "slide bar - основной по умолчанию должен быть скрыт"
+        - "Нужно расширить контекстное меню строк на странице `TimelinePage`: добавить действие копирования строк в
+     другой timeline..." [long detailed request with code context]
+        - "добавь в пункт выбора 'скопировать в текущий timeline'"
+        - "Нужно убрать статичный заголовок `График Timeline` на странице `TimelinePage`... Дополнительно нужно
+     упростить переименование timeline в списке: при двойном клике ЛКМ..." [detailed request]
+        - "Название подтянулось, но двойной щелкоч ЛКМ не работает"
+        - "Нужно привести tooltip у элементов навигации в `Sidebar` к тому же визуальному формату, что уже используется
+     у `taskbar` в `TimelinePage`..." [detailed request with screenshots]
+        - "теперь подсказка скрыта, её не видно, должно быть видно поверх страницы"
+        - "при выборе timeline second side bar скрывается автоматически, должен оставаться. скрывается при закрытии на
+     кнопку или при клике на страницу, но при клике в sidebar или second sidebar он не должен скрываться"
+        - "проблема с zoom. задай несколько уточняющих вопросов перед тем, как начать делать. [Request interrupted by
+     user] сделай краткое описание для комита в git текстом сюда. Текущей сессии"
+        - [Summary request]
+
+     7. Pending Tasks:
+        - **Zoom problem**: User started to mention a problem with zoom but interrupted themselves and asked for a
+     commit description instead. This is unresolved and may need follow-up.
+
+     8. Current Work:
+        The last completed task was fixing the Timeline drawer to stay open when selecting a timeline. The fix removed
+     `setTimelinePopupOpen(false)` from two places in `Sidebar.tsx`:
+        - Timeline item `onClick` handler (inside `clickTimerRef` setTimeout)
+        - "Добавить Timeline" button `onClick` handler
+
+        Before that, the user had started to raise a zoom issue but interrupted themselves to request a git commit
+     summary instead.
+
+     9. Optional Next Step:
+        The user mentioned "проблема с zoom" but interrupted the request before describing it. The next step would be to
+      ask the user to describe the zoom problem they were about to raise, as it was explicitly started but not
+     completed. Direct quote: *"проблема с zoom. задай несколько уточняющих вопросов перед тем, как начать делать.
+     [Request interrupted by user]"*
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you
+     generated), read the full transcript at: C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--T
+     imeLineManager-4-18-02-2026\f9fefff7-9e2e-45d6-9f2e-efa2f390bbab.jsonl
+
+
+
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file src\components\layout\Sidebar.tsx
+  ⎿  Referenced file src\pages\Timeline\TimelinePage.tsx
+  ⎿  Referenced file src\store.ts
+  ⎿  Read src\App.tsx (55 lines)
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Showing detailed transcript · ctrl+o to toggle · ctrl+e to show all
