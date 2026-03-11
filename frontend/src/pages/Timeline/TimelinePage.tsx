@@ -1068,6 +1068,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   // Обработчики drag and drop
   const handleTaskMouseDown = (e: React.MouseEvent, task: Task) => {
     if (editingTaskId === task.id) return;
+    if (task.fix) return;
     e.preventDefault();
     setDragState({
       taskId: task.id,
@@ -1078,6 +1079,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   };
 
   const handleResizeMouseDown = (e: React.MouseEvent, task: Task, side: 'left' | 'right') => {
+    if (task.fix) return;
     e.preventDefault();
     e.stopPropagation();
     setResizeState({
@@ -1558,6 +1560,41 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                           const isDragging = dragState?.taskId === task.id;
                           const isResizing = resizeState?.taskId === task.id;
 
+                          if (task.milestone) {
+                            const cx = position.left + position.width / 2;
+                            const size = 14;
+                            return (
+                              <div
+                                key={task.id}
+                                onClick={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => handleTaskMouseDown(e, task)}
+                                onContextMenu={(e) => handleTaskBarContextMenu(e, task)}
+                                onMouseEnter={(e) => handleTaskBarMouseEnter(e, task)}
+                                onMouseLeave={handleTaskBarMouseLeave}
+                                className={`absolute flex items-center select-none transition-all ${isDragging ? 'opacity-75 cursor-grabbing' : 'cursor-grab hover:opacity-80'}`}
+                                style={{
+                                  left: `${cx - size / 2}px`,
+                                  top: `${topOffset}px`,
+                                  height: '20px',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: `${size}px`,
+                                    height: `${size}px`,
+                                    flexShrink: 0,
+                                    backgroundColor: '#1a1a1a',
+                                    transform: 'rotate(45deg)',
+                                    boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+                                  }}
+                                />
+                                <span className="ml-2 text-[10px] font-medium text-app-text-head whitespace-nowrap">
+                                  {task.name}
+                                </span>
+                              </div>
+                            );
+                          }
+
                           return (
                             <div
                               key={task.id}
@@ -1806,6 +1843,41 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                           const topOffset = layerIndex * 24 + 2;
                           const isDragging = dragState?.taskId === task.id;
                           const isResizing = resizeState?.taskId === task.id;
+
+                          if (task.milestone) {
+                            const cx = position.left + position.width / 2;
+                            const size = 14;
+                            return (
+                              <div
+                                key={task.id}
+                                onClick={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => handleTaskMouseDown(e, task)}
+                                onContextMenu={(e) => handleTaskBarContextMenu(e, task)}
+                                onMouseEnter={(e) => handleTaskBarMouseEnter(e, task)}
+                                onMouseLeave={handleTaskBarMouseLeave}
+                                className={`absolute flex items-center select-none transition-all ${isDragging ? 'opacity-75 cursor-grabbing' : 'cursor-grab hover:opacity-80'}`}
+                                style={{
+                                  left: `${cx - size / 2}px`,
+                                  top: `${topOffset}px`,
+                                  height: '20px',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: `${size}px`,
+                                    height: `${size}px`,
+                                    flexShrink: 0,
+                                    backgroundColor: '#1a1a1a',
+                                    transform: 'rotate(45deg)',
+                                    boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+                                  }}
+                                />
+                                <span className="ml-2 text-[10px] font-medium text-app-text-head whitespace-nowrap">
+                                  {task.name}
+                                </span>
+                              </div>
+                            );
+                          }
 
                           return (
                             <div

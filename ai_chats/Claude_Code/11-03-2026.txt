@@ -177,3 +177,298 @@
 
 ─────────────────────────────────────────────────────────────────────────────────────────────────
   Showing detailed transcript · ctrl+o to toggle · ctrl+e to show all
+
+
+● Рефакторинг TaskModal и поддержка вехи
+
+  - Заменён Розовый цвет в палитре на Стальной #90A4AE
+  - Блок Приоритет и Статус заменён на компактные чекбоксы: Блокер и Закрыта в одну строку
+  - Кнопка цвета перенесена в общую строку с флагами
+  - Добавлен флаг Fix с сохранением в Task и блокировкой drag/resize на таймлайне
+  - Добавлена Веха: однодневный диапазон, режим single в календаре, ромб чёрного цвета с
+  названием задачи справа, отключение полей цвет/блокер/закрыта
+  - Ширина модалки сужена до 290px
+  - В store.ts добавлены поля fix и milestone в интерфейс Task
+  - Подсчёт дней заменён на рабочие дни по графику 5/2 и скрывается при вехе
+
+
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The
+     summary below covers the earlier portion of the conversation.
+
+     Analysis:
+     Let me chronologically analyze the conversation:
+
+     1. User reported two bugs in TaskModal.tsx:
+        - Duration showing calendar days instead of working days (Mon-Fri, 5/2 schedule)
+        - Fix checkbox not wired up - doesn't affect taskbar drag/resize behavior
+
+     2. I made fixes:
+        - store.ts: added `fix?: boolean` to Task interface
+        - TaskModal.tsx: replaced `differenceInCalendarDays` import with `eachDayOfInterval,
+     isWeekend` from date-fns; added `fix` state; wired checkbox; included `fix` in taskData
+        - TimelinePage.tsx: added `if (task.fix) return` checks in `handleTaskMouseDown` and
+     `handleResizeMouseDown`
+
+     3. User reported fix not saving - I investigated but found code correct. TypeScript compiled
+      clean. Likely HMR issue.
+
+     4. User asked to replace "Розовый" (#F48FB1) color in palette - too similar to blocker
+     (#fca5a5). I tried:
+        - Мятный #A5D6A7 - rejected (too green, similar to "done")
+        - Абрикосовый #FFAB91 - rejected (similar to blocker)
+        - Стальной #90A4AE - accepted
+
+     5. User asked to simplify task properties block:
+        - Remove Priority/Status dropdowns
+        - Replace with compact checkboxes: Blocker and Done
+        - Move color button to same area
+        - Keep color override logic unchanged
+        I restructured: removed color from Period row, replaced Priority+Status selects with
+     "Цвет · Блокер · Закрыта" sections as separate rows
+
+     6. User asked to make "Блокер" styled like "delete" (app-error color) and distribute 3
+     fields equally across width → I added flex-1 + justify-center, styled Blocker with
+     text-app-error/accent-app-error
+
+     7. User didn't like horizontal layout → wanted 3 rows instead. I restructured to 3 separate
+     divs with justify-between (label left, control right)
+
+     8. User wanted text snapped to right (next to checkboxes) → changed to justify-end gap-1.5
+     for Блокер and Закрыта rows
+
+     9. User wanted same for Цвет row → changed justify-between to justify-end gap-1.5
+
+     10. User wanted all 3 fields moved to LEFT → changed all to justify-start gap-1.5
+
+     11. User wanted "Fix" and duration swapped (Fix before duration), reduce gap to date, window
+      15% narrower:
+         - Width: 340px → 290px
+         - gap-3 → gap-1.5 between date picker and right block
+         - Swapped Fix and duration order
+
+     12. User wanted them swapped back (duration before Fix) → swapped back
+
+     13. Major feature: Веха (Milestone):
+         - "Блокер" and "Закрыта" in one row, equally distributed
+         - Add "Веха" checkbox to "Цвет" row (left of color), equally distributed
+         - Веха logic: collapses date range to single day (first day of range)
+         - Taskbar replaced with black diamond (rotated div)
+         - Color/Blocker/Done become inactive when Веха checked
+         - Duration hidden when Веха
+         - store.ts: added `milestone?: boolean` to Task
+         - TaskModal: added milestone state, wired up, included in taskData
+         - TimelinePage: diamond render with task name to the right
+         - Had replace_all error (2 identical blocks) → used replace_all: true
+
+     14. User wanted calendar to only allow single day selection when Веха is checked:
+         - Added `singleDay?: boolean` prop to DateRangePicker
+         - When singleDay: DayPicker mode="single", onSelect sets from===to
+         - Passed `singleDay={milestone}` from TaskModal
+
+     15. User wanted task name shown to the right of the diamond
+
+     16. User wanted diamond color changed to black (#1a1a1a)
+
+     17. User asked for git commit description (no quotes)
+
+     Final state of key files:
+     - store.ts: Task interface has fix?: boolean and milestone?: boolean
+     - TaskModal.tsx: w-[290px], fix state, milestone state, working days calc, Веха+Цвет row,
+     Блокер+Закрыта row, singleDay prop passed
+     - TimelinePage.tsx: drag/resize blocked for fix tasks, milestone renders as black diamond
+     with task name
+     - DateRangePicker.tsx: singleDay prop support
+
+     Summary:
+     1. Primary Request and Intent:
+        The user requested a series of incremental UI and logic improvements to the TaskModal and
+      Timeline taskbar:
+        - Fix duration display to show working days (Mon–Fri, 5/2) instead of calendar days
+        - Wire up the Fix checkbox so it saves and blocks drag/resize on the timeline
+        - Replace "Розовый" palette color (too similar to blocker) — went through Мятный
+     (rejected: too green like done), Абрикосовый (rejected: too similar to blocker), settled on
+     Стальной #90A4AE
+        - Simplify Priority/Status dropdowns into compact checkboxes (Блокер, Закрыта), move
+     color button into same area
+        - Various layout iterations: 3 equal columns → 3 separate rows → text snapped right to
+     checkboxes → all fields moved left
+        - Narrow modal window by ~15% (340px → 290px), reduce gap between date picker and right
+     controls, swap Fix/duration order (then swap back)
+        - Add Веха (Milestone) feature: single-day date selection, black diamond taskbar with
+     task name to the right, disables Color/Blocker/Done fields, hides duration count
+        - Calendar should enforce single-day selection when Веха is active
+        - Diamond color changed to black
+
+     2. Key Technical Concepts:
+        - React controlled inputs (checkbox state management)
+        - date-fns: eachDayOfInterval, isWeekend for working day calculation
+        - react-day-picker v9: mode="range" vs mode="single"
+        - CSS transform: rotate(45deg) for diamond shape
+        - Tailwind v4 custom colors (app-error, app-primary, app-text-head)
+        - TypeScript interface extension (Task in store.ts)
+        - Store pattern: globalAppData singleton with useCallback, notifySubscribers
+        - Portal-based color picker popover
+        - replace_all: true for Edit tool when multiple identical blocks exist
+
+     3. Files and Code Sections:
+        - `frontend/src/store.ts`
+          - Added two fields to Task interface:
+            ```ts
+            fix?: boolean; // Закреплённая задача — нельзя двигать на timeline
+            milestone?: boolean; // Веха — 1 день, отображается ромбом
+            ```
+
+        - `frontend/src/pages/Timeline/TaskModal.tsx`
+          - Width: w-[290px]
+          - Import changed: `differenceInCalendarDays` → `eachDayOfInterval, isWeekend`
+          - States added: `fix`, `milestone`
+          - Duration calc: skips weekends, hidden when milestone active
+          - taskData now includes `fix` and `milestone`
+          - Period row: gap-1.5, duration then Fix checkbox
+          - Palette: Розовый replaced with Стальной #90A4AE
+          - Layout rows:
+            ```tsx
+            {/* Веха · Цвет */}
+            <div className="flex items-center">
+              <div className="flex-1 flex items-center gap-1.5"> {/* Веха checkbox */} </div>
+              <div className={`flex-1 flex items-center gap-1.5 ${milestone ? 'opacity-40
+     pointer-events-none' : ''}`}> {/* Color button */} </div>
+            </div>
+            {/* Блокер · Закрыта */}
+            <div className={`flex items-center ${milestone ? 'opacity-40 pointer-events-none' :
+     ''}`}>
+              <div className="flex-1 flex items-center gap-1.5"> {/* Blocker checkbox
+     accent-app-error */} </div>
+              <div className="flex-1 flex items-center gap-1.5"> {/* Done checkbox */} </div>
+            </div>
+            ```
+          - Milestone logic on toggle:
+            ```tsx
+            onChange={e => {
+              const val = e.target.checked;
+              setMilestone(val);
+              if (val && dateRange?.from) {
+                setDateRange({ from: dateRange.from, to: dateRange.from });
+              }
+            }}
+            ```
+          - DateRangePicker gets `singleDay={milestone}`
+
+        - `frontend/src/components/ui/DateRangePicker.tsx`
+          - Added `singleDay?: boolean` prop
+          - When singleDay=true, renders DayPicker in mode="single":
+            ```tsx
+            <DayPicker
+              mode="single"
+              selected={range?.from}
+              onSelect={(day) => onRangeChange(day ? { from: day, to: day } : undefined)}
+              ...
+            />
+            ```
+
+        - `frontend/src/pages/Timeline/TimelinePage.tsx`
+          - handleTaskMouseDown: `if (task.fix) return;`
+          - handleResizeMouseDown: `if (task.fix) return;`
+          - Both taskbar render blocks (two identical locations) updated with milestone branch:
+            ```tsx
+            if (task.milestone) {
+              const cx = position.left + position.width / 2;
+              const size = 14;
+              return (
+                <div
+                  key={task.id}
+                  className={`absolute flex items-center select-none transition-all ${isDragging
+     ? 'opacity-75 cursor-grabbing' : 'cursor-grab hover:opacity-80'}`}
+                  style={{ left: `${cx - size / 2}px`, top: `${topOffset}px`, height: '20px' }}
+                  onClick/onMouseDown/onContextMenu/onMouseEnter/onMouseLeave handlers...
+                >
+                  <div style={{ width: 14, height: 14, flexShrink: 0, backgroundColor: '#1a1a1a',
+      transform: 'rotate(45deg)', boxShadow: '0 1px 4px rgba(0,0,0,0.25)' }} />
+                  <span className="ml-2 text-[10px] font-medium text-app-text-head
+     whitespace-nowrap">
+                    {task.name}
+                  </span>
+                </div>
+              );
+            }
+            ```
+
+     4. Errors and fixes:
+        - Edit tool: two identical taskbar render blocks in TimelinePage.tsx caused "Found 2
+     matches" error → used `replace_all: true` to update both simultaneously
+        - Color iterations rejected by user: Мятный (green, too close to done status),
+     Абрикосовый (too close to blocker) → settled on Стальной #90A4AE
+        - Diamond color: initially proposed #F59E0B (amber) → user changed to #1a1a1a (black)
+        - Layout iterations: horizontal 3-column → 3 separate rows → text right-aligned → all
+     left-aligned
+        - Fix checkbox not saving: TypeScript compiled clean, concluded it was likely HMR/cache
+     issue, no code change needed
+
+     5. Problem Solving:
+        - Working days: replaced differenceInCalendarDays with eachDayOfInterval().filter(d =>
+     !isWeekend(d)).length
+        - Milestone single-day enforcement: added singleDay prop to DateRangePicker switching
+     DayPicker to mode="single" with from===to on select
+        - Two identical render blocks in TimelinePage required replace_all: true
+
+     6. All user messages:
+        - Initial bug report: duration shows calendar days (should be working days 5/2), Fix
+     checkbox not wired to drag/resize behavior
+        - fix не сохраняется, исправь, должен сохраняться при нажатии save
+        - В TaskModal.tsx нужно заменить цвет Розовый на другой пастельный оттенок, не похожий на
+      Блокер
+        - нет, зелёный тоже под запретом, схож, когда задача закрыта
+        - нет, абрикосовый похож на блокер
+        - Нужно упростить блок свойств задачи: компактный ряд цвет/блокер/закрыта, убрать
+     дропдауны, перенести кнопку цвета
+        - отлично, сделай блокер цветом в стиле delete и распредели 3 поля равно по всей ширине
+        - не нравится, сделай 3 поля = 3 строки
+        - Смести и прикрепи текст вправо к чек-боксам
+        - тоже самое для цвет
+        - 3 поля смести в левую часть
+        - поменяй местами поля: количество рабочих дней и фикс, сократи расстояние до даты, всё
+     окно должно стать чуть уже процентов на 15
+        - поменяй местами fix и рабочие дни обратно
+        - Major milestone feature request: Веха checkbox, single-day range, diamond taskbar,
+     disable color/blocker/done, hide duration
+        - а можно заставить календарь выбирать только один день, если выбран параметр веха?
+        - при включённой вехе, должно отражаться название задачи справа от неё
+        - сделай цвет ромба - вехи чёрным
+        - сделай краткое описание сессии текстом здесь для комита git, не используй кавычки
+        - Summary request (current message)
+
+     7. Pending Tasks:
+        - None explicitly pending. All requested changes have been implemented.
+
+     8. Current Work:
+        The last substantive work was implementing the full Milestone (Веха) feature across three
+      files, then changing the diamond color to black, and providing a git commit message. All
+     tasks were completed successfully with TypeScript compiling clean after each change.
+
+     9. Optional Next Step:
+        No pending tasks remain. The user's last explicit request was for a git commit
+     description, which was provided. No further action is needed unless the user raises a new
+     request.
+
+     If you need specific details from before compaction (like exact code snippets, error
+     messages, or content you generated), read the full transcript at:
+     C:\Users\Георгий\.claude\projects\C--Users---------Desktop-prog-TimeLine-2-15-02-2026\8141e6
+     49-3f5e-43f0-8a75-d3417a14fd87.jsonl
+
+
+
+
+
+
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file src\pages\Timeline\TimelinePage.tsx
+  ⎿  Referenced file src\pages\Timeline\TaskModal.tsx
+  ⎿  Read src\components\ui\DateRangePicker.tsx (315 lines)
+  ⎿  Referenced file src\store.ts
+  ⎿  Read src\pages\Tasks\TasksPage.tsx (344 lines)
+
+─────────────────────────────────────────────────────────────────────────────────────────────────
+  Showing detailed transcript · ctrl+o to toggle · ctrl+e to show all

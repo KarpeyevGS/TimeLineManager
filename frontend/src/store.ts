@@ -69,6 +69,8 @@ export interface Task {
   resourceIds?: string[];
   customFields?: Record<string, string>;
   color?: string; // HEX цвет для задачи
+  fix?: boolean; // Закреплённая задача — нельзя двигать на timeline
+  milestone?: boolean; // Веха — 1 день, отображается ромбом
 }
 
 // Параметр Timeline с фильтрами

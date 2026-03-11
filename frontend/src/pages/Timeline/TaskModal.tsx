@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { differenceInCalendarDays } from 'date-fns';
+import { eachDayOfInterval, isWeekend } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { X, ChevronRight, ChevronDown, Plus } from 'lucide-react';
 import { DateRangePicker } from '../../components/ui/DateRangePicker';
@@ -60,14 +60,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [newTypeName, setNewTypeName] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showEmptyFiltersDialog, setShowEmptyFiltersDialog] = useState(false);
+  const [fix, setFix] = useState(task?.fix ?? false);
+  const [milestone, setMilestone] = useState(task?.milestone ?? false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [pickerPosition, setPickerPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const colorButtonRef = useRef<HTMLButtonElement>(null);
   const [pendingTaskData, setPendingTaskData] = useState<Omit<Task, 'id'> & { id?: string } | null>(null);
 
   const duration =
-    dateRange?.from && dateRange?.to
-      ? differenceInCalendarDays(dateRange.to, dateRange.from) + 1
+    !milestone && dateRange?.from && dateRange?.to
+      ? eachDayOfInterval({ start: dateRange.from, end: dateRange.to }).filter(d => !isWeekend(d)).length
       : '';
 
   const validate = (): boolean => {
@@ -105,6 +107,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       description: description.trim() || undefined,
       customFields: Object.keys(customFieldValues).length > 0 ? customFieldValues : undefined,
       color,
+      fix,
+      milestone,
     };
 
     // Если параметр не имеет фильтров и это режим добавления, показать dialog
@@ -137,7 +141,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     { name: 'Лавандовый', hex: '#D1C4E9' },
     { name: 'Песочный', hex: '#FFE082' },
     { name: 'Персиковый', hex: '#FFCC80' },
-    { name: 'Розовый', hex: '#F48FB1' },
+    { name: 'Стальной', hex: '#90A4AE' },
     { name: 'Индиго', hex: '#9FA8DA' },
     { name: 'Серо-голубой', hex: '#B0BEC5' },
     { name: 'Бирюзовый', hex: '#80DEEA' },
@@ -218,7 +222,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       <div className="fixed inset-0 z-[300] flex items-center justify-center">
         <div className="absolute inset-0 bg-black/20" onClick={onClose} />
 
-      <div className="relative z-10 bg-white border border-app-border rounded-xl w-[340px] max-h-[90vh] overflow-y-auto flex flex-col">
+      <div className="relative z-10 bg-white border border-app-border rounded-xl w-[290px] max-h-[90vh] overflow-y-auto flex flex-col">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-app-border">
@@ -287,87 +291,30 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             <label className={labelCls}>
               Period <span className="text-app-error">*</span>
             </label>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
               <div className="flex-1">
                 <DateRangePicker
                   range={dateRange}
                   onRangeChange={setDateRange}
                   fixedDropdown
+                  singleDay={milestone}
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-app-text-head whitespace-nowrap font-semibold">
-                  {duration && `${duration} дн`}
-                </span>
-                <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                  <input type="checkbox" className="accent-app-primary w-3.5 h-3.5 cursor-pointer" />
+              <div className="flex items-center gap-1.5">
+                {duration ? (
+                  <span className="text-xs text-app-text-head whitespace-nowrap font-semibold">
+                    {`${duration} дн`}
+                  </span>
+                ) : null}
+                <label className="flex items-center gap-1 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={fix}
+                    onChange={e => setFix(e.target.checked)}
+                    className="accent-app-primary w-3.5 h-3.5 cursor-pointer"
+                  />
                   <span className="text-xs text-app-text-head">Fix</span>
                 </label>
-                {/* Color Picker */}
-                <div>
-                  <button
-                    ref={colorButtonRef}
-                    type="button"
-                    onClick={() => {
-                      if (status === 'done' || priority === 'blocker') return;
-                      if (!colorPickerOpen && colorButtonRef.current) {
-                        const rect = colorButtonRef.current.getBoundingClientRect();
-                        const popoverWidth = 256; // w-64 = 256px
-                        const spaceRight = window.innerWidth - rect.right;
-                        const left = spaceRight >= popoverWidth + 8
-                          ? rect.right + 8
-                          : rect.left - popoverWidth - 8;
-                        setPickerPosition({ top: rect.top, left });
-                      }
-                      setColorPickerOpen(!colorPickerOpen);
-                    }}
-                    className="w-5 h-5 rounded-full border border-app-border transition-all"
-                    style={{
-                      backgroundColor: status === 'done' ? '#86efac' : priority === 'blocker' ? '#fca5a5' : color,
-                      opacity: status === 'done' || priority === 'blocker' ? 0.5 : 1,
-                      cursor: status === 'done' || priority === 'blocker' ? 'not-allowed' : 'pointer',
-                    }}
-                    title={
-                      status === 'done' ? 'Цвет переопределён: Завершено'
-                      : priority === 'blocker' ? 'Цвет переопределён: Блокер'
-                      : 'Выбрать цвет'
-                    }
-                  />
-                  {colorPickerOpen && createPortal(
-                    <>
-                      {/* Overlay для закрытия */}
-                      <div
-                        className="fixed inset-0 z-[350]"
-                        onClick={() => setColorPickerOpen(false)}
-                      />
-                      {/* Popover */}
-                      <div
-                        className="fixed z-[360] bg-white border border-app-border rounded-lg shadow-2xl p-3 w-64"
-                        style={{ top: pickerPosition.top, left: pickerPosition.left }}
-                      >
-                        <div className="grid grid-cols-4 gap-2">
-                          {COLORS.map((col) => (
-                            <button
-                              key={col.hex}
-                              type="button"
-                              onClick={() => {
-                                setColor(col.hex);
-                                setColorPickerOpen(false);
-                              }}
-                              className="w-full h-10 rounded border-2 hover:shadow-md transition-all"
-                              style={{
-                                backgroundColor: col.hex,
-                                borderColor: color === col.hex ? '#000' : '#ccc',
-                              }}
-                              title={col.name}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </>,
-                    document.body
-                  )}
-                </div>
               </div>
             </div>
             {errors.dateRange && (
@@ -375,33 +322,113 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             )}
           </div>
 
-          {/* Priority + Status */}
-          <div className="flex gap-3">
-            <div className="flex flex-col gap-1 flex-1">
-              <label className={labelCls}>Приоритет</label>
-              <select
-                value={priority}
-                onChange={e => setPriority(e.target.value as 'low' | 'medium' | 'blocker')}
-                className="w-full h-8 px-2 text-xs rounded border border-app-border bg-white text-app-text-head outline-none focus:border-app-primary transition-colors cursor-pointer"
-              >
-                <option value="low">Низкий</option>
-                <option value="medium">Средний</option>
-                <option value="blocker">Блокер</option>
-              </select>
+          {/* Веха · Цвет */}
+          <div className="flex items-center">
+            {/* Веха */}
+            <div className="flex-1 flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                checked={milestone}
+                onChange={e => {
+                  const val = e.target.checked;
+                  setMilestone(val);
+                  if (val && dateRange?.from) {
+                    setDateRange({ from: dateRange.from, to: dateRange.from });
+                  }
+                }}
+                className="accent-app-primary w-3.5 h-3.5 cursor-pointer"
+              />
+              <span className={labelCls}>Веха</span>
             </div>
-            <div className="flex flex-col gap-1 flex-1">
-              <label className={labelCls}>Статус</label>
-              <select
-                value={status}
-                onChange={e =>
-                  setStatus(e.target.value as 'not_started' | 'in_progress' | 'done')
-                }
-                className="w-full h-8 px-2 text-xs rounded border border-app-border bg-white text-app-text-head outline-none focus:border-app-primary transition-colors cursor-pointer"
-              >
-                <option value="not_started">Не начато</option>
-                <option value="in_progress">В процессе</option>
-                <option value="done">Завершено</option>
-              </select>
+            {/* Цвет */}
+            <div className={`flex-1 flex items-center gap-1.5 ${milestone ? 'opacity-40 pointer-events-none' : ''}`}>
+              <span className={labelCls}>Цвет</span>
+              <div>
+                <button
+                  ref={colorButtonRef}
+                  type="button"
+                  onClick={() => {
+                    if (status === 'done' || priority === 'blocker') return;
+                    if (!colorPickerOpen && colorButtonRef.current) {
+                      const rect = colorButtonRef.current.getBoundingClientRect();
+                      const popoverWidth = 256;
+                      const spaceRight = window.innerWidth - rect.right;
+                      const left = spaceRight >= popoverWidth + 8
+                        ? rect.right + 8
+                        : rect.left - popoverWidth - 8;
+                      setPickerPosition({ top: rect.top, left });
+                    }
+                    setColorPickerOpen(!colorPickerOpen);
+                  }}
+                  className="w-5 h-5 rounded-full border border-app-border transition-all"
+                  style={{
+                    backgroundColor: status === 'done' ? '#86efac' : priority === 'blocker' ? '#fca5a5' : color,
+                    opacity: status === 'done' || priority === 'blocker' ? 0.5 : 1,
+                    cursor: status === 'done' || priority === 'blocker' ? 'not-allowed' : 'pointer',
+                  }}
+                  title={
+                    status === 'done' ? 'Цвет переопределён: Завершено'
+                    : priority === 'blocker' ? 'Цвет переопределён: Блокер'
+                    : 'Выбрать цвет'
+                  }
+                />
+                {colorPickerOpen && createPortal(
+                  <>
+                    <div
+                      className="fixed inset-0 z-[350]"
+                      onClick={() => setColorPickerOpen(false)}
+                    />
+                    <div
+                      className="fixed z-[360] bg-white border border-app-border rounded-lg shadow-2xl p-3 w-64"
+                      style={{ top: pickerPosition.top, left: pickerPosition.left }}
+                    >
+                      <div className="grid grid-cols-4 gap-2">
+                        {COLORS.map((col) => (
+                          <button
+                            key={col.hex}
+                            type="button"
+                            onClick={() => {
+                              setColor(col.hex);
+                              setColorPickerOpen(false);
+                            }}
+                            className="w-full h-10 rounded border-2 hover:shadow-md transition-all"
+                            style={{
+                              backgroundColor: col.hex,
+                              borderColor: color === col.hex ? '#000' : '#ccc',
+                            }}
+                            title={col.name}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </>,
+                  document.body
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Блокер · Закрыта */}
+          <div className={`flex items-center ${milestone ? 'opacity-40 pointer-events-none' : ''}`}>
+            {/* Блокер */}
+            <div className="flex-1 flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                checked={priority === 'blocker'}
+                onChange={e => setPriority(e.target.checked ? 'blocker' : 'medium')}
+                className="accent-app-error w-3.5 h-3.5 cursor-pointer"
+              />
+              <span className="text-[11px] font-semibold text-app-error">Блокер</span>
+            </div>
+            {/* Закрыта */}
+            <div className="flex-1 flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                checked={status === 'done'}
+                onChange={e => setStatus(e.target.checked ? 'done' : 'not_started')}
+                className="accent-app-primary w-3.5 h-3.5 cursor-pointer"
+              />
+              <span className={labelCls}>Закрыта</span>
             </div>
           </div>
 

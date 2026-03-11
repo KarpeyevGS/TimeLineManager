@@ -9,11 +9,12 @@ interface DateRangePickerProps {
   range: DateRange | undefined;
   onRangeChange: (range: DateRange | undefined) => void;
   fixedDropdown?: boolean;
+  singleDay?: boolean;
 }
 
 type ViewMode = 'days' | 'months' | 'years';
 
-export const DateRangePicker: React.FC<DateRangePickerProps> = ({ range, onRangeChange, fixedDropdown }) => {
+export const DateRangePicker: React.FC<DateRangePickerProps> = ({ range, onRangeChange, fixedDropdown, singleDay }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('days');
   const [currentMonth, setCurrentMonth] = useState<Date>(range?.from || new Date());
@@ -214,21 +215,39 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ range, onRange
             {/* VIEW: DAYS */}
             {viewMode === 'days' && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <DayPicker
-            mode="range"
-            selected={range}
-            onSelect={onRangeChange}
-                  month={currentMonth}
-                  onMonthChange={setCurrentMonth}
-            locale={ru}
-            showOutsideDays
-                  disableNavigation
-                  classNames={{
-                    month_caption: "hidden",
-                    months: "w-full",
-                    month: "w-full",
-                  }}
-                />
+                {singleDay ? (
+                  <DayPicker
+                    mode="single"
+                    selected={range?.from}
+                    onSelect={(day) => onRangeChange(day ? { from: day, to: day } : undefined)}
+                    month={currentMonth}
+                    onMonthChange={setCurrentMonth}
+                    locale={ru}
+                    showOutsideDays
+                    disableNavigation
+                    classNames={{
+                      month_caption: "hidden",
+                      months: "w-full",
+                      month: "w-full",
+                    }}
+                  />
+                ) : (
+                  <DayPicker
+                    mode="range"
+                    selected={range}
+                    onSelect={onRangeChange}
+                    month={currentMonth}
+                    onMonthChange={setCurrentMonth}
+                    locale={ru}
+                    showOutsideDays
+                    disableNavigation
+                    classNames={{
+                      month_caption: "hidden",
+                      months: "w-full",
+                      month: "w-full",
+                    }}
+                  />
+                )}
               </div>
             )}
 
