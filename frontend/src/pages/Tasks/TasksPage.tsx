@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { Pencil, Plus } from 'lucide-react';
+import { Pencil, Plus, Copy, Trash2 } from 'lucide-react';
 import { useAppStore, type Task } from '../../store';
 import { TaskModal } from '../Timeline/TaskModal';
 
@@ -11,9 +11,17 @@ interface TaskModalState {
   initialDate?: Date;
 }
 
+interface TaskContextMenu {
+  task: Task;
+  x: number;
+  y: number;
+}
+
 export const TasksPage: React.FC = () => {
   const store = useAppStore();
   const [taskModal, setTaskModal] = useState<TaskModalState | null>(null);
+  const [taskContextMenu, setTaskContextMenu] = useState<TaskContextMenu | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
 
   // Получаем все задачи и вспомогательные данные
   const allTasks = useMemo(() => store.tasks.getAll(), [store.appData.tasks]);
@@ -56,6 +64,31 @@ export const TasksPage: React.FC = () => {
   const handleAddTask = () => {
     setTaskModal({ mode: 'add' });
   };
+
+  const handleCopyTask = (task: Task) => {
+    const { id: _id, ...taskData } = task;
+    store.tasks.add({ ...taskData, name: `${task.name} (копия)` });
+    setTaskContextMenu(null);
+  };
+
+  const handleDeleteTaskFromMenu = (task: Task) => {
+    if (window.confirm('Вы точно хотите удалить задачу?')) {
+      store.tasks.delete(task.id);
+    }
+    setTaskContextMenu(null);
+  };
+
+  const handleRowContextMenu = (e: React.MouseEvent, task: Task) => {
+    e.preventDefault();
+    setTaskContextMenu({ task, x: e.clientX, y: e.clientY });
+  };
+
+  useEffect(() => {
+    if (!taskContextMenu) return;
+    const handleClick = () => setTaskContextMenu(null);
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [taskContextMenu]);
 
   const handleAddCustomFieldType = (name: string) => {
     return store.customFieldTypes.add(name);
@@ -200,6 +233,7 @@ export const TasksPage: React.FC = () => {
                       idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'
                     }`}
                     onClick={() => handleEditTask(task)}
+                    onContextMenu={(e) => handleRowContextMenu(e, task)}
                   >
                     <td className="px-4 py-3 text-app-text-main text-sm font-medium">
                       {task.name}
@@ -258,6 +292,38 @@ export const TasksPage: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* КОНТЕКСТНОЕ МЕНЮ ЗАДАЧИ */}
+      {taskContextMenu && (
+        <div
+          ref={contextMenuRef}
+          className="fixed z-[200] bg-app-surface border border-app-border rounded-xl shadow-2xl py-1 min-w-[160px]"
+          style={{ top: taskContextMenu.y, left: taskContextMenu.x }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => { setTaskModal({ mode: 'edit', task: taskContextMenu.task }); setTaskContextMenu(null); }}
+            className="w-full text-left px-4 py-2 text-xs font-semibold text-app-text-main hover:bg-app-bg/50 transition-colors flex items-center gap-2"
+          >
+            <Pencil size={12} />
+            Изменить
+          </button>
+          <button
+            onClick={() => handleCopyTask(taskContextMenu.task)}
+            className="w-full text-left px-4 py-2 text-xs font-semibold text-app-text-main hover:bg-app-bg/50 transition-colors flex items-center gap-2"
+          >
+            <Copy size={12} />
+            Копировать
+          </button>
+          <button
+            onClick={() => handleDeleteTaskFromMenu(taskContextMenu.task)}
+            className="w-full text-left px-4 py-2 text-xs font-semibold text-app-error hover:bg-app-error/10 transition-colors flex items-center gap-2"
+          >
+            <Trash2 size={12} />
+            Удалить
+          </button>
+        </div>
+      )}
 
       {/* МОДАЛЬНОЕ ОКНО ADD / EDIT TASK */}
       {taskModal && (
