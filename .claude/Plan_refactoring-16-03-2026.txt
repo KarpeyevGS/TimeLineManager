@@ -1,0 +1,151 @@
+ Plan: Рефакторинг перед Electron
+
+ Context
+
+ TimelinePage.tsx разросся до 2294 строк (God Component). Есть дублирование кода, отладочные console.log в проде, и три
+  отдельных реализации одной функции. Цель — повысить стабильность и читаемость кода без изменения UI или поведения,
+ чтобы потом безопасно добавлять Electron IPC.
+
+ ---
+ Phase 1: Безопасные изменения в store.ts (без риска)
+
+ 1.1 — Удалить 8 отладочных console.log
+
+ Файл: frontend/src/store.ts
+ Удалить строки 288, 299, 301, 306, 455, 460, 466, 472 (все console.log с эмодзи 📡📦📢🔧✅📝).
+ Они срабатывают при каждом монтировании и каждом добавлении параметра.
+
+ 1.2 — Исправить дату по умолчанию
+
+ Файл: frontend/src/store.ts
+ DEFAULT_TIMELINE_VIEW (строки 14–19) хардкодит new Date(2026, 0, 1).
+ Заменить константу на функцию getDefaultTimelineView(), которая возвращает объект с new Date() (текущий месяц).
+
+ 1.3 — Устранить дублирование getDescendantIds
+
+ Файл: frontend/src/store.ts
+ Функция реализована 3 раза: экспортируемая (строка 590), и две локальные замыкания (строки 548, 712).
+ Удалить оба локальных замыкания, заменить вызовы на getDescendantIds(params, activeId).
+
+ ---
+ Phase 2: Извлечение хуков из TimelinePage.tsx
+
+ Каждый хук — это перемещение существующей логики, не новая абстракция. JSX и поведение не меняются.
+
+ 2.1 — Создать hooks/useScrollSync.ts
+
+ Извлечь из TimelinePage:
+ - isSyncing ref (строка 253)
+ - scrollSaveTimer ref (строка 258)
+ - 4 функции синхронизации: syncFromTimeline, syncFromScrollbar, syncFromSidebar, syncFromFrozenTimeline (строки
+ 558–604)
+ - 2 эффекта для инициализации scroll и восстановления позиции (строки 517–613)
+
+ Хук принимает: 5 refs, frozenRowsCount, initialScrollLeft
+ Хук возвращает: 4 функции-обработчика для onScroll пропсов
+
+ 2.2 — Создать hooks/useTaskDragResize.ts
+
+ Извлечь из TimelinePage:
+ - Состояния: dragState, resizeState, dragPreview (строки 278–279, 285)
+ - Обработчики: handleTaskMouseDown, handleResizeMouseDown, handleMouseMove, handleMouseUp (строки 1078–1157)
+ - useEffect для mousemove/mouseup на document (строки 1177–1187)
+
+ Хук принимает: dayWidth, dateRange, колбэки к store, editingTaskId
+ Хук возвращает: 3 состояния + 2 обработчика mousedown
+
+ 2.3 — Создать hooks/useParamDnD.ts
+
+ Извлечь из TimelinePage:
+ - dndSensors (строка 721)
+ - dropState и производные (строки 728–731)
+ - 6 refs для DnD (строки 735–745)
+ - useEffect для mousemove (строки 747–751)
+ - dndSortingStrategy, setScenario, updateDropScenario (строки 753–788)
+ - handleParamDragEnd, handleParamDragOver, handleParamDragMove, getVisualRect (строки 790–853)
+
+ Хук принимает: parameters, selectedTimelineId, колбэки к store, сеттеры dragActiveId/dragLevelDelta
+ Хук возвращает: handlers для DndContext, dropScenario, dropTargetId
+
+ ---
+ Phase 3: Устранение дублирования в JSX
+
+ 3.1 — Создать компонент TaskBar.tsx
+
+ Файл: frontend/src/pages/Timeline/TaskBar.tsx
+
+ Рендер task bar (milestone diamond + обычный бар с ручками resize + inline edit) дублируется дважды:
+ - Frozen rows: строки 1563–1669
+ - Scrollable rows: строки 1847–1953
+
+ Извлечь в компонент <TaskBar> с пропсами для всех обработчиков.
+ В обоих местах заменить дублированный JSX на <TaskBar key={task.id} ... />.
+ Компонент чисто презентационный — без внутреннего состояния.
+
+ 3.2 — Создать компонент SelectionHighlightLayer.tsx
+
+ Файл: frontend/src/pages/Timeline/SelectionHighlightLayer.tsx
+
+ Overlay выделения колонок тоже дублируется (строки 1676–1709 и 1960–1993, ~33 строки каждый).
+ Компонент принимает dayWidth, days, weeks, selectedColumnDates.
+
+ ---
+ Phase 4: Боковая панель (опционально, низкий приоритет)
+
+ Sidebar.tsx не требует срочного рефакторинга.
+ - Контекстные меню в Sidebar и TimelinePage оперируют разными данными — общую абстракцию делать не нужно.
+ - showTooltip/hideTooltip можно вынести в useTooltip() (экономия ~8 строк) — делать только если есть желание.
+
+ ---
+ Новые файлы
+
+ frontend/src/pages/Timeline/hooks/useScrollSync.ts
+ frontend/src/pages/Timeline/hooks/useTaskDragResize.ts
+ frontend/src/pages/Timeline/hooks/useParamDnD.ts
+ frontend/src/pages/Timeline/TaskBar.tsx
+ frontend/src/pages/Timeline/SelectionHighlightLayer.tsx
+
+ Изменяемые файлы: store.ts, TimelinePage.tsx
+ Остальные файлы не трогаем.
+
+ ---
+ Порядок выполнения
+
+ 1.1 → 1.2 → 1.3    (независимы, делать первыми)
+ 2.1 → 2.2 → 2.3    (независимы между собой)
+ 3.1 → 3.2           (после 2.2, пока dragState/resizeState устоялись)
+ 4   (опционально, в конце)
+
+ После каждого шага: npm run build (запускает tsc), ручная проверка функционала.
+
+ ---
+ Проверка после каждого шага
+
+ ┌─────┬─────────────────────────────────────────────────────────────────────────────┐
+ │ Шаг │                                Что проверить                                │
+ ├─────┼─────────────────────────────────────────────────────────────────────────────┤
+ │ 1.1 │ Консоль браузера чиста при работе с параметрами                             │
+ ├─────┼─────────────────────────────────────────────────────────────────────────────┤
+ │ 1.2 │ Сброс localStorage → timeline открывается на текущем месяце                 │
+ ├─────┼─────────────────────────────────────────────────────────────────────────────┤
+ │ 1.3 │ Перетаскивание параметров в иерархии работает корректно                     │
+ ├─────┼─────────────────────────────────────────────────────────────────────────────┤
+ │ 2.1 │ Синхронизация scroll между панелями, восстановление позиции                 │
+ ├─────┼─────────────────────────────────────────────────────────────────────────────┤
+ │ 2.2 │ Drag/resize task bar сохраняет даты; fix:true задачи неподвижны             │
+ ├─────┼─────────────────────────────────────────────────────────────────────────────┤
+ │ 2.3 │ Перетаскивание строк параметров, drop-зоны above/below, undo работает       │
+ ├─────┼─────────────────────────────────────────────────────────────────────────────┤
+ │ 3.1 │ Task bars идентичны во frozen и scrollable секциях; все интеракции работают │
+ ├─────┼─────────────────────────────────────────────────────────────────────────────┤
+ │ 3.2 │ Выделение колонок отображается в обеих секциях                              │
+ └─────┴─────────────────────────────────────────────────────────────────────────────┘
+
+ ---
+ Чего НЕ делать
+
+ - Не трогать API store.ts (не разбивать useAppStore)
+ - Не создавать общий <ContextMenu> — меню оперируют разными данными
+ - Не перемещать getTaskBarColor/getTaskBarStyle в utils в рамках этого рефакторинга
+ - Не трогать sortHierarchically — уже хорошо вынесена
+ - Не менять UI: никаких новых классов, иконок, текстов

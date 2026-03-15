@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useLayoutEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { DateRange } from 'react-day-picker';
 import {
@@ -10,7 +10,7 @@ import {
   isToday
 } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { Plus, Minus, Pencil, Trash2, Copy, Globe, GripVertical, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Minus, Pencil, Trash2, Copy, GripVertical, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const PinIcon: React.FC<{ size?: number; className?: string }> = ({ size = 12, className }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className={className} xmlns="http://www.w3.org/2000/svg">
@@ -18,16 +18,21 @@ const PinIcon: React.FC<{ size?: number; className?: string }> = ({ size = 12, c
   </svg>
 );
 import {
-  DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragMoveEvent,
+  DndContext, closestCenter,
 } from '@dnd-kit/core';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { SortableContext, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { DateRangePicker } from '../../components/ui/DateRangePicker';
 import { TaskModal } from './TaskModal';
 import { ParameterModal } from './ParameterModal';
-import { useAppStore, useTimelineViewState, saveTimelineViewState, loadTimelineViewState, type Task, type TimelineParameter } from '../../store';
+import { useAppStore, useTimelineViewState, type Task, type TimelineParameter } from '../../store';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { useScrollSync } from './hooks/useScrollSync';
+import { useTaskDragResize } from './hooks/useTaskDragResize';
+import { useParamDnD } from './hooks/useParamDnD';
+import { TaskBar } from './TaskBar';
+import { SelectionHighlightLayer } from './SelectionHighlightLayer';
 
 interface ContextMenuState {
   x: number;
@@ -81,21 +86,6 @@ const ZOOM_CONFIG: Record<number, number> = {
   5: 6,   // 3Q
   6: 4,   // Y
 };
-
-interface DragState {
-  taskId: string;
-  startX: number;
-  startDate: Date;
-  endDate: Date;
-}
-
-interface ResizeState {
-  taskId: string;
-  side: 'left' | 'right';
-  startX: number;
-  startDate: Date;
-  endDate: Date;
-}
 
 interface TimelinePageProps {
   activeTimelineId?: string;
@@ -250,12 +240,10 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   const [addButtonHeight, setAddButtonHeight] = useState(26);
   const timeHeaderRef = React.useRef<HTMLDivElement>(null);
   const frozenTimelineRef = React.useRef<HTMLDivElement>(null);
-  const isSyncing = React.useRef(false);
   const scrollbarRef = React.useRef<HTMLDivElement>(null);
   const contextMenuRef = React.useRef<HTMLDivElement>(null);
   const timelineRowMenuRef = React.useRef<HTMLDivElement>(null);
   const taskContextMenuRef = React.useRef<HTMLDivElement>(null);
-  const scrollSaveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Состояния из постоянного хранилища
   const zoomIndex = viewState.zoomIndex;
@@ -275,14 +263,11 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [frozenIds, setFrozenIds] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const [dragState, setDragState] = useState<DragState | null>(null);
-  const [resizeState, setResizeState] = useState<ResizeState | null>(null);
   const [timelineRowMenu, setTimelineRowMenu] = useState<TimelineRowMenuState | null>(null);
   const [taskModal, setTaskModal] = useState<TaskModalState | null>(null);
   const [parameterModal, setParameterModal] = useState<ParameterModalState>({
     isOpen: timelineParameterModalOpen
   });
-  const [dragPreview, setDragPreview] = useState<Task | null>(null);
   const [selectedParamIds, setSelectedParamIds] = useState<Set<string>>(new Set());
   const [selectedColumnDates, setSelectedColumnDates] = useState<Set<string>>(new Set());
   const [dragActiveId, setDragActiveId] = useState<string | null>(null);
@@ -297,6 +282,15 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   const [ganttNotification, setGanttNotification] = useState<string | null>(null);
 
   const dayWidth = ZOOM_CONFIG[zoomIndex] || 56;
+
+  // ===== Task drag/resize hook — must be declared before getDisplayTasks =====
+  const { dragState, resizeState, dragPreview, handleTaskMouseDown, handleResizeMouseDown } = useTaskDragResize({
+    dayWidth,
+    dateRange,
+    editingTaskId,
+    getAllTasks: store.tasks.getAll,
+    updateTask: store.tasks.update,
+  });
 
   // Загружаем конфигурацию выбранной timeline
   const timelineConfig = useMemo(
@@ -513,17 +507,16 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     setParameterModal(prev => ({ ...prev, isOpen: timelineParameterModalOpen }));
   }, [timelineParameterModalOpen]);
 
-  // Восстанавливаем горизонтальный scroll при монтировании
-  useEffect(() => {
-    const savedScroll = viewState.scrollLeft;
-    if (savedScroll > 0) {
-      if (scrollbarRef.current) scrollbarRef.current.scrollLeft = savedScroll;
-      if (timelineRef.current) timelineRef.current.scrollLeft = savedScroll;
-      if (timeHeaderRef.current) timeHeaderRef.current.scrollLeft = savedScroll;
-      if (frozenTimelineRef.current) frozenTimelineRef.current.scrollLeft = savedScroll;
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // ===== Scroll sync hook =====
+  const { syncFromTimeline, syncFromScrollbar, syncFromSidebar, syncFromFrozenTimeline } = useScrollSync({
+    sidebarRef,
+    timelineRef,
+    timeHeaderRef,
+    frozenTimelineRef,
+    scrollbarRef,
+    frozenRowsCount: frozenRows.length,
+    initialScrollLeft: viewState.scrollLeft,
+  });
 
   // После рендера контекстного меню корректируем позицию по фактическому размеру
   useEffect(() => {
@@ -553,64 +546,6 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-
-  // Синхронизация скролла
-  const syncFromTimeline = () => {
-    if (isSyncing.current) return;
-    const tl = timelineRef.current;
-    const sb = sidebarRef.current;
-    if (!tl || !sb || sb.scrollTop === tl.scrollTop) return;
-    isSyncing.current = true;
-    sb.scrollTop = tl.scrollTop;
-    requestAnimationFrame(() => { isSyncing.current = false; });
-  };
-
-  const syncFromScrollbar = () => {
-    if (isSyncing.current) return;
-    isSyncing.current = true;
-    const sb = scrollbarRef.current;
-    if (timelineRef.current && sb) timelineRef.current.scrollLeft = sb.scrollLeft;
-    if (timeHeaderRef.current && sb) timeHeaderRef.current.scrollLeft = sb.scrollLeft;
-    if (frozenTimelineRef.current && sb) frozenTimelineRef.current.scrollLeft = sb.scrollLeft;
-    requestAnimationFrame(() => { isSyncing.current = false; });
-
-    // Дебаунс сохранения scrollLeft — без setState, чтобы не вызывать ре-рендер
-    if (scrollSaveTimer.current) clearTimeout(scrollSaveTimer.current);
-    scrollSaveTimer.current = setTimeout(() => {
-      if (scrollbarRef.current) {
-        saveTimelineViewState({ ...loadTimelineViewState(), scrollLeft: scrollbarRef.current.scrollLeft });
-      }
-    }, 300);
-  };
-
-  const syncFromSidebar = () => {
-    if (isSyncing.current) return;
-    const tl = timelineRef.current;
-    const sb = sidebarRef.current;
-    if (!tl || !sb || tl.scrollTop === sb.scrollTop) return;
-    isSyncing.current = true;
-    tl.scrollTop = sb.scrollTop;
-    requestAnimationFrame(() => { isSyncing.current = false; });
-  };
-
-  const syncFromFrozenTimeline = () => {
-    if (isSyncing.current) return;
-    isSyncing.current = true;
-    const ft = frozenTimelineRef.current;
-    if (scrollbarRef.current && ft) scrollbarRef.current.scrollLeft = ft.scrollLeft;
-    if (timelineRef.current && ft) timelineRef.current.scrollLeft = ft.scrollLeft;
-    if (timeHeaderRef.current && ft) timeHeaderRef.current.scrollLeft = ft.scrollLeft;
-    isSyncing.current = false;
-  };
-
-  // Синхронизация scrollLeft закреплённой области при её появлении/изменении
-  useLayoutEffect(() => {
-    if (frozenRows.length > 0 && frozenTimelineRef.current) {
-      const sl = scrollbarRef.current?.scrollLeft ?? timelineRef.current?.scrollLeft ?? 0;
-      frozenTimelineRef.current.scrollLeft = sl;
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [frozenRows.length]);
 
   // Управление состоянием иерархии
   const toggleCollapse = (id: string) => {
@@ -718,139 +653,23 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   }, [dayWidth, days]);
 
   // ===== DnD для строк =====
-  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-
-  // 'above' — вставить перед целевой строкой на её уровне (зона: верхние 50%)
-  // 'below' — вставить после целевой строки на её уровне (зона: нижние 50%)
-  type DropScenario = 'above' | 'below';
-
-  // Единый объект состояния — один setState вместо двух → вдвое меньше рендеров
-  const [dropState, setDropState] = useState<{ scenario: DropScenario | null; targetId: string | null }>(
-    { scenario: null, targetId: null }
-  );
-  const dropScenario = dropState.scenario;
-  const dropTargetId = dropState.targetId;
-
-  // Ref для кастомной стратегии сортировки (синхронный доступ без closure)
-  const dropScenarioRef = React.useRef<DropScenario | null>(null);
-  // Ref текущего targetId — для early exit без closure
-  const dropTargetIdRef = React.useRef<string | null>(null);
-
-  // Отслеживаем Y-позицию курсора и кэшируем rect over-элемента
-  const pointerYRef = React.useRef(0);
-  const overRectRef = React.useRef<{ top: number; height: number } | null>(null);
-  const overIdRef = React.useRef<string | null>(null);
-
-  // Кэш потомков активного узла — вычисляем один раз при начале перетаскивания
-  const activeDescendantsRef = React.useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => { pointerYRef.current = e.clientY; };
-    document.addEventListener('mousemove', handler, { passive: true });
-    return () => document.removeEventListener('mousemove', handler);
-  }, []);
-
-  const dndSortingStrategy = useCallback(
-    (args: Parameters<typeof verticalListSortingStrategy>[0]) => {
-      return verticalListSortingStrategy(args);
-    },
-    []
-  );
-
-  const setScenario = useCallback((s: DropScenario | null, targetId: string | null) => {
-    // Early exit: не обновлять состояние если ничего не изменилось
-    if (dropScenarioRef.current === s && dropTargetIdRef.current === targetId) return;
-    dropScenarioRef.current = s;
-    dropTargetIdRef.current = targetId;
-    setDropState({ scenario: s, targetId });
-  }, []);
-
-  const updateDropScenario = useCallback((
-    overId: string,
-    overRect: { top: number; height: number },
-    activeId: string,
-  ) => {
-    if (overId === activeId) { setScenario(null, null); return; }
-
-    if (!PARAMETERS.find(p => p.id === activeId) || !PARAMETERS.find(p => p.id === overId)) {
-      setScenario(null, null); return;
-    }
-
-    const relY = (pointerYRef.current - overRect.top) / overRect.height;
-
-    if (relY < 0.50) {
-      // Верхние 50% — вставить перед целевой строкой на её уровне
-      setScenario('above', overId);
-    } else {
-      // Нижние 50% — вставить после целевой строки на её уровне
-      setScenario('below', overId);
-    }
-  }, [PARAMETERS, setScenario]);
-
-  const handleParamDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    const scenario = dropScenario;
-    const targetId = dropTargetId;
-
-    setDragActiveId(null);
-    setDragLevelDelta(0);
-    setScenario(null, null);
-    overIdRef.current = null;
-    overRectRef.current = null;
-    activeDescendantsRef.current = new Set();
-
-    if (!over || !targetId) return;
-    const activeId = active.id as string;
-    if (activeId === targetId) return;
-
-    if (scenario === 'above') {
-      const targetParam = PARAMETERS.find(p => p.id === targetId);
-      if (!targetParam) return;
-      store.timelines.reorderAndReparent(
-        selectedTimelineId, activeId, targetId,
-        targetParam.level, targetParam.parentId
-      );
-    } else if (scenario === 'below') {
-      const targetParam = PARAMETERS.find(p => p.id === targetId);
-      if (!targetParam) return;
-      store.timelines.insertAfter(
-        selectedTimelineId, activeId, targetId,
-        targetParam.level, targetParam.parentId
-      );
-    }
-  }, [dropScenario, dropTargetId, selectedTimelineId, store.timelines, PARAMETERS, setScenario]);
-
-  // Получить визуальный rect элемента (с учётом CSS transform/анимации)
-  const getVisualRect = (id: string, fallback: { top: number; height: number }) => {
-    const el = document.querySelector(`[data-param-id="${id}"]`) as HTMLElement | null;
-    if (el) {
-      const vr = el.getBoundingClientRect();
-      return { top: vr.top, height: vr.height };
-    }
-    return fallback;
-  };
-
-  const handleParamDragOver = useCallback((event: DragMoveEvent) => {
-    if (!event.over) { setScenario(null, null); return; }
-    const overId = event.over.id as string;
-    overIdRef.current = overId;
-    // getBoundingClientRect() учитывает transform, event.over.rect — нет
-    const visualRect = getVisualRect(overId, event.over.rect);
-    overRectRef.current = visualRect;
-    updateDropScenario(overId, visualRect, event.active.id as string);
-  }, [updateDropScenario, setScenario]);
-
-  const handleParamDragMove = useCallback((event: DragMoveEvent) => {
-    if (!overIdRef.current) return;
-    // Обновляем rect на каждом mousemove — анимация могла сдвинуть строку
-    const el = document.querySelector(`[data-param-id="${overIdRef.current}"]`) as HTMLElement | null;
-    if (el) {
-      const vr = el.getBoundingClientRect();
-      overRectRef.current = { top: vr.top, height: vr.height };
-    }
-    if (!overRectRef.current) return;
-    updateDropScenario(overIdRef.current, overRectRef.current, event.active.id as string);
-  }, [updateDropScenario]);
+  const {
+    dndSensors,
+    dropScenario,
+    dropTargetId,
+    handleParamDragStart,
+    handleParamDragEnd,
+    handleParamDragOver,
+    handleParamDragMove,
+    dndSortingStrategy,
+  } = useParamDnD({
+    parameters: PARAMETERS,
+    selectedTimelineId,
+    setDragActiveId,
+    setDragLevelDelta,
+    reorderAndReparent: store.timelines.reorderAndReparent,
+    insertAfter: store.timelines.insertAfter,
+  });
 
   // ПКМ по пустой ячейке timeline — меню «Добавить задачу»
   const handleTimelineRowContextMenu = (e: React.MouseEvent, paramId: string) => {
@@ -1072,90 +891,6 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     setCopyToTimelineModal(null);
   };
 
-  // Импорт данных из JSON файла
-
-  // Обработчики drag and drop
-  const handleTaskMouseDown = (e: React.MouseEvent, task: Task) => {
-    if (editingTaskId === task.id) return;
-    if (task.fix) return;
-    e.preventDefault();
-    setDragState({
-      taskId: task.id,
-      startX: e.clientX,
-      startDate: task.startDate,
-      endDate: task.endDate,
-    });
-  };
-
-  const handleResizeMouseDown = (e: React.MouseEvent, task: Task, side: 'left' | 'right') => {
-    if (task.fix) return;
-    e.preventDefault();
-    e.stopPropagation();
-    setResizeState({
-      taskId: task.id,
-      side,
-      startX: e.clientX,
-      startDate: task.startDate,
-      endDate: task.endDate,
-    });
-  };
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    const allTasks = store.tasks.getAll();
-    if (dragState && dateRange?.from) {
-      const deltaX = e.clientX - dragState.startX;
-      const daysDelta = Math.round(deltaX / dayWidth);
-
-      const taskToUpdate = allTasks.find(t => t.id === dragState.taskId);
-      if (taskToUpdate) {
-        const newStartDate = new Date(dragState.startDate);
-        const newEndDate = new Date(dragState.endDate);
-
-        newStartDate.setDate(newStartDate.getDate() + daysDelta);
-        newEndDate.setDate(newEndDate.getDate() + daysDelta);
-
-        setDragPreview({ ...taskToUpdate, startDate: newStartDate, endDate: newEndDate });
-      }
-    } else if (resizeState && dateRange?.from) {
-      const deltaX = e.clientX - resizeState.startX;
-      const daysDelta = Math.round(deltaX / dayWidth);
-
-      const taskToUpdate = allTasks.find(t => t.id === resizeState.taskId);
-      if (taskToUpdate) {
-        if (resizeState.side === 'right') {
-          const newEndDate = new Date(resizeState.endDate);
-          newEndDate.setDate(newEndDate.getDate() + daysDelta);
-          if (newEndDate >= resizeState.startDate) {
-            setDragPreview({ ...taskToUpdate, endDate: newEndDate });
-          }
-        } else {
-          const newStartDate = new Date(resizeState.startDate);
-          newStartDate.setDate(newStartDate.getDate() + daysDelta);
-          if (newStartDate <= resizeState.endDate) {
-            setDragPreview({ ...taskToUpdate, startDate: newStartDate });
-          }
-        }
-      }
-    }
-  }, [dragState, resizeState, dateRange, dayWidth, store.tasks]);
-
-  const handleMouseUp = useCallback(() => {
-    if (dragPreview && dragState) {
-      store.tasks.update(dragState.taskId, {
-        startDate: dragPreview.startDate,
-        endDate: dragPreview.endDate,
-      });
-    } else if (dragPreview && resizeState) {
-      store.tasks.update(resizeState.taskId, {
-        startDate: dragPreview.startDate,
-        endDate: dragPreview.endDate,
-      });
-    }
-    setDragState(null);
-    setResizeState(null);
-    setDragPreview(null);
-  }, [dragPreview, dragState, resizeState, store.tasks]);
-
   // Закрытие контекстных меню по клику вне
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -1172,19 +907,6 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Обработчики mouse events для drag and drop / resize
-  useEffect(() => {
-    if (!dragState && !resizeState) return;
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [dragState, resizeState, dayWidth, dateRange, handleMouseMove, handleMouseUp]);
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
@@ -1569,101 +1291,28 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                           const isDragging = dragState?.taskId === task.id;
                           const isResizing = resizeState?.taskId === task.id;
 
-                          if (task.milestone) {
-                            const cx = position.left + position.width / 2;
-                            const size = 14;
-                            return (
-                              <div
-                                key={task.id}
-                                onClick={(e) => e.stopPropagation()}
-                                onMouseDown={(e) => handleTaskMouseDown(e, task)}
-                                onContextMenu={(e) => handleTaskBarContextMenu(e, task)}
-                                onMouseEnter={(e) => handleTaskBarMouseEnter(e, task)}
-                                onMouseLeave={handleTaskBarMouseLeave}
-                                className={`absolute flex items-center select-none transition-all ${isDragging ? 'opacity-75 cursor-grabbing' : 'cursor-grab hover:opacity-80'}`}
-                                style={{
-                                  left: `${cx - size / 2}px`,
-                                  top: `${topOffset}px`,
-                                  height: '20px',
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    width: `${size}px`,
-                                    height: `${size}px`,
-                                    flexShrink: 0,
-                                    backgroundColor: '#1a1a1a',
-                                    transform: 'rotate(45deg)',
-                                    boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
-                                  }}
-                                />
-                                <span className="ml-2 text-[10px] font-medium text-app-text-head whitespace-nowrap">
-                                  {task.name}
-                                </span>
-                              </div>
-                            );
-                          }
-
                           return (
-                            <div
+                            <TaskBar
                               key={task.id}
-                              onClick={(e) => e.stopPropagation()}
-                              onMouseDown={(e) => handleTaskMouseDown(e, task)}
-                              onDoubleClick={(e) => handleTaskBarDoubleClick(e, task)}
-                              onContextMenu={(e) => handleTaskBarContextMenu(e, task)}
-                              onMouseEnter={(e) => handleTaskBarMouseEnter(e, task)}
+                              task={task}
+                              position={position}
+                              topOffset={topOffset}
+                              isDragging={isDragging}
+                              isResizing={isResizing}
+                              isEditing={editingTaskId === task.id}
+                              editingTaskName={editingTaskName}
+                              getTaskBarColor={getTaskBarColor}
+                              getTaskBarStyle={getTaskBarStyle}
+                              onMouseDown={handleTaskMouseDown}
+                              onDoubleClick={handleTaskBarDoubleClick}
+                              onContextMenu={handleTaskBarContextMenu}
+                              onMouseEnter={handleTaskBarMouseEnter}
                               onMouseLeave={handleTaskBarMouseLeave}
-                              className={`absolute h-[20px] rounded-sm shadow-md text-[10px] flex items-center font-medium transition-all select-none overflow-hidden ${getTaskBarColor(task)} ${
-                                editingTaskId === task.id ? 'cursor-text' :
-                                isDragging ? 'shadow-2xl opacity-75 scale-105 cursor-grabbing' :
-                                isResizing ? 'shadow-2xl opacity-75 cursor-ew-resize' :
-                                'hover:shadow-lg cursor-grab'
-                              }`}
-                              style={{
-                                left: `${position.left}px`,
-                                width: `${position.width}px`,
-                                top: `${topOffset}px`,
-                                ...getTaskBarStyle(task),
-                              }}
-                            >
-                              <div
-                                className="absolute left-0 top-0 h-full w-[5px] z-10 cursor-ew-resize hover:bg-white/30"
-                                onMouseDown={(e) => handleResizeMouseDown(e, task, 'left')}
-                              />
-                              {editingTaskId === task.id ? (
-                                <input
-                                  autoFocus
-                                  type="text"
-                                  value={editingTaskName}
-                                  onChange={(e) => setEditingTaskName(e.target.value)}
-                                  onBlur={() => handleEditingConfirm(task)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') { e.preventDefault(); handleEditingConfirm(task); }
-                                    if (e.key === 'Escape') { e.preventDefault(); handleEditingCancel(); }
-                                    e.stopPropagation();
-                                  }}
-                                  onMouseDown={(e) => e.stopPropagation()}
-                                  className="px-2 flex-1 min-w-0 h-full bg-transparent outline-none text-[10px] font-medium"
-                                />
-                              ) : (
-                                <span className="px-2 truncate flex-1 min-w-0">{task.name}</span>
-                              )}
-                              {task.link && (
-                                <a
-                                  href={task.link}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="flex-shrink-0 mr-2 opacity-70 hover:opacity-100 transition-opacity"
-                                >
-                                  <Globe size={10} />
-                                </a>
-                              )}
-                              <div
-                                className="absolute right-0 top-0 h-full w-[5px] z-10 cursor-ew-resize hover:bg-white/30"
-                                onMouseDown={(e) => handleResizeMouseDown(e, task, 'right')}
-                              />
-                            </div>
+                              onResizeMouseDown={handleResizeMouseDown}
+                              onEditingNameChange={setEditingTaskName}
+                              onEditingConfirm={handleEditingConfirm}
+                              onEditingCancel={handleEditingCancel}
+                            />
                           );
                         })
                       )}
@@ -1673,40 +1322,12 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
               </div>
 
               {/* Слой подсветки колонок и строк (поверх строк) */}
-              <div className="absolute inset-0 z-20 pointer-events-none flex">
-                {dayWidth < 12 ? (
-                  weeks.map((w, i) => {
-                    const today = new Date();
-                    const isCurrentWeek = w.number === getWeek(today, { weekStartsOn: 1, locale: ru }) && w.year === today.getFullYear();
-                    const isWkSelected = w.dateStrings.some((d: string) => selectedColumnDates.has(d));
-                    return (
-                      <div
-                        key={i}
-                        style={{ width: dayWidth * w.daysCount, transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
-                        className={`flex-shrink-0 ${isWkSelected ? 'bg-app-accent/[0.12]' : isCurrentWeek ? 'bg-pink-500/[0.15]' : ''}`}
-                      />
-                    );
-                  })
-                ) : (
-                  days.map((day, i) => {
-                    const isTdy = isToday(day);
-                    const isWknd = isWeekend(day);
-                    const dateStr = format(day, 'yyyy-MM-dd');
-                    const isColSelected = selectedColumnDates.has(dateStr);
-                    let bgColor = 'bg-transparent';
-                    if (isColSelected) bgColor = 'bg-app-accent/[0.12]';
-                    else if (isTdy) bgColor = 'bg-pink-500/[0.15]';
-                    else if (isWknd) bgColor = 'bg-app-primary/[0.08]';
-                    return (
-                      <div
-                        key={i}
-                        style={{ width: dayWidth, transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
-                        className={`flex-shrink-0 ${bgColor}`}
-                      />
-                    );
-                  })
-                )}
-              </div>
+              <SelectionHighlightLayer
+                dayWidth={dayWidth}
+                days={days}
+                weeks={weeks}
+                selectedColumnDates={selectedColumnDates}
+              />
             </div>
           </div>
         </div>
@@ -1725,19 +1346,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
               sensors={dndSensors}
               modifiers={[restrictToVerticalAxis]}
               collisionDetection={closestCenter}
-              onDragStart={(e) => {
-                const activeId = e.active.id as string;
-                setDragActiveId(activeId);
-                setDragLevelDelta(0);
-                setScenario(null, null);
-                // Кэшируем потомков один раз — избегаем O(n²) на каждый mousemove
-                const descendants = new Set<string>();
-                const walk = (pid: string) => {
-                  PARAMETERS.forEach(p => { if (p.parentId === pid) { descendants.add(p.id); walk(p.id); } });
-                };
-                walk(activeId);
-                activeDescendantsRef.current = descendants;
-              }}
+              onDragStart={(e) => handleParamDragStart(e.active.id as string)}
               onDragMove={handleParamDragMove}
               onDragOver={handleParamDragOver}
               onDragEnd={handleParamDragEnd}
@@ -1853,101 +1462,28 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                           const isDragging = dragState?.taskId === task.id;
                           const isResizing = resizeState?.taskId === task.id;
 
-                          if (task.milestone) {
-                            const cx = position.left + position.width / 2;
-                            const size = 14;
-                            return (
-                              <div
-                                key={task.id}
-                                onClick={(e) => e.stopPropagation()}
-                                onMouseDown={(e) => handleTaskMouseDown(e, task)}
-                                onContextMenu={(e) => handleTaskBarContextMenu(e, task)}
-                                onMouseEnter={(e) => handleTaskBarMouseEnter(e, task)}
-                                onMouseLeave={handleTaskBarMouseLeave}
-                                className={`absolute flex items-center select-none transition-all ${isDragging ? 'opacity-75 cursor-grabbing' : 'cursor-grab hover:opacity-80'}`}
-                                style={{
-                                  left: `${cx - size / 2}px`,
-                                  top: `${topOffset}px`,
-                                  height: '20px',
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    width: `${size}px`,
-                                    height: `${size}px`,
-                                    flexShrink: 0,
-                                    backgroundColor: '#1a1a1a',
-                                    transform: 'rotate(45deg)',
-                                    boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
-                                  }}
-                                />
-                                <span className="ml-2 text-[10px] font-medium text-app-text-head whitespace-nowrap">
-                                  {task.name}
-                                </span>
-                              </div>
-                            );
-                          }
-
                           return (
-                            <div
+                            <TaskBar
                               key={task.id}
-                              onClick={(e) => e.stopPropagation()}
-                              onMouseDown={(e) => handleTaskMouseDown(e, task)}
-                              onDoubleClick={(e) => handleTaskBarDoubleClick(e, task)}
-                              onContextMenu={(e) => handleTaskBarContextMenu(e, task)}
-                              onMouseEnter={(e) => handleTaskBarMouseEnter(e, task)}
+                              task={task}
+                              position={position}
+                              topOffset={topOffset}
+                              isDragging={isDragging}
+                              isResizing={isResizing}
+                              isEditing={editingTaskId === task.id}
+                              editingTaskName={editingTaskName}
+                              getTaskBarColor={getTaskBarColor}
+                              getTaskBarStyle={getTaskBarStyle}
+                              onMouseDown={handleTaskMouseDown}
+                              onDoubleClick={handleTaskBarDoubleClick}
+                              onContextMenu={handleTaskBarContextMenu}
+                              onMouseEnter={handleTaskBarMouseEnter}
                               onMouseLeave={handleTaskBarMouseLeave}
-                              className={`absolute h-[20px] rounded-sm shadow-md text-[10px] flex items-center font-medium transition-all select-none overflow-hidden ${getTaskBarColor(task)} ${
-                                editingTaskId === task.id ? 'cursor-text' :
-                                isDragging ? 'shadow-2xl opacity-75 scale-105 cursor-grabbing' :
-                                isResizing ? 'shadow-2xl opacity-75 cursor-ew-resize' :
-                                'hover:shadow-lg cursor-grab'
-                              }`}
-                              style={{
-                                left: `${position.left}px`,
-                                width: `${position.width}px`,
-                                top: `${topOffset}px`,
-                                ...getTaskBarStyle(task),
-                              }}
-                            >
-                              <div
-                                className="absolute left-0 top-0 h-full w-[5px] z-10 cursor-ew-resize hover:bg-white/30"
-                                onMouseDown={(e) => handleResizeMouseDown(e, task, 'left')}
-                              />
-                              {editingTaskId === task.id ? (
-                                <input
-                                  autoFocus
-                                  type="text"
-                                  value={editingTaskName}
-                                  onChange={(e) => setEditingTaskName(e.target.value)}
-                                  onBlur={() => handleEditingConfirm(task)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') { e.preventDefault(); handleEditingConfirm(task); }
-                                    if (e.key === 'Escape') { e.preventDefault(); handleEditingCancel(); }
-                                    e.stopPropagation();
-                                  }}
-                                  onMouseDown={(e) => e.stopPropagation()}
-                                  className="px-2 flex-1 min-w-0 h-full bg-transparent outline-none text-[10px] font-medium"
-                                />
-                              ) : (
-                                <span className="px-2 truncate flex-1 min-w-0">{task.name}</span>
-                              )}
-                              {task.link && (
-                                <a
-                                  href={task.link}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="flex-shrink-0 mr-2 opacity-70 hover:opacity-100 transition-opacity"
-                                >
-                                  <Globe size={10} />
-                                </a>
-                              )}
-                              <div
-                                className="absolute right-0 top-0 h-full w-[5px] z-10 cursor-ew-resize hover:bg-white/30"
-                                onMouseDown={(e) => handleResizeMouseDown(e, task, 'right')}
-                              />
-                            </div>
+                              onResizeMouseDown={handleResizeMouseDown}
+                              onEditingNameChange={setEditingTaskName}
+                              onEditingConfirm={handleEditingConfirm}
+                              onEditingCancel={handleEditingCancel}
+                            />
                           );
                         })
                       )}
@@ -1957,40 +1493,12 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
               </div>
 
               {/* Слой подсветки колонок и строк (поверх строк) */}
-              <div className="absolute inset-0 z-20 pointer-events-none flex">
-                {dayWidth < 12 ? (
-                  weeks.map((w, i) => {
-                    const today = new Date();
-                    const isCurrentWeek = w.number === getWeek(today, { weekStartsOn: 1, locale: ru }) && w.year === today.getFullYear();
-                    const isWkSelected = w.dateStrings.some((d: string) => selectedColumnDates.has(d));
-                    return (
-                      <div
-                        key={i}
-                        style={{ width: dayWidth * w.daysCount, transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
-                        className={`flex-shrink-0 ${isWkSelected ? 'bg-app-accent/[0.12]' : isCurrentWeek ? 'bg-pink-500/[0.15]' : ''}`}
-                      />
-                    );
-                  })
-                ) : (
-                  days.map((day, i) => {
-                    const isTdy = isToday(day);
-                    const isWknd = isWeekend(day);
-                    const dateStr = format(day, 'yyyy-MM-dd');
-                    const isColSelected = selectedColumnDates.has(dateStr);
-                    let bgColor = 'bg-transparent';
-                    if (isColSelected) bgColor = 'bg-app-accent/[0.12]';
-                    else if (isTdy) bgColor = 'bg-pink-500/[0.15]';
-                    else if (isWknd) bgColor = 'bg-app-primary/[0.08]';
-                    return (
-                      <div
-                        key={i}
-                        style={{ width: dayWidth, transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
-                        className={`flex-shrink-0 ${bgColor}`}
-                      />
-                    );
-                  })
-                )}
-              </div>
+              <SelectionHighlightLayer
+                dayWidth={dayWidth}
+                days={days}
+                weeks={weeks}
+                selectedColumnDates={selectedColumnDates}
+              />
             </div>
           </div>
           </div>

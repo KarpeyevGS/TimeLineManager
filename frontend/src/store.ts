@@ -10,13 +10,18 @@ export interface TimelineViewState {
 
 const TIMELINE_VIEW_KEY = 'timeline_view_state';
 
-const DEFAULT_TIMELINE_VIEW: TimelineViewState = {
-  dateRange: {
-    from: new Date(2026, 0, 1).toISOString(),
-    to: new Date(2026, 0, 31).toISOString(),
-  },
-  zoomIndex: 2,
-  scrollLeft: 0,
+const getDefaultTimelineView = (): TimelineViewState => {
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return {
+    dateRange: {
+      from: from.toISOString(),
+      to: to.toISOString(),
+    },
+    zoomIndex: 2,
+    scrollLeft: 0,
+  };
 };
 
 export const loadTimelineViewState = (): TimelineViewState => {
@@ -26,7 +31,7 @@ export const loadTimelineViewState = (): TimelineViewState => {
   } catch {
     // ignore
   }
-  return DEFAULT_TIMELINE_VIEW;
+  return getDefaultTimelineView();
 };
 
 export const saveTimelineViewState = (state: TimelineViewState): void => {
@@ -285,7 +290,6 @@ if (typeof window !== 'undefined') {
           })) ?? [],
         };
         notifySubscribers();
-        console.log('📡 Data synced from another tab');
       } catch (error) {
         console.error('Failed to sync data from another tab:', error);
       }
@@ -296,14 +300,11 @@ if (typeof window !== 'undefined') {
 // ============= Хук useAppStore =============
 
 export const useAppStore = () => {
-  console.log('🔧 useAppStore hook initializing');
   const [appData, setAppData] = useState<AppData>(globalAppData);
-  console.log('📦 AppData loaded:', appData);
 
   // Подписка на изменения глобального состояния
   useEffect(() => {
     const unsubscribe = subscribe((newData) => {
-      console.log('📢 Store updated, notifying component');
       setAppData(newData);
     });
     return unsubscribe;
@@ -452,24 +453,20 @@ export const useAppStore = () => {
   const addParameterToTimeline = useCallback(
     (configId: string, parameter: Omit<TimelineParameter, 'id'>): TimelineParameter => {
       pushUndo();
-      console.log('🔧 addParameterToTimeline called:', { configId, parameter });
       const newParameter: TimelineParameter = {
         ...parameter,
         id: `param_${Date.now()}_${Math.random().toString(36).slice(2)}`,
       };
-      console.log('✅ Created new parameter:', newParameter);
 
       globalAppData = {
         ...globalAppData,
         timelineConfigs: globalAppData.timelineConfigs.map(cfg => {
           if (cfg.id === configId) {
-            console.log('✅ Found matching config, adding parameter');
             return { ...cfg, parameters: [...cfg.parameters, newParameter] };
           }
           return cfg;
         }),
       };
-      console.log('📝 Updated timelineConfigs:', globalAppData.timelineConfigs);
       notifySubscribers();
 
       return newParameter;
@@ -545,17 +542,7 @@ export const useAppStore = () => {
       const levelDelta = newLevel - activeParam.level;
 
       // Собираем активный узел + всех потомков
-      const getDescendantIds = (pid: string): string[] => {
-        const result: string[] = [];
-        params.forEach(p => {
-          if (p.parentId === pid) {
-            result.push(p.id);
-            result.push(...getDescendantIds(p.id));
-          }
-        });
-        return result;
-      };
-      const movedIds = new Set([activeId, ...getDescendantIds(activeId)]);
+      const movedIds = new Set([activeId, ...getDescendantIds(params, activeId)]);
 
       const movedBlock = params.filter(p => movedIds.has(p.id));
       const remaining = params.filter(p => !movedIds.has(p.id));
@@ -709,17 +696,7 @@ export const useAppStore = () => {
       const activeParam = params[activeIdx];
       const levelDelta = newLevel - activeParam.level;
 
-      const getDescendantIds = (pid: string): string[] => {
-        const result: string[] = [];
-        params.forEach(p => {
-          if (p.parentId === pid) {
-            result.push(p.id);
-            result.push(...getDescendantIds(p.id));
-          }
-        });
-        return result;
-      };
-      const movedIds = new Set([activeId, ...getDescendantIds(activeId)]);
+      const movedIds = new Set([activeId, ...getDescendantIds(params, activeId)]);
 
       const movedBlock = params.filter(p => movedIds.has(p.id));
       const remaining = params.filter(p => !movedIds.has(p.id));
