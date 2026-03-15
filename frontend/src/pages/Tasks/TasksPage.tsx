@@ -4,6 +4,7 @@ import { ru } from 'date-fns/locale';
 import { Pencil, Plus, Copy, Trash2 } from 'lucide-react';
 import { useAppStore, type Task } from '../../store';
 import { TaskModal } from '../Timeline/TaskModal';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 
 interface TaskModalState {
   mode: 'add' | 'edit';
@@ -21,6 +22,7 @@ export const TasksPage: React.FC = () => {
   const store = useAppStore();
   const [taskModal, setTaskModal] = useState<TaskModalState | null>(null);
   const [taskContextMenu, setTaskContextMenu] = useState<TaskContextMenu | null>(null);
+  const [confirmDeleteTask, setConfirmDeleteTask] = useState<Task | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
   // Получаем все задачи и вспомогательные данные
@@ -72,10 +74,8 @@ export const TasksPage: React.FC = () => {
   };
 
   const handleDeleteTaskFromMenu = (task: Task) => {
-    if (window.confirm('Вы точно хотите удалить задачу?')) {
-      store.tasks.delete(task.id);
-    }
     setTaskContextMenu(null);
+    setConfirmDeleteTask(task);
   };
 
   const handleRowContextMenu = (e: React.MouseEvent, task: Task) => {
@@ -336,6 +336,20 @@ export const TasksPage: React.FC = () => {
           onSave={handleSaveTask}
           onDelete={taskModal.mode === 'edit' ? handleDeleteTask : undefined}
           onClose={() => setTaskModal(null)}
+        />
+      )}
+
+      {confirmDeleteTask && (
+        <ConfirmDialog
+          title={`Удалить задачу «${confirmDeleteTask.name}»?`}
+          message="Задача будет безвозвратно удалена."
+          confirmLabel="Удалить"
+          confirmVariant="danger"
+          onConfirm={() => {
+            store.tasks.delete(confirmDeleteTask.id);
+            setConfirmDeleteTask(null);
+          }}
+          onCancel={() => setConfirmDeleteTask(null)}
         />
       )}
     </div>

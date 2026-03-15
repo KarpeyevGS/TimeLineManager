@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 // Импорт иконок из библиотеки Lucide (LucideIcon — тип для компонентов иконок)
 import {
   ListTodo,
@@ -58,6 +59,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tooltip, setTooltip] = useState<{ label: string; x: number; y: number } | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmNewProject, setConfirmNewProject] = useState(false);
+  const [importAlert, setImportAlert] = useState<{ message: string; onClose: () => void } | null>(null);
 
   const showTooltip = (e: React.MouseEvent<HTMLElement>, label: string) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -95,14 +99,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleDeleteConfig = (cfgId: string) => {
-    const confirmed = window.confirm('Удалить Timeline?');
-    if (!confirmed) { setContextMenu(null); return; }
-    const remaining = store.appData.timelineConfigs.filter(c => c.id !== cfgId);
-    store.timelines.deleteConfig(cfgId);
-    if (activeTimelineId === cfgId) {
+    setContextMenu(null);
+    setConfirmDeleteId(cfgId);
+  };
+
+  const confirmDelete = () => {
+    if (!confirmDeleteId) return;
+    const remaining = store.appData.timelineConfigs.filter(c => c.id !== confirmDeleteId);
+    store.timelines.deleteConfig(confirmDeleteId);
+    if (activeTimelineId === confirmDeleteId) {
       onTimelineSelect(remaining.length > 0 ? remaining[0].id : '');
     }
-    setContextMenu(null);
+    setConfirmDeleteId(null);
   };
 
   // Функция экспорта данных
@@ -121,17 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Функция создания нового проекта
   const handleNewProject = () => {
-    const wantSave = window.confirm('Сохранить текущий проект?');
-    if (wantSave) {
-      const confirmed = window.confirm('Вы точно уверены?');
-      if (!confirmed) return;
-      handleExport();
-      store.reset();
-      window.location.reload();
-    } else {
-      store.reset();
-      window.location.reload();
-    }
+    setConfirmNewProject(true);
   };
 
   // Функция импорта данных
@@ -145,13 +143,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         const content = e.target?.result as string;
         const success = store.import(content);
         if (success) {
-          alert('✅ Данные успешно импортированы! Страница перезагрузится.');
-          window.location.reload();
+          setImportAlert({ message: 'Данные успешно импортированы.', onClose: () => window.location.reload() });
         } else {
-          alert('❌ Ошибка: некорректный формат файла');
+          setImportAlert({ message: 'Ошибка: некорректный формат файла.', onClose: () => setImportAlert(null) });
         }
       } catch (error) {
-        alert('❌ Ошибка при импорте: ' + (error instanceof Error ? error.message : 'неизвестная ошибка'));
+        setImportAlert({ message: 'Ошибка при импорте: ' + (error instanceof Error ? error.message : 'неизвестная ошибка'), onClose: () => setImportAlert(null) });
       }
     };
     reader.readAsText(file);
@@ -443,5 +440,55 @@ export const Sidebar: React.FC<SidebarProps> = ({
     document.body
   );
 
-  return <>{aside}{portal}{tooltipPortal}</>;
+  const deleteTimelineName = confirmDeleteId
+    ? store.appData.timelineConfigs.find(c => c.id === confirmDeleteId)?.name
+    : undefined;
+
+  return (
+    <>
+      {aside}
+      {portal}
+      {tooltipPortal}
+      {confirmDeleteId && (
+        <ConfirmDialog
+          title={`Удалить Timeline «${deleteTimelineName}»?`}
+          message="Это действие нельзя отменить. Все параметры и настройки будут удалены."
+          confirmLabel="Удалить"
+          confirmVariant="danger"
+          onConfirm={confirmDelete}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
+      {importAlert && (
+        <ConfirmDialog
+          title="Импорт данных"
+          message={importAlert.message}
+          confirmLabel="OK"
+          confirmVariant="primary"
+          onConfirm={importAlert.onClose}
+        />
+      )}
+      {confirmNewProject && (
+        <ConfirmDialog
+          title="Создать новый проект"
+          message="Все текущие данные будут удалены. Хотите сохранить резервную копию перед сбросом?"
+          confirmLabel="Сохранить и сбросить"
+          confirmVariant="primary"
+          secondaryLabel="Сбросить без сохранения"
+          onSecondary={() => {
+            setConfirmNewProject(false);
+            store.reset();
+            window.location.reload();
+          }}
+          onConfirm={() => {
+            setConfirmNewProject(false);
+            handleExport();
+            store.reset();
+            window.location.reload();
+          }}
+          onCancel={() => setConfirmNewProject(false)}
+        />
+      )}
+    </>
+  );
 };

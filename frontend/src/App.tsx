@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from './components/layout/Sidebar';
 import { TimelinePage } from './pages/Timeline/TimelinePage';
 import { TasksPage } from './pages/Tasks/TasksPage';
 import { ResourcesPage } from './pages/Resources/ResourcesPage';
+import { undoAppData } from './store';
 
 // 2. Главный компонент приложения
 function App() {
@@ -11,6 +12,20 @@ function App() {
   const [activeTimelineId, setActiveTimelineId] = useState<string | undefined>(undefined);
   const [timelineParameterModalOpen, setTimelineParameterModalOpen] = useState(false);
   console.log('📄 Current page:', activePage);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        const target = e.target as HTMLElement;
+        // Не перехватываем Ctrl+Z внутри текстовых полей
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+        e.preventDefault();
+        undoAppData();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Функция для отрисовки активной страницы
   const renderPage = () => {

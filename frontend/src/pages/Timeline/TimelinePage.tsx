@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useLayoutEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { DateRange } from 'react-day-picker';
 import {
@@ -27,6 +27,7 @@ import { DateRangePicker } from '../../components/ui/DateRangePicker';
 import { TaskModal } from './TaskModal';
 import { ParameterModal } from './ParameterModal';
 import { useAppStore, useTimelineViewState, saveTimelineViewState, loadTimelineViewState, type Task, type TimelineParameter } from '../../store';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 
 interface ContextMenuState {
   x: number;
@@ -287,6 +288,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   const [dragActiveId, setDragActiveId] = useState<string | null>(null);
   const [_dragLevelDelta, setDragLevelDelta] = useState(0);
   const [taskContextMenu, setTaskContextMenu] = useState<TaskContextMenuState | null>(null);
+  const [confirmDeleteTask, setConfirmDeleteTask] = useState<Task | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTaskName, setEditingTaskName] = useState<string>('');
   const [hoveredTask, setHoveredTask] = useState<TooltipState | null>(null);
@@ -601,6 +603,15 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     isSyncing.current = false;
   };
 
+  // Синхронизация scrollLeft закреплённой области при её появлении/изменении
+  useLayoutEffect(() => {
+    if (frozenRows.length > 0 && frozenTimelineRef.current) {
+      const sl = scrollbarRef.current?.scrollLeft ?? timelineRef.current?.scrollLeft ?? 0;
+      frozenTimelineRef.current.scrollLeft = sl;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [frozenRows.length]);
+
   // Управление состоянием иерархии
   const toggleCollapse = (id: string) => {
     setCollapsedIds(prev => {
@@ -897,10 +908,8 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
 
   // Удаление задачи из контекстного меню
   const handleDeleteTaskFromMenu = (task: Task) => {
-    if (window.confirm('Вы точно хотите удалить задачу?')) {
-      store.tasks.delete(task.id);
-    }
     setTaskContextMenu(null);
+    setConfirmDeleteTask(task);
   };
 
   // Inline-редактирование названия задачи
@@ -2265,6 +2274,20 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
           </div>
         </div>,
         document.body
+      )}
+
+      {confirmDeleteTask && (
+        <ConfirmDialog
+          title={`Удалить задачу «${confirmDeleteTask.name}»?`}
+          message="Задача будет безвозвратно удалена."
+          confirmLabel="Удалить"
+          confirmVariant="danger"
+          onConfirm={() => {
+            store.tasks.delete(confirmDeleteTask.id);
+            setConfirmDeleteTask(null);
+          }}
+          onCancel={() => setConfirmDeleteTask(null)}
+        />
       )}
     </div>
   );

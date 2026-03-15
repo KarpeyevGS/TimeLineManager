@@ -232,6 +232,32 @@ export const saveAppData = (data: AppData): void => {
 let globalAppData: AppData = loadAppData();
 const subscribers = new Set<(data: AppData) => void>();
 
+// ============= Undo Stack =============
+
+const MAX_UNDO = 50;
+const undoStack: string[] = []; // JSON-снапшоты состояния
+
+const pushUndo = () => {
+  undoStack.push(JSON.stringify(globalAppData));
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+};
+
+export const undoAppData = (): boolean => {
+  if (undoStack.length === 0) return false;
+  const snapshot = undoStack.pop()!;
+  const parsed = JSON.parse(snapshot) as AppData;
+  globalAppData = {
+    ...parsed,
+    tasks: (parsed.tasks ?? []).map((task) => ({
+      ...task,
+      startDate: new Date(task.startDate),
+      endDate: new Date(task.endDate),
+    })),
+  };
+  notifySubscribers();
+  return true;
+};
+
 // Функция для уведомления всех подписчиков
 const notifySubscribers = () => {
   saveAppData(globalAppData);
@@ -285,6 +311,7 @@ export const useAppStore = () => {
 
   // ===== Операции с задачами =====
   const addTask = useCallback((task: Omit<Task, 'id'>): Task => {
+    pushUndo();
     const newTask: Task = {
       ...task,
       id: `task_${Date.now()}_${Math.random().toString(36).slice(2)}`,
@@ -298,6 +325,7 @@ export const useAppStore = () => {
   }, []);
 
   const updateTask = useCallback((taskId: string, updates: Partial<Task>): void => {
+    pushUndo();
     globalAppData = {
       ...globalAppData,
       tasks: globalAppData.tasks.map(task =>
@@ -308,6 +336,7 @@ export const useAppStore = () => {
   }, []);
 
   const deleteTask = useCallback((taskId: string): void => {
+    pushUndo();
     globalAppData = {
       ...globalAppData,
       tasks: globalAppData.tasks.filter(task => task.id !== taskId),
@@ -321,6 +350,7 @@ export const useAppStore = () => {
 
   // ===== Операции с типами полей =====
   const addCustomFieldType = useCallback((name: string): CustomFieldType => {
+    pushUndo();
     const newType: CustomFieldType = {
       id: `cft_${Date.now()}`,
       name,
@@ -338,6 +368,7 @@ export const useAppStore = () => {
   }, []);
 
   const deleteCustomFieldType = useCallback((id: string): void => {
+    pushUndo();
     globalAppData = {
       ...globalAppData,
       customFieldTypes: globalAppData.customFieldTypes.filter(t => t.id !== id),
@@ -420,6 +451,7 @@ export const useAppStore = () => {
   // ===== Операции с параметрами Timeline =====
   const addParameterToTimeline = useCallback(
     (configId: string, parameter: Omit<TimelineParameter, 'id'>): TimelineParameter => {
+      pushUndo();
       console.log('🔧 addParameterToTimeline called:', { configId, parameter });
       const newParameter: TimelineParameter = {
         ...parameter,
@@ -447,6 +479,7 @@ export const useAppStore = () => {
 
   const deleteParameterFromTimeline = useCallback(
     (configId: string, paramId: string): void => {
+      pushUndo();
       globalAppData = {
         ...globalAppData,
         timelineConfigs: globalAppData.timelineConfigs.map(cfg =>
@@ -462,6 +495,7 @@ export const useAppStore = () => {
 
   const updateParameterInTimeline = useCallback(
     (configId: string, paramId: string, updates: Partial<Omit<TimelineParameter, 'id'>>): void => {
+      pushUndo();
       globalAppData = {
         ...globalAppData,
         timelineConfigs: globalAppData.timelineConfigs.map(cfg =>
@@ -477,6 +511,7 @@ export const useAppStore = () => {
 
   const reorderParameters = useCallback(
     (configId: string, activeId: string, overId: string): void => {
+      pushUndo();
       const config = globalAppData.timelineConfigs.find(c => c.id === configId);
       if (!config) return;
       const params = [...config.parameters];
@@ -498,6 +533,7 @@ export const useAppStore = () => {
 
   const reorderAndReparentParameter = useCallback(
     (configId: string, activeId: string, overId: string, newLevel: number, newParentId: string | undefined): void => {
+      pushUndo();
       const config = globalAppData.timelineConfigs.find(c => c.id === configId);
       if (!config) return;
       const params = [...config.parameters];
@@ -565,6 +601,7 @@ export const useAppStore = () => {
   // Сценарий 1: поднять узел выше его родителя (стать sibling родителя)
   const liftAboveParentParameter = useCallback(
     (configId: string, nodeId: string): void => {
+      pushUndo();
       const config = globalAppData.timelineConfigs.find(c => c.id === configId);
       if (!config) return;
       const params = [...config.parameters];
@@ -609,6 +646,7 @@ export const useAppStore = () => {
   // Сценарий 2: сделать узел дочерним другого узла
   const reparentUnderParameter = useCallback(
     (configId: string, nodeId: string, newParentId: string): void => {
+      pushUndo();
       const config = globalAppData.timelineConfigs.find(c => c.id === configId);
       if (!config) return;
       const params = [...config.parameters];
@@ -660,6 +698,7 @@ export const useAppStore = () => {
   // Вставить активный параметр сразу после целевого (на том же уровне)
   const insertAfterParameter = useCallback(
     (configId: string, activeId: string, overId: string, newLevel: number, newParentId: string | undefined): void => {
+      pushUndo();
       const config = globalAppData.timelineConfigs.find(c => c.id === configId);
       if (!config) return;
       const params = [...config.parameters];
@@ -714,6 +753,7 @@ export const useAppStore = () => {
 
   // ===== Сброс данных =====
   const clearAppData = useCallback((): void => {
+    pushUndo();
     localStorage.removeItem(STORAGE_KEY);
     globalAppData = createInitialAppData();
     notifySubscribers();
@@ -721,6 +761,7 @@ export const useAppStore = () => {
 
   // Создать новую конфигурацию Timeline
   const addTimelineConfig = useCallback((name: string): TimelineConfig => {
+    pushUndo();
     const newConfig: TimelineConfig = {
       id: `timeline_${Date.now()}_${Math.random().toString(36).slice(2)}`,
       name,
@@ -735,6 +776,7 @@ export const useAppStore = () => {
   }, []);
 
   const deleteTimelineConfig = useCallback((id: string): void => {
+    pushUndo();
     globalAppData = {
       ...globalAppData,
       timelineConfigs: globalAppData.timelineConfigs.filter(cfg => cfg.id !== id),
@@ -743,6 +785,7 @@ export const useAppStore = () => {
   }, []);
 
   const updateTimelineConfig = useCallback((id: string, updates: Partial<TimelineConfig>): void => {
+    pushUndo();
     globalAppData = {
       ...globalAppData,
       timelineConfigs: globalAppData.timelineConfigs.map(cfg =>
@@ -753,6 +796,7 @@ export const useAppStore = () => {
   }, []);
 
   const duplicateTimelineConfig = useCallback((id: string): TimelineConfig | undefined => {
+    pushUndo();
     const original = globalAppData.timelineConfigs.find(cfg => cfg.id === id);
     if (!original) return undefined;
     const newConfig: TimelineConfig = {
@@ -809,6 +853,7 @@ export const useAppStore = () => {
     export: exportData,
     import: importData,
     reset: clearAppData,
+    undo: undoAppData,
   };
 };
 

@@ -1,0 +1,263 @@
+Вот текст без кавычек:
+
+● ConfirmDialog и undo-история
+
+Добавлен переиспользуемый компонент ConfirmDialog (portal, backdrop, кнопки в стиле проекта)
+Все window.confirm и alert() заменены кастомными диалогами в Sidebar, TasksPage, TimelinePage
+Диалог Новый проект объединяет два последовательных confirm в один с тремя кнопками
+Добавлен undo-стек (до 50 шагов) в store: pushUndo() перед каждой мутацией, undoAppData() для отката
+Ctrl+Z в App.tsx — глобальный обработчик, не перехватывает нажатие внутри input/textarea
+Баг: несоосность сетки при закреплении строк
+
+Исправлено: при первом появлении frozen-секции frozenTimelineRef монтировался со scrollLeft = 0, тогда как основная область уже была прокручена — добавлен useLayoutEffect для синхронизации при изменении frozenRows.length
+
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the
+     earlier portion of the conversation.
+
+     Summary:
+     1. Primary Request and Intent:
+        - **Undo (Ctrl+Z)**: Implement undo history for destructive actions (delete timeline, edit/delete task)
+     triggered by Ctrl+Z
+        - **Custom confirm dialogs**: Replace all `window.confirm()` and `alert()` system dialogs with styled custom
+     modal windows matching project design (reference: EmptyFiltersDialog in TaskModal.tsx)
+        - **Frozen grid misalignment fix**: After pinning rows in Timeline, vertical grid lines in the frozen area and
+     main scrollable area become visually misaligned
+        - **ConfirmDialog button overflow fix**: Long button labels (e.g. "Сохранить и сбросить") overflow their buttons
+      in the "New project" dialog
+        - **Buttons in one line**: User rejected flex-wrap solution — buttons must stay on one row
+        - **Button alignment**: Buttons were right-aligned; user requested center alignment
+
+     2. Key Technical Concepts:
+        - Global singleton store pattern (`globalAppData`, subscribers) in `store.ts`
+        - Undo stack: module-level `string[]` of JSON snapshots, `pushUndo()` before mutations, `undoAppData()` for
+     restore
+        - React portal (`ReactDOM.createPortal`) for modal dialogs rendered to `document.body`
+        - `useLayoutEffect` vs `useEffect`: layout effect runs synchronously after DOM mutations, before browser paint —
+      used to sync `frozenTimelineRef.scrollLeft` without visual flash
+        - Horizontal scroll synchronization between multiple refs (`timeHeaderRef`, `frozenTimelineRef`, `timelineRef`,
+     `scrollbarRef`)
+        - CSS `background-image: linear-gradient` grid lines with `backgroundSize` and `backgroundPosition` for timeline
+      grid rendering
+        - `w-fit` CSS for dialog auto-sizing to content width
+        - `whitespace-nowrap` to prevent text wrapping inside buttons
+
+     3. Files and Code Sections:
+        - **`frontend/src/store.ts`**
+          - Added module-level undo stack and functions before `notifySubscribers`:
+          ```ts
+          const MAX_UNDO = 50;
+          const undoStack: string[] = [];
+          const pushUndo = () => {
+            undoStack.push(JSON.stringify(globalAppData));
+            if (undoStack.length > MAX_UNDO) undoStack.shift();
+          };
+          export const undoAppData = (): boolean => {
+            if (undoStack.length === 0) return false;
+            const snapshot = undoStack.pop()!;
+            const parsed = JSON.parse(snapshot) as AppData;
+            globalAppData = {
+              ...parsed,
+              tasks: (parsed.tasks ?? []).map((task) => ({
+                ...task,
+                startDate: new Date(task.startDate),
+                endDate: new Date(task.endDate),
+              })),
+            };
+            notifySubscribers();
+            return true;
+          };
+          ```
+          - `pushUndo()` added before every mutation: addTask, updateTask, deleteTask, addCustomFieldType,
+     deleteCustomFieldType, addParameterToTimeline, deleteParameterFromTimeline, updateParameterInTimeline,
+     reorderParameters, reorderAndReparentParameter, liftAboveParentParameter, reparentUnderParameter,
+     insertAfterParameter, clearAppData, addTimelineConfig, deleteTimelineConfig, updateTimelineConfig,
+     duplicateTimelineConfig
+          - Added `undo: undoAppData` to `useAppStore` return value
+
+        - **`frontend/src/App.tsx`**
+          - Added `useEffect` and `undoAppData` imports
+          - Global Ctrl+Z handler (skips input/textarea/contentEditable):
+          ```tsx
+          useEffect(() => {
+            const handleKeyDown = (e: KeyboardEvent) => {
+              if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+                const target = e.target as HTMLElement;
+                if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+                e.preventDefault();
+                undoAppData();
+              }
+            };
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+          }, []);
+          ```
+
+        - **`frontend/src/components/ui/ConfirmDialog.tsx`** (new file)
+          - Reusable confirm dialog with portal, backdrop, optional cancel button, optional secondary action,
+     danger/primary variant
+          - Final state after all iterations:
+          ```tsx
+          import React from 'react';
+          import ReactDOM from 'react-dom';
+          interface ConfirmDialogProps {
+            title: string;
+            message?: string;
+            confirmLabel: string;
+            confirmVariant?: 'danger' | 'primary';
+            secondaryLabel?: string;
+            onSecondary?: () => void;
+            cancelLabel?: string;
+            onConfirm: () => void;
+            onCancel?: () => void;
+          }
+          export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({...}) => {
+            return ReactDOM.createPortal(
+              <div className="fixed inset-0 z-[500] flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
+                <div className="relative z-10 bg-white border border-app-border rounded-xl min-w-[360px] max-w-[90vw]
+     w-fit shadow-2xl">
+                  <div className="px-5 py-4 border-b border-app-border">
+                    <h3 className="text-sm font-bold text-app-text-head">{title}</h3>
+                  </div>
+                  {message && (
+                    <div className="px-5 py-4">
+                      <p className="text-xs text-app-text-main leading-relaxed">{message}</p>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-center gap-2 px-5 py-3 border-t border-app-border">
+                    {onCancel && (
+                      <button onClick={onCancel} className="py-1.5 px-3 text-xs font-semibold rounded border
+     border-app-border text-app-text-head hover:border-app-primary hover:text-app-primary transition-colors
+     whitespace-nowrap">
+                        {cancelLabel}
+                      </button>
+                    )}
+                    {secondaryLabel && onSecondary && (
+                      <button onClick={onSecondary} className="py-1.5 px-3 text-xs font-semibold rounded border
+     border-app-border text-app-text-head hover:border-app-primary hover:text-app-primary transition-colors
+     whitespace-nowrap">
+                        {secondaryLabel}
+                      </button>
+                    )}
+                    <button onClick={onConfirm} className={`py-1.5 px-4 text-xs font-semibold rounded transition-colors
+     whitespace-nowrap ${confirmVariant === 'danger' ? 'bg-app-error text-white hover:opacity-90' : 'bg-app-primary
+     text-white hover:bg-app-primary-hover'}`}>
+                      {confirmLabel}
+                    </button>
+                  </div>
+                </div>
+              </div>,
+              document.body
+            );
+          };
+          ```
+
+        - **`frontend/src/components/layout/Sidebar.tsx`**
+          - Added import `ConfirmDialog`
+          - Added states: `confirmDeleteId`, `confirmNewProject`, `importAlert`
+          - `handleDeleteConfig`: sets `confirmDeleteId` (closes context menu first)
+          - `confirmDelete`: actual deletion logic (extracted)
+          - `handleNewProject`: sets `confirmNewProject = true`
+          - `handleImport`: replaced 3 `alert()` with `importAlert` state (`{ message, onClose }`)
+          - Three ConfirmDialog instances in return: delete timeline (danger), import alert (primary, no cancel,
+     onConfirm triggers reload or close), new project (primary, with secondary "Сбросить без сохранения")
+
+        - **`frontend/src/pages/Tasks/TasksPage.tsx`**
+          - Added `ConfirmDialog` import
+          - Added `confirmDeleteTask: Task | null` state
+          - `handleDeleteTaskFromMenu`: closes context menu, sets `confirmDeleteTask`
+          - ConfirmDialog in return with task name in title
+
+        - **`frontend/src/pages/Timeline/TimelinePage.tsx`**
+          - Added `ConfirmDialog` import
+          - Added `useLayoutEffect` to imports
+          - Added `confirmDeleteTask: Task | null` state
+          - `handleDeleteTaskFromMenu`: closes context menu, sets `confirmDeleteTask`
+          - ConfirmDialog at end of return
+          - **Frozen grid fix** — added after `syncFromFrozenTimeline`:
+          ```tsx
+          useLayoutEffect(() => {
+            if (frozenRows.length > 0 && frozenTimelineRef.current) {
+              const sl = scrollbarRef.current?.scrollLeft ?? timelineRef.current?.scrollLeft ?? 0;
+              frozenTimelineRef.current.scrollLeft = sl;
+            }
+          // eslint-disable-next-line react-hooks/exhaustive-deps
+          }, [frozenRows.length]);
+          ```
+
+     4. Errors and fixes:
+        - **`undoAppData` calls `notifySubscribers` declared after it**: Not actually an error — JavaScript closures
+     capture the variable reference, not the value at declaration time. By the time `undoAppData` is called,
+     `notifySubscribers` is initialized. TypeScript compiled clean.
+        - **`onCancel` was required in ConfirmDialog**: When adding importAlert (info-only dialog with just OK),
+     `onCancel` needed to be optional. Made `onCancel?: () => void` and conditionally rendered the cancel button.
+        - **Button text overflow**: `h-7` fixed height clipped text in long-label buttons. Fixed by replacing with
+     `py-1.5` + `whitespace-nowrap`.
+        - **User rejected flex-wrap**: Initial fix added `flex-wrap` to footer so buttons could wrap to next line. User
+     said "кнопки должны быть в одну строку" — removed `flex-wrap`, changed dialog to `w-fit min-w-[360px] max-w-[90vw]`
+      so dialog grows to fit buttons.
+        - **Buttons right-aligned**: After `w-fit` change, user noted buttons were shifted right. Changed `justify-end`
+     → `justify-center` on footer.
+
+     5. Problem Solving:
+        - **Undo architecture**: Used JSON.stringify for snapshots (handles Date→string automatically), restore converts
+      strings back to Date objects (same as loadAppData pattern). Stack at module level (not inside hook) ensures single
+      instance.
+        - **Frozen grid misalignment root cause**: `{frozenRows.length > 0 && <frozenSection>}` means
+     `frozenTimelineRef.current` is null until first pin. `syncFromScrollbar` skips null refs, so scroll state is never
+     transferred. When frozen section first mounts, its scrollLeft=0 while timelineRef.scrollLeft may be non-zero.
+     `useLayoutEffect` with `[frozenRows.length]` dep syncs scroll before paint, preventing any visual flash.
+
+     6. All user messages:
+        - "1hello"
+        - "как запланировать отмену последнего изменения через ctrl+z? например при удалении timeline или
+     изменении/удалении задачи"
+        - "Замени системные окна подтверждения (window.confirm) на кастомное модальное окно в стиле проекта. [full
+     detailed spec with file/line references and style guide]"
+        - "осталось системное диалоговое окно при импорте"
+        - "Проблема: При закреплении строк в Timeline верхний закреплённый блок и основная прокручиваемая часть начинают
+      рисовать вертикальные линии временной сетки несоосно. [full spec with line references]"
+        - "Проблема: В `ConfirmDialog` текст длинных подписей действий не помещается в кнопки [full spec]"
+        - "да, только кнопки должны быть в одну строку"
+        - "нужно их выровнить по центру, сейчас они смещены вправо"
+        - "напиши текстом сюда, краткое описание того что сделано для git"
+        - "Your task is to create a detailed summary of the conversation so far..."
+
+     7. Pending Tasks:
+        - None explicitly pending. All requested tasks have been completed.
+
+     8. Current Work:
+        The last functional change made was to `ConfirmDialog.tsx` footer alignment — changed `justify-end` to
+     `justify-center`:
+        ```tsx
+        <div className="flex items-center justify-center gap-2 px-5 py-3 border-t border-app-border">
+        ```
+        This followed two prior iterations: first adding `flex-wrap` (rejected by user), then switching to `w-fit`
+     dialog width with `whitespace-nowrap` buttons (user accepted single-line approach but noted right-alignment issue).
+
+        The user then requested a git commit message (provided as plain text), and finally requested this conversation
+     summary.
+
+     9. Optional Next Step:
+        No pending tasks remain. All requested features have been implemented and the user's last substantive request
+     (centering the buttons) was completed. The summary request is the final action in this conversation. No next step
+     is warranted without new user input.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you
+     generated), read the full transcript at: C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--T
+     imeLineManager-4-18-02-2026\0d0a4372-14e4-4e0e-bbec-7b4d09936c13.jsonl
+
+
+
+
+
+
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Read src\components\ui\ConfirmDialog.tsx (74 lines)
+  ⎿  Referenced file src\pages\Timeline\TimelinePage.tsx
+  ⎿  Referenced file src\components\layout\Sidebar.tsx
+  ⎿  Read src\pages\Tasks\TasksPage.tsx (358 lines)
+  ⎿  Read src\App.tsx (70 lines)
