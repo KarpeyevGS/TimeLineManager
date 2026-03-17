@@ -1,0 +1,233 @@
+  Удалены неиспользуемые зависимости clsx, tailwind-merge, react-router-dom из frontend/package.json. Сборка остаётся
+  чистой.
+
+  ПКМ по пустой ячейке timeline теперь передаёт фильтры строки в TaskModal как initialFilters, поэтому новая задача
+  сразу получает значения кастомных полей из контекста строки. Фильтр с ключом id намеренно исключается. Секция Custom
+  Fields авто-раскрывается если есть предзаполненные значения. Удалена устаревшая функция isParameterEmpty.
+
+  Кастомные поля в TaskModal заменены с обычного input на компонент Autocomplete. В Autocomplete добавлен проп
+  inputClassName для управления стилем внутреннего инпута. В TimelinePage вычисляется useMemo customFieldOptions —
+  словарь уникальных значений каждого кастомного поля из всех задач — и передаётся в TaskModal.
+
+  Исправлен визуальный дефект EmptyFiltersDialog: ширина диалога увеличена до 420px чтобы три кнопки с русскими
+  подписями не переполняли контейнер, добавлен whitespace-nowrap, кнопка Отмена отделена через mr-auto, паддинг футера
+  симметричен px-5.
+
+  Кнопка Просто добавить теперь показывает промежуточный диалог SimpleAddConfirmDialog с предупреждением задача не будет
+   отражена в данной строке и кнопками Отмена / Всё равно создать.
+
+  Исправлен сценарий Добавить фильтры: задача больше не сохраняется преждевременно. Вместо этого pendingTaskData
+  передаётся в onEditParameter, сохраняется как returnTaskModal внутри ParameterModalState, и восстанавливает TaskModal
+  с предзаполненной формой после закрытия ParameterModal. При отмене параметра hasEmptyFilters остаётся true, при
+  сохранении параметра сбрасывается в false чтобы задача сохранилась без повторного диалога.
+
+✻ Conversation compacted (ctrl+o for history)
+
+
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the
+     earlier portion of the conversation.
+
+     Summary:
+     1. Primary Request and Intent:
+        The session covered six distinct tasks in the TimeLine Planner frontend:
+        1. Remove unused npm dependencies (clsx, tailwind-merge, react-router-dom) before Electron build
+        2. Pre-fill task custom field values from the timeline row filters when creating a task via right-click context
+     menu
+        3. Add autocomplete with existing values to custom field inputs in TaskModal
+        4. Fix EmptyFiltersDialog button overflow — Russian button labels were being clipped/wrapped
+        5. Add a confirmation dialog when clicking "Просто добавить" in EmptyFiltersDialog
+        6. Fix the "Добавить фильтры" flow so that cancelling ParameterModal returns to a pre-filled TaskModal instead
+     of losing all form data
+
+     2. Key Technical Concepts:
+        - React state management with useState and useMemo hooks
+        - Component prop drilling for callback signatures
+        - Flexbox overflow with whitespace-nowrap — buttons exceeding container width
+        - Modal z-index layering (TaskModal z-300, EmptyFiltersDialog z-400, SimpleAddConfirmDialog z-450,
+     ParameterModal)
+        - Restoring component state via stored TaskModalState in ParameterModalState
+        - Deferred task saving — pendingTaskData passed through callback chain instead of saved immediately
+        - TypeScript interface extension for inter-modal communication
+        - Tailwind CSS v4 class composition
+
+     3. Files and Code Sections:
+
+        - frontend/package.json
+          - Removed clsx, tailwind-merge, react-router-dom (6 packages total including transitive deps)
+
+        - frontend/src/components/ui/Autocomplete.tsx
+          - Added inputClassName?: string prop to AutocompleteProps interface
+          - Applied inputClassName to the inner input element (overrides default h-7 style)
+          - Important: allows TaskModal to pass h-8 height matching other inputs via inputCls()
+
+        - frontend/src/pages/Timeline/TaskModal.tsx
+          - Added initialFilters?: Record<string, string> prop — pre-fills customFieldValues from row filters
+          - Added customFieldOptions?: Record<string, string[]> prop — options for autocomplete per field type ID
+          - Changed onEditParameter signature: onEditParameter?: (pendingTask: Omit<Task, 'id'> & { id?: string }) =>
+     void
+          - customFieldValues init: task?.customFields ?? initialFilters ?? {}
+          - customFieldsOpen init updated:
+            ```typescript
+            const [customFieldsOpen, setCustomFieldsOpen] = useState(
+              mode === 'add' && (
+                (!!initialFilters && Object.keys(initialFilters).length > 0) ||
+                (!!task?.customFields && Object.keys(task.customFields).length > 0)
+              )
+            );
+            ```
+          - Added showSimpleAddConfirm state
+          - Replaced input with Autocomplete for custom field rendering:
+            ```tsx
+            <Autocomplete
+              options={customFieldOptions?.[id] ?? []}
+              value={customFieldValues[id] ?? ''}
+              onChange={val => handleCustomFieldChange(id, val)}
+              placeholder={`Enter ${name}`}
+              inputClassName={inputCls()}
+            />
+            ```
+          - EmptyFiltersDialog width changed from w-[360px] to w-[420px], footer uses px-5 symmetric, all buttons have
+     whitespace-nowrap, Отмена has mr-auto
+          - "Просто добавить" handler now sets showSimpleAddConfirm=true instead of calling onSave directly
+          - "Добавить фильтры" handler changed — NO longer calls onSave, just calls onEditParameter(pendingTaskData):
+            ```tsx
+            onClick={() => {
+              if (pendingTaskData && onEditParameter) {
+                onEditParameter(pendingTaskData);
+              }
+            }}
+            ```
+          - Added SimpleAddConfirmDialog component (z-450) with text "Задача не будет отражена в данной строке" and
+     buttons Отмена / Всё равно создать
+          - SimpleAddConfirmDialog rendered in return fragment: {showSimpleAddConfirm && <SimpleAddConfirmDialog />}
+
+        - frontend/src/pages/Timeline/TimelinePage.tsx
+          - Added initialFilters?: Record<string, string> to TaskModalState
+          - Added returnTaskModal?: TaskModalState to ParameterModalState
+          - ПКМ handler extracts param.filters, excludes key id, passes as initialFilters:
+            ```typescript
+            const param = PARAMETERS.find(p => p.id === timelineRowMenu.paramId);
+            const filters = param?.filters ?? {};
+            const hasEmpty = Object.keys(filters).length === 0;
+            const initialFilters = Object.fromEntries(
+              Object.entries(filters).filter(([key]) => key !== 'id')
+            );
+            ```
+          - Removed isParameterEmpty function (was unused after refactor)
+          - Added customFieldOptions useMemo:
+            ```typescript
+            const customFieldOptions = useMemo(() => {
+              const map: Record<string, string[]> = {};
+              store.appData.tasks.forEach(task => {
+                Object.entries(task.customFields ?? {}).forEach(([fieldId, val]) => {
+                  if (!map[fieldId]) map[fieldId] = [];
+                  if (val && !map[fieldId].includes(val)) map[fieldId].push(val);
+                });
+              });
+              return map;
+            }, [store.appData.tasks]);
+            ```
+          - customFieldOptions passed to TaskModal render
+          - handleCloseParameterModal updated to accept saved flag and restore TaskModal:
+            ```typescript
+            const handleCloseParameterModal = (saved = false) => {
+              const returnState = parameterModal.returnTaskModal;
+              setParameterModal({ isOpen: false });
+              onTimelineParameterModalChange?.(false);
+              if (returnState) {
+                setTaskModal(saved ? { ...returnState, hasEmptyFilters: false } : returnState);
+              }
+            };
+            ```
+          - handleSaveParameter and handleUpdateParameter call handleCloseParameterModal(true)
+          - onEditParameter callback updated to receive pendingTask and create returnTaskModal:
+            ```typescript
+            onEditParameter={(pendingTask) => {
+              if (taskModal.paramId) {
+                const param = PARAMETERS.find(p => p.id === taskModal.paramId);
+                if (param) {
+                  const returnState: TaskModalState = {
+                    mode: 'add',
+                    task: pendingTask as Task,
+                    paramId: taskModal.paramId,
+                    initialDate: taskModal.initialDate,
+                    hasEmptyFilters: taskModal.hasEmptyFilters,
+                  };
+                  setTaskModal(null);
+                  setParameterModal({ isOpen: true, mode: 'edit', editingParameter: param, returnTaskModal: returnState
+     });
+                }
+              }
+            }}
+            ```
+
+     4. Errors and fixes:
+        - TS6133 isParameterEmpty declared but never read: after extracting filter logic inline into the ПКМ handler,
+     the old isParameterEmpty function became unused. Removed it entirely.
+        - EmptyFiltersDialog buttons overflow (no gap on right): multiple failed attempts — adding mr-1 to last button,
+     changing pr-5 to pr-6, changing pl-5 pr-4, etc. Root cause was that three Russian-labeled buttons with
+     whitespace-nowrap (~347px total) exceeded the w-[360px] container content area (~316px). Fix: widened dialog to
+     w-[420px] giving 380px content area at px-5 padding.
+        - User correction on mr-1: user reported "нет зазора" three times during the gap-fixing attempts; the real fix
+     turned out to be the container width, not padding tweaks.
+
+     5. Problem Solving:
+        - Deferred task saving in "Добавить фильтры" flow: previously the task was saved immediately before opening
+     ParameterModal, so cancelling ParameterModal left a saved task with no way back. Solved by passing pendingTaskData
+     through onEditParameter callback, storing it as returnTaskModal in ParameterModalState, and restoring the full
+     TaskModal on ParameterModal close.
+        - All builds passed cleanly throughout the session after each fix.
+
+     6. All user messages:
+        - Implement the following plan: [plan to remove unused dependencies clsx, tailwind-merge, react-router-dom]
+        - Нужно исправить поведение добавления задачи через ПКМ по пустой ячейке timeline... [pre-fill filters from row
+     context]
+        - Нужно изменить поведение поля кастомного параметра в модальном окне создания/редактирования задачи TaskModal:
+     для поля вида Enter Тип задачи пользователь должен по-прежнему иметь свободный текстовый ввод, но при вводе должен
+     видеть автодополнение... [autocomplete for custom fields]
+        - Нужно исправить в EmptyFiltersDialog визуальный дефект внизу модального окна... [button overflow fix]
+        - Добавь зазор между рамкой и кнопкой самой правой кнопки "Добавить фильтры"
+        - нет зазора (first time)
+        - нет зазора (second time)
+        - всё ещё нет зазора, ещё раз задание... [repeated the full EmptyFiltersDialog gap task description]
+        - При выборе кнопки "просто добавить" - всплывающее окно - предупреждение, "задача не будет отражена в данной
+     строке" - "отмена" "создать"
+        - Замени "создать" на "всё равно создать"
+        - В этом же сценарии, при выборе "добавить фильтр" если нажимаешь "отмена" - в настройке фильтра строки,
+     возвращает к созданию задачи, которая предзаполнена. Сейчас просто задача отменяется
+        - сделай краткий отчёт текущей сесси для GIT здесь текстом без использования ковычек
+        - [Summary request — current message]
+
+     7. Pending Tasks:
+        - No pending tasks. All requested features were implemented and builds passed cleanly.
+
+     8. Current Work:
+        The last substantive work completed was fixing the "Добавить фильтры" flow in EmptyFiltersDialog. The fix
+     involved:
+        - Removing premature onSave call from the "Добавить фильтры" button handler in TaskModal
+        - Changing onEditParameter signature to pass pendingTaskData
+        - Adding returnTaskModal field to ParameterModalState
+        - Modifying handleCloseParameterModal to restore TaskModal with pre-filled form data
+        - Distinguishing cancel (hasEmptyFilters unchanged) vs save (hasEmptyFilters: false) cases
+        Before that, the user requested a plain-text git session report (no quotes), which was provided.
+
+     9. Optional Next Step:
+        No next step is pending. The user's last substantive request was fully completed:
+        "при выборе 'добавить фильтр' если нажимаешь 'отмена' - в настройке фильтра строки, возвращает к созданию
+     задачи, которая предзаполнена"
+        This was implemented and the build passed. The subsequent messages were a git report request and this summary
+     request, both of which are complete.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you
+     generated), read the full transcript at: C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--T
+     imeLineManager-4-18-02-2026\3253f2d5-4c49-4f75-acf1-decf86b68881.jsonl
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file src\pages\Timeline\TimelinePage.tsx
+  ⎿  Referenced file src\pages\Timeline\TaskModal.tsx
+  ⎿  Read src\components\ui\Autocomplete.tsx (88 lines)
+  ⎿  Referenced file src\store.ts
+  ⎿  Read src\pages\Timeline\ParameterModal.tsx (335 lines)
+  ⎿  Plan file referenced (~\.claude\plans\enumerated-dazzling-octopus.md)

@@ -591,3 +591,163 @@
 > /compact
   ⎿  Compacted (ctrl+o to see full summary)
   ⎿  Referenced file frontend\src\pages\Timeline\TimelinePage.tsx
+
+
+● Рефакторинг TimelinePage и store перед Electron: удалены 8 отладочных console.log из store.ts, дата по умолчанию
+  заменена на текущий месяц, устранено дублирование getDescendantIds. Из TimelinePage извлечены три хука —
+  useScrollSync, useTaskDragResize, useParamDnD — и два компонента — TaskBar и SelectionHighlightLayer. Поведение и UI
+  не изменились, сборка чистая.
+
+✻ Conversation compacted (ctrl+o for history)
+
+
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the
+     earlier portion of the conversation.
+
+     Summary:
+     1. Primary Request and Intent:
+        The user requested implementation of a pre-written refactoring plan titled "Рефакторинг перед Electron"
+     (Refactoring before Electron). The goal was to reduce TimelinePage.tsx from ~2294 lines (God Component), eliminate
+     code duplication, remove debug console.logs, and improve code stability and readability — **without changing any UI
+      or behavior** — to safely add Electron IPC later.
+
+        The plan had three active phases:
+        - Phase 1: Safe store.ts changes (remove console.logs, fix hardcoded date, deduplicate function)
+        - Phase 2: Extract 3 hooks from TimelinePage.tsx
+        - Phase 3: Extract 2 presentational components from TimelinePage.tsx
+        - Phase 4: Sidebar (optional, low priority — not requested)
+
+     2. Key Technical Concepts:
+        - React 19 + TypeScript custom hooks extraction pattern
+        - God Component decomposition without behavior change
+        - @dnd-kit/core DnD library for parameter row drag-and-drop
+        - Scroll synchronization between multiple panels using refs and isSyncing guard
+        - Task drag/resize via mouse events on document
+        - Tailwind CSS v4 with custom CSS properties
+        - Global singleton store pattern with subscriber system (`globalAppData` + `notifySubscribers`)
+        - TypeScript strict compilation via `tsc -b` + Vite bundling
+        - `useCallback` / `useRef` / `useEffect` / `useLayoutEffect` patterns for DOM sync
+
+     3. Files and Code Sections:
+        - **`frontend/src/store.ts`** (modified)
+          - Removed 8 debug console.log calls with emoji (📡📦📢🔧✅📝) from lines 288, 299, 301, 306, 455, 460, 466,
+     472
+          - Replaced hardcoded `DEFAULT_TIMELINE_VIEW` constant (Jan 2026) with `getDefaultTimelineView()` function:
+            ```typescript
+            const getDefaultTimelineView = (): TimelineViewState => {
+              const now = new Date();
+              const from = new Date(now.getFullYear(), now.getMonth(), 1);
+              const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+              return { dateRange: { from: from.toISOString(), to: to.toISOString() }, zoomIndex: 2, scrollLeft: 0 };
+            };
+            ```
+          - Removed 2 duplicate local `getDescendantIds` closures inside `reorderAndReparentParameter` (~line 548) and
+     `insertAfterParameter` (~line 712); replaced `getDescendantIds(activeId)` calls with `getDescendantIds(params,
+     activeId)` using the outer function at line 577
+
+        - **`frontend/src/pages/Timeline/hooks/useScrollSync.ts`** (created)
+          - Extracts: `isSyncing` ref, `scrollSaveTimer` ref, 4 sync functions, 2 scroll effects
+          - Accepts: 5 refs (sidebar, timeline, timeHeader, frozenTimeline, scrollbar), `frozenRowsCount`,
+     `initialScrollLeft`
+          - Returns: `{ syncFromTimeline, syncFromScrollbar, syncFromSidebar, syncFromFrozenTimeline }`
+          - Uses `useEffect` to restore scroll on mount, `useLayoutEffect` to sync frozen panel on appear
+
+        - **`frontend/src/pages/Timeline/hooks/useTaskDragResize.ts`** (created)
+          - Extracts: `dragState`, `resizeState`, `dragPreview` states; `handleTaskMouseDown`, `handleResizeMouseDown`,
+     `handleMouseMove`, `handleMouseUp`; the `useEffect` adding mousemove/mouseup to document
+          - Accepts: `dayWidth`, `dateRange`, `editingTaskId`, `getAllTasks`, `updateTask`
+          - Returns: `{ dragState, resizeState, dragPreview, handleTaskMouseDown, handleResizeMouseDown }`
+
+        - **`frontend/src/pages/Timeline/hooks/useParamDnD.ts`** (created)
+          - Extracts: `dndSensors`, `dropState`, 6 refs, mousemove effect, `dndSortingStrategy`, `setScenario`,
+     `updateDropScenario`, `handleParamDragEnd`, `handleParamDragOver`, `handleParamDragMove`, `getVisualRect`,
+     `handleParamDragStart`
+          - Accepts: `parameters`, `selectedTimelineId`, `setDragActiveId`, `setDragLevelDelta`, `reorderAndReparent`,
+     `insertAfter`
+          - Returns: `{ dndSensors, dropScenario, dropTargetId, activeDescendantsRef, handleParamDragStart,
+     handleParamDragEnd, handleParamDragOver, handleParamDragMove, dndSortingStrategy }`
+
+        - **`frontend/src/pages/Timeline/TaskBar.tsx`** (created)
+          - Purely presentational component replacing duplicated task bar JSX in both frozen (~lines 1563–1669) and
+     scrollable (~lines 1847–1953) row sections
+          - Handles milestone diamond rendering and regular bar with resize handles and inline edit input
+          - Props: `task, position, topOffset, isDragging, isResizing, isEditing, editingTaskName, getTaskBarColor,
+     getTaskBarStyle, onMouseDown, onDoubleClick, onContextMenu, onMouseEnter, onMouseLeave, onResizeMouseDown,
+     onEditingNameChange, onEditingConfirm, onEditingCancel`
+
+        - **`frontend/src/pages/Timeline/SelectionHighlightLayer.tsx`** (created)
+          - Purely presentational component replacing duplicated column highlight overlay in both frozen (~lines
+     1676–1709) and scrollable (~lines 1960–1993) sections
+          - Props: `dayWidth, days, weeks, selectedColumnDates`
+          - Renders week-level or day-level color overlays (today=pink, weekend=primary/8%, selected=accent/12%)
+
+        - **`frontend/src/pages/Timeline/TimelinePage.tsx`** (modified)
+          - Added imports for 3 hooks and 2 components
+          - Removed: `DragState`, `ResizeState` interfaces; `isSyncing`, `scrollSaveTimer` refs; `dragState`,
+     `resizeState`, `dragPreview` states; 4 sync functions; 2 scroll effects; drag/resize handlers; DnD state/refs/logic
+      (~150 lines total)
+          - Added hook calls:
+            ```typescript
+            const { syncFromTimeline, syncFromScrollbar, syncFromSidebar, syncFromFrozenTimeline } =
+     useScrollSync({...});
+            const { dragState, resizeState, dragPreview, handleTaskMouseDown, handleResizeMouseDown } =
+     useTaskDragResize({...});
+            const { dndSensors, dropScenario, dropTargetId, activeDescendantsRef, handleParamDragStart, ... } =
+     useParamDnD({...});
+            ```
+          - Replaced `onDragStart` inline handler with `onDragStart={(e) => handleParamDragStart(e.active.id as
+     string)}`
+          - Replaced duplicated task bar JSX (×2) with `<TaskBar key={task.id} ... />`
+          - Replaced duplicated highlight overlay JSX (×2) with `<SelectionHighlightLayer ... />`
+          - Removed no-longer-needed imports: `Globe`, `DragEndEvent`, `DragMoveEvent`, `useSensor`, `useSensors`,
+     `verticalListSortingStrategy`, `saveTimelineViewState`, `loadTimelineViewState`
+
+     4. Errors and fixes:
+        - No errors reported. The agent completed the implementation and `npm run build` passed successfully (TypeScript
+      + Vite).
+
+     5. Problem Solving:
+        - The core problem was a 2294-line God Component (TimelinePage.tsx) with duplicated JSX, debug logging in
+     production, and 3 implementations of the same helper function
+        - Solved by delegating to a general-purpose agent with detailed, precise instructions
+        - Verified completion by: checking file existence with Glob, checking console.log removal with Grep, checking
+     getDescendantIds count with Grep, checking hook/component imports in TimelinePage with Grep
+
+     6. All user messages:
+        - "Implement the following plan: [full refactoring plan text]" — main request to implement the pre-written
+     refactoring plan
+        - "по плану всё готово?" — asking if everything from the plan is done
+        - "сделай краткое описание последней сессии для git текстом без ковычек сюда" — asking for a git commit
+     description without quotes
+        - "Your task is to create a detailed summary of the conversation..." — current summary request
+
+     7. Pending Tasks:
+        - None. All requested phases (1, 2, 3) are complete. Phase 4 (Sidebar tooltip hook) was marked optional in the
+     plan and was not requested.
+
+     8. Current Work:
+        All implementation work is complete. The last action before this summary request was providing the git commit
+     description:
+        > "Рефакторинг TimelinePage и store перед Electron: удалены 8 отладочных console.log из store.ts, дата по
+     умолчанию заменена на текущий месяц, устранено дублирование getDescendantIds. Из TimelinePage извлечены три хука —
+     useScrollSync, useTaskDragResize, useParamDnD — и два компонента — TaskBar и SelectionHighlightLayer. Поведение и
+     UI не изменились, сборка чистая."
+
+     9. Optional Next Step:
+        No pending tasks. The refactoring plan is fully implemented and verified. The user has not indicated any
+     follow-up work. Next steps (e.g., adding Electron IPC) were mentioned as the *motivation* for this refactoring but
+     were not requested in this session.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you
+     generated), read the full transcript at: C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--T
+     imeLineManager-4-18-02-2026\18e2224c-f657-4a26-a6fb-0e8288b31cc1.jsonl
+
+
+
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file frontend\src\pages\Timeline\TimelinePage.tsx
+  ⎿  Referenced file frontend\src\store.ts
+  ⎿  Plan file referenced (~\.claude\plans\reflective-growing-kitten.md)

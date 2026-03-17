@@ -54,6 +54,7 @@ interface TaskModalState {
   initialDate?: Date;
   hasEmptyFilters?: boolean;  // ← Флаг для параметра без фильтров
   isGanttMode?: boolean;  // ← Создание задачи как Gantt-объекта (авто-строка)
+  initialFilters?: Record<string, string>;  // ← Предзаполнение customFields из фильтров строки
 }
 
 interface ParameterModalState {
@@ -61,6 +62,7 @@ interface ParameterModalState {
   mode?: 'add' | 'edit';
   editingParameter?: TimelineParameter;
   defaultParentId?: string;
+  returnTaskModal?: TaskModalState;  // ← восстановить TaskModal после закрытия ParameterModal
 }
 
 interface TaskContextMenuState {
@@ -309,6 +311,18 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     () => store.timelines.groupTasksForTimeline(selectedTimelineId),
     [store.appData.tasks, store.appData.timelineConfigs, selectedTimelineId]
   );
+
+  // Уникальные значения кастомных полей из всех задач (для автодополнения в TaskModal)
+  const customFieldOptions = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    store.appData.tasks.forEach(task => {
+      Object.entries(task.customFields ?? {}).forEach(([fieldId, val]) => {
+        if (!map[fieldId]) map[fieldId] = [];
+        if (val && !map[fieldId].includes(val)) map[fieldId].push(val);
+      });
+    });
+    return map;
+  }, [store.appData.tasks]);
 
   // Вычисляемые данные для иерархии
   const parentIds = useMemo(
@@ -683,12 +697,6 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     setTimelineRowMenu({ x: e.clientX, y: e.clientY, paramId, date: clickDate });
   };
 
-  // Проверить, есть ли фильтры у параметра
-  const isParameterEmpty = (paramId: string): boolean => {
-    const param = PARAMETERS.find(p => p.id === paramId);
-    return param ? Object.keys(param.filters).length === 0 : false;
-  };
-
   // Определить цвет плашки задачи (приоритет: done > blocker > цвет задачи > default)
   const getTaskBarColor = (task: Task): string => {
     if (task.status === 'done') {
@@ -812,7 +820,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   // Сохранение параметра (add)
   const handleSaveParameter = (parameter: Omit<TimelineParameter, 'id'>) => {
     store.timelines.addParameter(selectedTimelineId, parameter);
-    handleCloseParameterModal();
+    handleCloseParameterModal(true);
   };
 
   // Обновление параметра (edit)
@@ -820,13 +828,20 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     if (parameterModal.editingParameter) {
       store.timelines.updateParameter(selectedTimelineId, parameterModal.editingParameter.id, updates);
     }
-    handleCloseParameterModal();
+    handleCloseParameterModal(true);
   };
 
   // Обработчик закрытия ParameterModal
-  const handleCloseParameterModal = () => {
+  const handleCloseParameterModal = (saved = false) => {
+    const returnState = parameterModal.returnTaskModal;
     setParameterModal({ isOpen: false });
     onTimelineParameterModalChange?.(false);
+    if (returnState) {
+      // Восстанавливаем TaskModal с предзаполненными данными.
+      // После успешного сохранения параметра сбрасываем hasEmptyFilters,
+      // чтобы задача сохранилась без повторного диалога.
+      setTaskModal(saved ? { ...returnState, hasEmptyFilters: false } : returnState);
+    }
   };
 
   // Удаление параметра из контекстного меню
@@ -1605,12 +1620,19 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         >
           <button
             onClick={() => {
-              const hasEmpty = isParameterEmpty(timelineRowMenu.paramId);
+              const param = PARAMETERS.find(p => p.id === timelineRowMenu.paramId);
+              const filters = param?.filters ?? {};
+              const hasEmpty = Object.keys(filters).length === 0;
+              // Фильтры по 'id' не наследуем — они указывают на конкретную задачу
+              const initialFilters = Object.fromEntries(
+                Object.entries(filters).filter(([key]) => key !== 'id')
+              );
               setTaskModal({
                 mode: 'add',
                 paramId: timelineRowMenu.paramId,
                 initialDate: timelineRowMenu.date,
-                hasEmptyFilters: hasEmpty
+                hasEmptyFilters: hasEmpty,
+                initialFilters: Object.keys(initialFilters).length > 0 ? initialFilters : undefined,
               });
               setTimelineRowMenu(null);
             }}
@@ -1665,18 +1687,28 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
           paramId={taskModal.paramId}
           initialDate={taskModal.initialDate}
           hasEmptyFilters={taskModal.hasEmptyFilters}
+          initialFilters={taskModal.initialFilters}
           ganttMode={taskModal.isGanttMode}
           customFieldTypes={store.customFieldTypes.getAll()}
+          customFieldOptions={customFieldOptions}
           onAddCustomFieldType={(name) => store.customFieldTypes.add(name)}
           onSave={handleSaveTask}
           onDelete={taskModal.mode === 'edit' ? handleDeleteTask : undefined}
-          onEditParameter={() => {
-            // Открыть ParameterModal в режиме edit для текущего параметра
+          onEditParameter={(pendingTask) => {
+            // Открыть ParameterModal в режиме edit для текущего параметра.
+            // Сохраняем pendingTask в returnTaskModal — он восстановит форму после закрытия ParameterModal.
             if (taskModal.paramId) {
               const param = PARAMETERS.find(p => p.id === taskModal.paramId);
               if (param) {
+                const returnState: TaskModalState = {
+                  mode: 'add',
+                  task: pendingTask as Task,
+                  paramId: taskModal.paramId,
+                  initialDate: taskModal.initialDate,
+                  hasEmptyFilters: taskModal.hasEmptyFilters,
+                };
                 setTaskModal(null);
-                setParameterModal({ isOpen: true, mode: 'edit', editingParameter: param });
+                setParameterModal({ isOpen: true, mode: 'edit', editingParameter: param, returnTaskModal: returnState });
               }
             }
           }}

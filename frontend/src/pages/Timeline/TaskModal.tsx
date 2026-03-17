@@ -4,6 +4,7 @@ import { eachDayOfInterval, isWeekend } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { X, ChevronRight, ChevronDown, Plus } from 'lucide-react';
 import { DateRangePicker } from '../../components/ui/DateRangePicker';
+import { Autocomplete } from '../../components/ui/Autocomplete';
 import type { Task } from '../../store';
 
 interface CustomFieldTypeDef {
@@ -17,12 +18,14 @@ interface TaskModalProps {
   paramId?: string;
   initialDate?: Date;
   hasEmptyFilters?: boolean;
+  initialFilters?: Record<string, string>;  // ← предзаполнение customFields из фильтров строки
+  customFieldOptions?: Record<string, string[]>;  // ← варианты автодополнения: fieldTypeId → []string
   ganttMode?: boolean;
   customFieldTypes: CustomFieldTypeDef[];
   onAddCustomFieldType: (name: string) => CustomFieldTypeDef;
   onSave: (data: Omit<Task, 'id'> & { id?: string }) => void;
   onDelete?: () => void;
-  onEditParameter?: () => void;
+  onEditParameter?: (pendingTask: Omit<Task, 'id'> & { id?: string }) => void;
   onClose: () => void;
 }
 
@@ -32,6 +35,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   paramId,
   initialDate,
   hasEmptyFilters,
+  initialFilters,
+  customFieldOptions,
   ganttMode,
   customFieldTypes,
   onAddCustomFieldType,
@@ -53,13 +58,21 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [priority, setPriority] = useState<'low' | 'medium' | 'blocker'>(task?.priority ?? 'medium');
   const [status, setStatus] = useState<'not_started' | 'in_progress' | 'done'>(task?.status ?? 'not_started');
   const [description, setDescription] = useState(task?.description ?? '');
-  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>(task?.customFields ?? {});
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>(
+    task?.customFields ?? initialFilters ?? {}
+  );
   const [color, setColor] = useState(task?.color ?? '#B0BEC5');
-  const [customFieldsOpen, setCustomFieldsOpen] = useState(false);
+  const [customFieldsOpen, setCustomFieldsOpen] = useState(
+    mode === 'add' && (
+      (!!initialFilters && Object.keys(initialFilters).length > 0) ||
+      (!!task?.customFields && Object.keys(task.customFields).length > 0)
+    )
+  );
   const [addingNewType, setAddingNewType] = useState(false);
   const [newTypeName, setNewTypeName] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showEmptyFiltersDialog, setShowEmptyFiltersDialog] = useState(false);
+  const [showSimpleAddConfirm, setShowSimpleAddConfirm] = useState(false);
   const [fix, setFix] = useState(task?.fix ?? false);
   const [milestone, setMilestone] = useState(task?.milestone ?? false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -155,7 +168,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const EmptyFiltersDialog = () => (
     <div className="fixed inset-0 z-[400] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" />
-      <div className="relative z-10 bg-white border border-app-border rounded-xl w-[360px] shadow-2xl">
+      <div className="relative z-10 bg-white border border-app-border rounded-xl w-[420px] shadow-2xl">
         {/* Header */}
         <div className="px-5 py-4 border-b border-app-border">
           <h3 className="text-sm font-bold text-app-text-head">
@@ -171,13 +184,57 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-app-border">
+        <div className="flex items-center gap-2 px-5 py-3 border-t border-app-border">
           <button
             onClick={() => {
               setShowEmptyFiltersDialog(false);
               setPendingTaskData(null);
             }}
-            className="h-7 px-3 text-xs font-semibold rounded border border-app-border text-app-text-head hover:border-app-primary hover:text-app-primary transition-colors"
+            className="mr-auto h-7 px-3 text-xs font-semibold whitespace-nowrap rounded border border-app-border text-app-text-head hover:border-app-primary hover:text-app-primary transition-colors"
+          >
+            Отмена
+          </button>
+          <button
+            onClick={() => {
+              if (pendingTaskData) {
+                setShowSimpleAddConfirm(true);
+              }
+            }}
+            className="h-7 px-3 text-xs font-semibold whitespace-nowrap rounded border border-app-border text-app-text-head hover:border-app-primary hover:text-app-primary transition-colors"
+          >
+            Просто добавить
+          </button>
+          <button
+            onClick={() => {
+              if (pendingTaskData && onEditParameter) {
+                onEditParameter(pendingTaskData);
+              }
+            }}
+            className="h-7 px-3 text-xs font-semibold whitespace-nowrap rounded bg-app-primary text-white hover:bg-app-primary-hover transition-colors"
+          >
+            Добавить фильтры
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const SimpleAddConfirmDialog = () => (
+    <div className="fixed inset-0 z-[450] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" />
+      <div className="relative z-10 bg-white border border-app-border rounded-xl w-[340px] shadow-2xl">
+        <div className="px-5 py-4 border-b border-app-border">
+          <h3 className="text-sm font-bold text-app-text-head">Подтвердите действие</h3>
+        </div>
+        <div className="px-5 py-4">
+          <p className="text-xs text-app-text-main leading-relaxed">
+            Задача не будет отражена в данной строке, так как её фильтры не настроены.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 px-5 py-3 border-t border-app-border">
+          <button
+            onClick={() => setShowSimpleAddConfirm(false)}
+            className="mr-auto h-7 px-3 text-xs font-semibold whitespace-nowrap rounded border border-app-border text-app-text-head hover:border-app-primary hover:text-app-primary transition-colors"
           >
             Отмена
           </button>
@@ -185,31 +242,15 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             onClick={() => {
               if (pendingTaskData) {
                 onSave(pendingTaskData);
+                setShowSimpleAddConfirm(false);
                 setShowEmptyFiltersDialog(false);
                 setPendingTaskData(null);
                 onClose();
               }
             }}
-            className="h-7 px-4 text-xs font-semibold rounded border border-app-border text-app-text-head hover:border-app-primary hover:text-app-primary transition-colors"
+            className="h-7 px-3 text-xs font-semibold whitespace-nowrap rounded bg-app-primary text-white hover:bg-app-primary-hover transition-colors"
           >
-            Просто добавить
-          </button>
-          <button
-            onClick={() => {
-              if (pendingTaskData) {
-                // Сначала сохраняем задачу в store
-                onSave(pendingTaskData);
-                setShowEmptyFiltersDialog(false);
-                setPendingTaskData(null);
-                // Затем открываем редактор параметра
-                if (onEditParameter) {
-                  onEditParameter();
-                }
-              }
-            }}
-            className="h-7 px-4 text-xs font-semibold rounded bg-app-primary text-white hover:bg-app-primary-hover transition-colors"
-          >
-            Добавить фильтры
+            Всё равно создать
           </button>
         </div>
       </div>
@@ -219,6 +260,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   return (
     <>
       {showEmptyFiltersDialog && <EmptyFiltersDialog />}
+      {showSimpleAddConfirm && <SimpleAddConfirmDialog />}
       <div className="fixed inset-0 z-[300] flex items-center justify-center">
         <div className="absolute inset-0 bg-black/20" onClick={onClose} />
 
@@ -459,12 +501,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               {customFieldTypes.map(({ id, name }) => (
                 <div key={id} className="flex flex-col gap-1">
                   <label className={`${labelCls} text-[10px]`}>{name}</label>
-                  <input
-                    type="text"
+                  <Autocomplete
+                    options={customFieldOptions?.[id] ?? []}
                     value={customFieldValues[id] ?? ''}
-                    onChange={e => handleCustomFieldChange(id, e.target.value)}
+                    onChange={val => handleCustomFieldChange(id, val)}
                     placeholder={`Enter ${name}`}
-                    className={inputCls()}
+                    inputClassName={inputCls()}
                   />
                 </div>
               ))}
