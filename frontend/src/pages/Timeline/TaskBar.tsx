@@ -1,6 +1,7 @@
 import React from 'react';
 import { Globe } from 'lucide-react';
 import type { Task } from '../../store';
+import { isValidHttpsUrl } from '../../utils/validateUrl';
 
 interface TaskBarProps {
   task: Task;
@@ -121,7 +122,7 @@ export const TaskBar: React.FC<TaskBarProps> = ({
       ) : (
         <span className="px-2 truncate flex-1 min-w-0">{task.name}</span>
       )}
-      {task.link && (
+      {task.link && isValidHttpsUrl(task.link) && (
         <a
           href={task.link}
           target="_blank"

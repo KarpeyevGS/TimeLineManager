@@ -137,6 +137,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      setImportAlert({ message: 'Файл слишком большой (макс. 5 МБ).', onClose: () => setImportAlert(null) });
+      event.target.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {

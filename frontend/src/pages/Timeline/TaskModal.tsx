@@ -6,6 +6,7 @@ import { X, ChevronRight, ChevronDown, Plus } from 'lucide-react';
 import { DateRangePicker } from '../../components/ui/DateRangePicker';
 import { Autocomplete } from '../../components/ui/Autocomplete';
 import type { Task } from '../../store';
+import { isValidHttpsUrl } from '../../utils/validateUrl';
 
 interface CustomFieldTypeDef {
   id: string;
@@ -89,6 +90,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = 'Обязательное поле';
     if (!dateRange?.from) errs.dateRange = 'Выберите даты';
+    if (link.trim() && !isValidHttpsUrl(link.trim())) errs.link = 'Ссылка должна начинаться с https://';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -324,8 +326,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               value={link}
               onChange={e => setLink(e.target.value)}
               placeholder="https://..."
-              className={inputCls()}
+              className={inputCls('link')}
             />
+            {errors.link && <p className="text-[10px] text-app-error">{errors.link}</p>}
           </div>
 
           {/* Date Range + Duration + Fix */}

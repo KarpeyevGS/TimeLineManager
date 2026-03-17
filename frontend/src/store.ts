@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { isValidHttpsUrl } from './utils/validateUrl';
 
 // ============= Timeline View State =============
 
@@ -408,9 +409,24 @@ export const useAppStore = () => {
           resources: parsed.resources ?? [],
           projects: parsed.projects ?? [],
           tasks: (parsed.tasks ?? []).map((task) => ({
-            ...task,
-            startDate: new Date(task.startDate),
-            endDate: new Date(task.endDate),
+            id:           typeof task.id === 'string' ? task.id : String(task.id ?? ''),
+            name:         String(task.name ?? '').slice(0, 500),
+            startDate:    new Date(task.startDate),
+            endDate:      new Date(task.endDate),
+            priority:     ((['low', 'medium', 'blocker'] as string[]).includes(task.priority ?? '') ? task.priority : 'medium') as 'low' | 'medium' | 'blocker',
+            status:       ((['not_started', 'in_progress', 'done'] as string[]).includes(task.status ?? '') ? task.status : 'not_started') as 'not_started' | 'in_progress' | 'done',
+            description:  task.description ? String(task.description).slice(0, 2000) : undefined,
+            link:         task.link && isValidHttpsUrl(String(task.link)) ? String(task.link) : undefined,
+            color:        typeof task.color === 'string' ? task.color : undefined,
+            fix:          typeof task.fix === 'boolean' ? task.fix : undefined,
+            milestone:    typeof task.milestone === 'boolean' ? task.milestone : undefined,
+            projectId:    task.projectId ? String(task.projectId) : undefined,
+            resourceIds:  Array.isArray(task.resourceIds)
+                            ? (task.resourceIds as unknown[]).filter((r): r is string => typeof r === 'string')
+                            : undefined,
+            customFields: task.customFields && typeof task.customFields === 'object' && !Array.isArray(task.customFields)
+                            ? task.customFields as Record<string, string>
+                            : undefined,
           })),
           timelineConfigs: parsed.timelineConfigs ?? [createDefaultTimelineConfig()],
         };

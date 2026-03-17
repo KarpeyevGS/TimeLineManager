@@ -231,3 +231,190 @@
   ⎿  Referenced file src\store.ts
   ⎿  Read src\pages\Timeline\ParameterModal.tsx (335 lines)
   ⎿  Plan file referenced (~\.claude\plans\enumerated-dazzling-octopus.md)
+
+● Безопасность: устранены 3 из 5 замечаний аудита
+
+
+  Finding 1 — валидация task.link: добавлена утилита isValidHttpsUrl, ссылки без https:// отклоняются в
+  TaskModal с сообщением об ошибке, в TaskBar иконка ссылки рендерится только для валидных URL.
+
+  Finding 2 — усиление импорта: в Sidebar добавлен лимит размера файла 5 МБ, в store.ts importData заменён
+  spread ...task на явное маппирование полей с обрезкой строк, валидацией enum-значений и фильтрацией
+  resourceIds.
+
+  Finding 5 — CSP: в index.html добавлен мета-тег Content-Security-Policy, блокирующий внешние скрипты,
+  fetch-запросы и object-src; разрешены inline-стили для Tailwind и blob: для экспорта.
+
+  Findings 3 и 4 закрыты как accepted risk.
+
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary
+     below covers the earlier portion of the conversation.
+
+     Summary:
+     1. Primary Request and Intent:
+        The user requested implementation of a security audit remediation plan covering 3 of 5 findings in
+     a React/TypeScript timeline planner app. The plan was pre-written and included: Finding 1 (task.link
+     URL validation), Finding 2 (weak import validation), and Finding 5 (missing CSP header). Findings 3
+     and 4 were explicitly accepted as risk and not implemented. After implementation, the user requested a
+      git commit message description in Russian without quotes.
+
+     2. Key Technical Concepts:
+        - URL validation using `new URL()` constructor with protocol check (`https:` only)
+        - Content Security Policy (CSP) via `<meta http-equiv>` tag
+        - Import data sanitization: explicit field mapping instead of object spread (`...task`)
+        - File size limit check before FileReader.readAsText()
+        - React TypeScript patterns for inline validation errors
+        - TypeScript union type narrowing with `includes()` on string arrays
+
+     3. Files and Code Sections:
+
+        - `frontend/src/utils/validateUrl.ts` (CREATED)
+          - New utility for URL validation, imported by TaskModal, TaskBar, and store.ts
+          ```ts
+          export function isValidHttpsUrl(url: string): boolean {
+            try {
+              const parsed = new URL(url);
+              return parsed.protocol === 'https:';
+            } catch {
+              return false;
+            }
+          }
+          ```
+
+        - `frontend/index.html` (MODIFIED)
+          - Added CSP meta tag to block external scripts, fetches, object embeds; allows inline styles
+     (Tailwind) and blob: (export)
+          ```html
+          <meta http-equiv="Content-Security-Policy"
+            content="default-src 'self';
+                     script-src 'self';
+                     style-src 'self' 'unsafe-inline';
+                     font-src 'self';
+                     img-src 'self' data: blob:;
+                     connect-src 'self';
+                     object-src 'none';
+                     base-uri 'self';" />
+          ```
+
+        - `frontend/src/pages/Timeline/TaskModal.tsx` (MODIFIED)
+          - Added import of `isValidHttpsUrl`
+          - Extended `validate()` to check link field
+          - Added error display for link field
+          ```ts
+          import { isValidHttpsUrl } from '../../utils/validateUrl';
+          // in validate():
+          if (link.trim() && !isValidHttpsUrl(link.trim())) errs.link = 'Ссылка должна начинаться с
+     https://';
+          // in JSX:
+          <input ... className={inputCls('link')} />
+          {errors.link && <p className="text-[10px] text-app-error">{errors.link}</p>}
+          ```
+
+        - `frontend/src/pages/Timeline/TaskBar.tsx` (MODIFIED)
+          - Added import of `isValidHttpsUrl`
+          - Guard on link rendering: only renders anchor if URL is valid https
+          ```tsx
+          import { isValidHttpsUrl } from '../../utils/validateUrl';
+          // changed:
+          {task.link && isValidHttpsUrl(task.link) && (
+            <a href={task.link} target="_blank" rel="noopener noreferrer" ...>
+              <Globe size={10} />
+            </a>
+          )}
+          ```
+
+        - `frontend/src/store.ts` (MODIFIED)
+          - Added import of `isValidHttpsUrl`
+          - Replaced `...task` spread in `importData` with explicit field mapping including type
+     validation, string truncation, enum checks, and link sanitization
+          ```ts
+          import { isValidHttpsUrl } from './utils/validateUrl';
+          // importData tasks mapping:
+          tasks: (parsed.tasks ?? []).map((task) => ({
+            id:           typeof task.id === 'string' ? task.id : String(task.id ?? ''),
+            name:         String(task.name ?? '').slice(0, 500),
+            startDate:    new Date(task.startDate),
+            endDate:      new Date(task.endDate),
+            priority:     ((['low', 'medium', 'blocker'] as string[]).includes(task.priority ?? '') ?
+     task.priority : 'medium') as 'low' | 'medium' | 'blocker',
+            status:       ((['not_started', 'in_progress', 'done'] as string[]).includes(task.status ?? '')
+      ? task.status : 'not_started') as 'not_started' | 'in_progress' | 'done',
+            description:  task.description ? String(task.description).slice(0, 2000) : undefined,
+            link:         task.link && isValidHttpsUrl(String(task.link)) ? String(task.link) : undefined,
+            color:        typeof task.color === 'string' ? task.color : undefined,
+            fix:          typeof task.fix === 'boolean' ? task.fix : undefined,
+            milestone:    typeof task.milestone === 'boolean' ? task.milestone : undefined,
+            projectId:    task.projectId ? String(task.projectId) : undefined,
+            resourceIds:  Array.isArray(task.resourceIds)
+                            ? (task.resourceIds as unknown[]).filter((r): r is string => typeof r ===
+     'string')
+                            : undefined,
+            customFields: task.customFields && typeof task.customFields === 'object' &&
+     !Array.isArray(task.customFields)
+                            ? task.customFields as Record<string, string>
+                            : undefined,
+          })),
+          ```
+
+        - `frontend/src/components/layout/Sidebar.tsx` (MODIFIED)
+          - Added 5 MB file size check in `handleImport` before calling `reader.readAsText(file)`
+          ```ts
+          if (file.size > 5 * 1024 * 1024) {
+            setImportAlert({ message: 'Файл слишком большой (макс. 5 МБ).', onClose: () =>
+     setImportAlert(null) });
+            event.target.value = '';
+            return;
+          }
+          ```
+
+     4. Errors and fixes:
+        - **TypeScript error TS2345 in store.ts** — `includes()` on a `readonly` tuple type rejected
+     `string | undefined` argument:
+          - First attempt: cast array `as const` and cast value `as string` — failed, tuple still rejected
+          - Second attempt: cast array `as string[]` — failed, value was `string | undefined`
+          - Final fix: cast array `as string[]` and use `?? ''` for undefined: `task.priority ?? ''`; cast
+     result `as 'low' | 'medium' | 'blocker'`
+
+     5. Problem Solving:
+        - All three findings were fully implemented and build passes cleanly (`✓ built in 3.42s`)
+        - TypeScript union narrowing required iterative approach — `includes()` on const tuples does not
+     accept wider types, solved by widening the array type to `string[]` and nullish-coalescing the input
+     value
+
+     6. All user messages:
+        - "Implement the following plan: [detailed security audit plan for findings 1, 2, 5]"
+        - "сделай краткое описание последней сесси для GIT текстом сюда без исопльзования ковычек"
+        - This summary request message
+
+     7. Pending Tasks:
+        - None. All requested findings were implemented and build is clean.
+
+     8. Current Work:
+        The session concluded with a successful production build after implementing all three security
+     findings. The last action before the summary request was providing a Russian-language git commit
+     description without quotes, summarizing: Finding 1 (isValidHttpsUrl utility + TaskModal validation +
+     TaskBar guard), Finding 2 (5 MB file size limit in Sidebar + explicit task mapping in store.ts
+     importData), Finding 5 (CSP meta tag in index.html), and noting Findings 3 and 4 as accepted risk.
+
+     9. Optional Next Step:
+        No pending tasks remain. The user's last explicit request (git commit description) was fulfilled.
+     No next step is required unless the user initiates a new task.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or
+     content you generated), read the full transcript at: C:\Users\Georgy\.claude\projects\C--Users-Georgy-
+     Desktop-prog--Projects--TimeLineManager-4-18-02-2026\383f1860-8c43-44b2-bfbc-e8d409f6de12.jsonl
+
+
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file src\store.ts
+  ⎿  Referenced file src\components\layout\Sidebar.tsx
+  ⎿  Read src\pages\Timeline\TaskBar.tsx (143 lines)
+  ⎿  Referenced file src\pages\Timeline\TaskModal.tsx
+  ⎿  Read index.html (23 lines)
+  ⎿  Plan file referenced (~\.claude\plans\proud-shimmying-anchor.md)
+
+
+

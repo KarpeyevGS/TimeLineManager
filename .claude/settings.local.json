@@ -19,7 +19,9 @@
       "Bash(head:*)",
       "Bash(find:*)",
       "Bash(grep:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(ls:*)",
+      "Bash(npm uninstall:*)"
     ]
   }
 }
