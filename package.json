@@ -1,6 +1,24 @@
 {
-  "dependencies": {
-    "date-fns": "^4.1.0",
-    "react-day-picker": "^9.13.2"
+  "name": "timeline-planner",
+  "version": "1.0.0",
+  "main": "dist-electron/main.js",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n VITE,ELECTRON -c cyan,yellow \"npm run dev:renderer\" \"wait-on http://localhost:5173 && npm run dev:electron\"",
+    "dev:renderer": "cd frontend && npm run dev",
+    "dev:electron": "tsc -p electron/tsconfig.json && electron .",
+    "build": "npm run build:renderer && npm run build:electron",
+    "build:renderer": "cd frontend && npm run build",
+    "build:electron": "tsc -p electron/tsconfig.json",
+    "dist:win": "npm run build && electron-builder --win --x64",
+    "lint": "cd frontend && npm run lint"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.0",
+    "concurrently": "^9.2.1",
+    "electron": "^36.9.5",
+    "electron-builder": "^26.8.1",
+    "typescript": "~5.9",
+    "wait-on": "^8.0.5"
   }
 }

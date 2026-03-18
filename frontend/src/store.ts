@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { isValidHttpsUrl } from './utils/validateUrl';
+import { getElectronAPI, isElectron } from './electronApi';
 
 // ============= Timeline View State =============
 
@@ -36,10 +37,16 @@ export const loadTimelineViewState = (): TimelineViewState => {
 };
 
 export const saveTimelineViewState = (state: TimelineViewState): void => {
-  try {
-    localStorage.setItem(TIMELINE_VIEW_KEY, JSON.stringify(state));
-  } catch {
-    // ignore
+  const json = JSON.stringify(state);
+  const api = getElectronAPI();
+  if (api) {
+    api.viewStateSave(json);
+  } else {
+    try {
+      localStorage.setItem(TIMELINE_VIEW_KEY, json);
+    } catch {
+      // ignore
+    }
   }
 };
 
@@ -127,17 +134,11 @@ const createInitialAppData = (): AppData => ({
     created: new Date().toISOString(),
     lastModified: new Date().toISOString(),
   },
-  customFieldTypes: [] as CustomFieldType[],
-  resources: [
-    { id: 'res_1', name: 'Иван Иванов', role: 'Developer' },
-    { id: 'res_2', name: 'Мария Петрова', role: 'Designer' },
-  ],
-  projects: [
-    { id: 'proj_1', name: 'Project A', color: '#4a7a85' },
-    { id: 'proj_2', name: 'Project B', color: '#3b82f6' },
-  ],
+  customFieldTypes: [],
+  resources: [],
+  projects: [],
   tasks: [],
-  timelineConfigs: [createDefaultTimelineConfig()],  // ← С примерами параметров
+  timelineConfigs: [createDefaultTimelineConfig()],
 });
 
 // ============= Утилиты для группировки задач =============
@@ -182,36 +183,34 @@ export const groupTasksByFilters = (
   return result;
 };
 
-// ============= Функции работы с localStorage =============
+// ============= Функции работы с хранилищем =============
 
 const STORAGE_KEY = 'timeline_app_data';
+
+// Shared JSON → AppData converter (used by both sync and async loaders)
+const parseStoredAppData = (json: string): AppData => {
+  const parsed = JSON.parse(json) as AppData;
+  const customFieldIds = new Set((parsed.customFieldTypes ?? []).map(t => t.id));
+  return {
+    ...parsed,
+    tasks: parsed.tasks?.map((task) => ({
+      ...task,
+      startDate: new Date(task.startDate),
+      endDate: new Date(task.endDate),
+    })) ?? [],
+    timelineConfigs: (parsed.timelineConfigs ?? [createDefaultTimelineConfig()]).map(cfg => ({
+      ...cfg,
+      parameters: cfg.parameters.filter(p =>
+        Object.keys(p.filters ?? {}).every(k => customFieldIds.has(k))
+      ),
+    })),
+  };
+};
 
 export const loadAppData = (): AppData => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored) as AppData;
-      // Конвертируем строки обратно в Date
-      const customFieldIds = new Set((parsed.customFieldTypes ?? []).map(t => t.id));
-
-      const loaded: AppData = {
-        ...parsed,
-        tasks: parsed.tasks?.map((task) => ({
-          ...task,
-          startDate: new Date(task.startDate),
-          endDate: new Date(task.endDate),
-        })) ?? [],
-        // Гарантируем наличие timelineConfigs
-        // Параметры с фильтрами по неизвестным полям (не кастомным) — удаляем
-        timelineConfigs: (parsed.timelineConfigs ?? [createDefaultTimelineConfig()]).map(cfg => ({
-          ...cfg,
-          parameters: cfg.parameters.filter(p =>
-            Object.keys(p.filters ?? {}).every(k => customFieldIds.has(k))
-          ),
-        })),
-      };
-      return loaded;
-    }
+    if (stored) return parseStoredAppData(stored);
   } catch (error) {
     console.error('Failed to load app data:', error);
   }
@@ -219,13 +218,15 @@ export const loadAppData = (): AppData => {
 };
 
 export const saveAppData = (data: AppData): void => {
+  const api = getElectronAPI();
+  if (api) {
+    // Electron: no persistence — session-only, data lives in memory
+    return;
+  }
   try {
     const toStore = {
       ...data,
-      meta: {
-        ...data.meta,
-        lastModified: new Date().toISOString(),
-      },
+      meta: { ...data.meta, lastModified: new Date().toISOString() },
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
   } catch (error) {
@@ -233,9 +234,21 @@ export const saveAppData = (data: AppData): void => {
   }
 };
 
+// Async initialiser — called by main.tsx before createRoot()
+export const initGlobalAppData = async (): Promise<void> => {
+  const api = getElectronAPI();
+  if (api) {
+    // Electron: always start empty — user imports data manually each session
+    api.dataClear();
+    globalAppData = createInitialAppData();
+  } else {
+    globalAppData = loadAppData();
+  }
+};
+
 // ============= Глобальное состояние (Singleton) =============
 
-let globalAppData: AppData = loadAppData();
+let globalAppData: AppData = createInitialAppData(); // populated by initGlobalAppData()
 const subscribers = new Set<(data: AppData) => void>();
 
 // ============= Undo Stack =============
@@ -276,8 +289,8 @@ const subscribe = (callback: (data: AppData) => void): (() => void) => {
   return () => subscribers.delete(callback);
 };
 
-// Синхронизация между вкладками через storage event
-if (typeof window !== 'undefined') {
+// Синхронизация между вкладками через storage event (только в браузере, не в Electron)
+if (typeof window !== 'undefined' && !isElectron()) {
   window.addEventListener('storage', (e) => {
     if (e.key === STORAGE_KEY && e.newValue) {
       try {
@@ -389,8 +402,21 @@ export const useAppStore = () => {
   }, []);
 
   // ===== Экспорт/Импорт =====
-  const exportData = useCallback((): string => {
-    return JSON.stringify(globalAppData, null, 2);
+  const exportData = useCallback(async (): Promise<boolean> => {
+    const json = JSON.stringify(globalAppData, null, 2);
+    const api = getElectronAPI();
+    if (api) {
+      return await api.exportJson(json);
+    } else {
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'timeline_export.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      return true;
+    }
   }, []);
 
   const importData = useCallback((jsonString: string): boolean => {
@@ -747,7 +773,9 @@ export const useAppStore = () => {
   // ===== Сброс данных =====
   const clearAppData = useCallback((): void => {
     pushUndo();
-    localStorage.removeItem(STORAGE_KEY);
+    const api = getElectronAPI();
+    if (api) { api.dataClear(); }
+    else { localStorage.removeItem(STORAGE_KEY); }
     globalAppData = createInitialAppData();
     notifySubscribers();
   }, []);
@@ -854,6 +882,21 @@ export const useAppStore = () => {
 
 export const useTimelineViewState = () => {
   const [viewState, setViewState] = useState<TimelineViewState>(loadTimelineViewState);
+
+  // In Electron, load view state asynchronously from the main process on mount
+  useEffect(() => {
+    const api = getElectronAPI();
+    if (!api) return;
+    api.viewStateLoad().then((json) => {
+      if (json) {
+        try {
+          setViewState(JSON.parse(json) as TimelineViewState);
+        } catch {
+          // ignore malformed state
+        }
+      }
+    });
+  }, []);
 
   const updateViewState = useCallback((updates: Partial<TimelineViewState>) => {
     setViewState(prev => {

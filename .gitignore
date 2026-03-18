@@ -8,6 +8,9 @@ TimeLinePlanner/frontend/node_modules/
 # Сборка
 dist/
 build/
+dist-electron/
+release/
+frontend/dist/
 
 # Логи и кэш
 npm-debug.log*

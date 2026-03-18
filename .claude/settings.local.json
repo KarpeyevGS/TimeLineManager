@@ -21,7 +21,12 @@
       "Bash(grep:*)",
       "Bash(cd:*)",
       "Bash(ls:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(powershell -Command \"\\(Get-Item 'C:\\\\Users\\\\Georgy\\\\Desktop\\\\prog\\\\_Projects\\\\_TimeLineManager\\\\4_18-02-2026\\\\assets\\\\icon.ico'\\).Length\")",
+      "Bash(Remove-Item -Recurse -Force \"$env:LOCALAPPDATA\\\\electron-builder\\\\Cache\\\\winCodeSign\" -ErrorAction SilentlyContinue && echo \"cache cleared\")",
+      "Bash(powershell -Command \"Remove-Item 'C:\\\\Users\\\\Georgy\\\\AppData\\\\Roaming\\\\timeline-planner\\\\timeline_app_data.json'; Write-Host deleted\")",
+      "Bash(powershell -Command \"Get-ChildItem 'C:\\\\Users\\\\Georgy\\\\AppData\\\\Roaming\\\\timeline-planner' -ErrorAction SilentlyContinue\")",
+      "Bash(powershell -Command \"\nRemove-Item 'C:\\\\Users\\\\Georgy\\\\AppData\\\\Roaming\\\\timeline-planner\\\\timeline_app_data.json' -ErrorAction SilentlyContinue\nRemove-Item 'C:\\\\Users\\\\Georgy\\\\AppData\\\\Roaming\\\\timeline-planner\\\\timeline_view_state.json' -ErrorAction SilentlyContinue\nRemove-Item 'C:\\\\Users\\\\Georgy\\\\AppData\\\\Roaming\\\\timeline-planner\\\\Local Storage' -Recurse -ErrorAction SilentlyContinue\nWrite-Host 'cleared'\n\")"
     ]
   }
 }

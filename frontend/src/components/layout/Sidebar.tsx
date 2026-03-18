@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { getElectronAPI } from '../../electronApi';
 import ReactDOM from 'react-dom';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 // Импорт иконок из библиотеки Lucide (LucideIcon — тип для компонентов иконок)
@@ -62,6 +63,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmNewProject, setConfirmNewProject] = useState(false);
   const [importAlert, setImportAlert] = useState<{ message: string; onClose: () => void } | null>(null);
+  const [confirmImport, setConfirmImport] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
+  const hasDataRef = useRef(false);
+  hasDataRef.current = store.appData.tasks.length > 0;
 
   const showTooltip = (e: React.MouseEvent<HTMLElement>, label: string) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -75,6 +80,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [contextMenu]);
+
+  useEffect(() => {
+    const api = getElectronAPI();
+    if (!api) return;
+    const unsubscribe = api.onWindowClosing(() => {
+      if (!hasDataRef.current) {
+        api.closeConfirmed();
+      } else {
+        setConfirmClose(true);
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   const handleRenameConfig = (cfgId: string) => {
     const cfg = store.appData.timelineConfigs.find(c => c.id === cfgId);
@@ -115,16 +133,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Функция экспорта данных
   const handleExport = () => {
-    const jsonData = store.export();
-    const blob = new Blob([jsonData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `timeline-backup-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    void store.export();
   };
 
   // Функция создания нового проекта
@@ -132,33 +141,61 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setConfirmNewProject(true);
   };
 
-  // Функция импорта данных
+  // Вспомогательная функция выполнения импорта
+  const doImport = useCallback((content: string) => {
+    const success = store.import(content);
+    if (success) {
+      setImportAlert({ message: 'Данные успешно импортированы.', onClose: () => setImportAlert(null) });
+    } else {
+      setImportAlert({ message: 'Ошибка: некорректный формат файла.', onClose: () => setImportAlert(null) });
+    }
+  }, [store]);
+
+  // Открыть файловый менеджер и выполнить импорт (вызывается ПОСЛЕ подтверждения)
+  const openFilePicker = () => {
+    const api = getElectronAPI();
+    if (api) {
+      void (async () => {
+        try {
+          const content = await api.importJson();
+          if (content) doImport(content);
+        } catch (error) {
+          setImportAlert({ message: 'Ошибка при импорте: ' + (error instanceof Error ? error.message : 'неизвестная ошибка'), onClose: () => setImportAlert(null) });
+        }
+      })();
+    } else {
+      fileInputRef.current?.click();
+    }
+  };
+
+  // Браузер: файл выбран — просто импортировать (диалог уже был показан до этого)
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     if (file.size > 5 * 1024 * 1024) {
       setImportAlert({ message: 'Файл слишком большой (макс. 5 МБ).', onClose: () => setImportAlert(null) });
       event.target.value = '';
       return;
     }
-
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const content = e.target?.result as string;
-        const success = store.import(content);
-        if (success) {
-          setImportAlert({ message: 'Данные успешно импортированы.', onClose: () => window.location.reload() });
-        } else {
-          setImportAlert({ message: 'Ошибка: некорректный формат файла.', onClose: () => setImportAlert(null) });
-        }
+        doImport(e.target?.result as string);
       } catch (error) {
         setImportAlert({ message: 'Ошибка при импорте: ' + (error instanceof Error ? error.message : 'неизвестная ошибка'), onClose: () => setImportAlert(null) });
       }
     };
     reader.readAsText(file);
     event.target.value = '';
+  };
+
+  // Клик по кнопке Импорт: если есть данные — сначала диалог, иначе сразу файловый менеджер
+  const handleImportClick = () => {
+    if (hasDataRef.current) {
+      setConfirmImport(true);
+    } else {
+      openFilePicker();
+    }
   };
 
   const aside = (
@@ -234,7 +271,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-3 space-y-2 border-t border-app-border">
         {/* Кнопка Импорт */}
         <button
-          onClick={() => fileInputRef.current?.click()}
+          onClick={handleImportClick}
           className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'p-3'} rounded-xl transition-all group relative text-app-text-main hover:bg-app-bg`}
           onMouseEnter={isCollapsed ? (e) => showTooltip(e, 'Импорт') : undefined}
           onMouseLeave={isCollapsed ? hideTooltip : undefined}
@@ -248,7 +285,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </button>
 
-        {/* Скрытый input для выбора файла */}
+        {/* Скрытый input для выбора файла (только в браузере) */}
         <input
           ref={fileInputRef}
           type="file"
@@ -484,15 +521,62 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onSecondary={() => {
             setConfirmNewProject(false);
             store.reset();
-            window.location.reload();
+            if (!getElectronAPI()) window.location.reload();
           }}
           onConfirm={() => {
             setConfirmNewProject(false);
-            handleExport();
-            store.reset();
-            window.location.reload();
+            void (async () => {
+              const saved = await store.export();
+              if (saved) {
+                store.reset();
+                if (!getElectronAPI()) window.location.reload();
+              }
+            })();
           }}
           onCancel={() => setConfirmNewProject(false)}
+        />
+      )}
+      {confirmImport && (
+        <ConfirmDialog
+          title="Импорт данных"
+          message="Текущие данные будут заменены. Хотите сохранить резервную копию перед импортом?"
+          confirmLabel="Сохранить и импортировать"
+          confirmVariant="primary"
+          secondaryLabel="Импортировать без сохранения"
+          onSecondary={() => {
+            setConfirmImport(false);
+            openFilePicker();
+          }}
+          onConfirm={() => {
+            setConfirmImport(false);
+            void (async () => {
+              const saved = await store.export();
+              if (saved) openFilePicker();
+            })();
+          }}
+          onCancel={() => setConfirmImport(false)}
+        />
+      )}
+      {confirmClose && (
+        <ConfirmDialog
+          title="Закрыть приложение"
+          message="Данные текущей сессии не сохраняются автоматически. Хотите экспортировать резервную копию перед выходом?"
+          confirmLabel="Сохранить и закрыть"
+          confirmVariant="primary"
+          secondaryLabel="Закрыть без сохранения"
+          onSecondary={() => {
+            setConfirmClose(false);
+            getElectronAPI()?.closeConfirmed();
+          }}
+          onConfirm={() => {
+            setConfirmClose(false);
+            void (async () => {
+              const saved = await store.export();
+              if (saved) getElectronAPI()?.closeConfirmed();
+              else setConfirmClose(false); // export cancelled, keep app open
+            })();
+          }}
+          onCancel={() => setConfirmClose(false)}
         />
       )}
     </>
