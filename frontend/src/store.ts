@@ -521,7 +521,20 @@ export const useAppStore = () => {
                               )
                             : undefined,
           })),
-          timelineConfigs: parsed.timelineConfigs ?? [createDefaultTimelineConfig()],
+          timelineConfigs: (() => {
+            const cfIds = new Set((parsed.customFieldTypes ?? []).map(t => t.id));
+            return (parsed.timelineConfigs ?? [createDefaultTimelineConfig()]).map(cfg => ({
+              ...cfg,
+              parameters: (cfg.parameters ?? [])
+                .filter(p => Object.keys(p.filters ?? {}).every(k => k === 'id' || cfIds.has(k)))
+                .map(p => ({
+                  ...p,
+                  filters: Object.fromEntries(
+                    Object.entries(p.filters ?? {}).map(([k, v]) => [k, toStringArray(v as unknown)])
+                  ) as Record<string, string[]>,
+                })),
+            }));
+          })(),
         };
         globalAppData = converted;
         notifySubscribers();
