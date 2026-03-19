@@ -163,3 +163,237 @@
   ⎿  Read ..\scripts\wait-and-run-electron.js (17 lines)
   ⎿  Read ..\package.json (25 lines)
   ⎿  Read src\App.tsx (70 lines)
+
+● fix: multi-value custom fields, print support, UX improvements
+
+  - Task customFields and timeline filters migrated from Record<string, string> to Record<string, string[]>
+  - AND-logic matching: task must contain all filter values per field
+  - Auto-migration on data load (string → string[] normalization)
+  - Store: added customFieldTypes.rename, reorder, migrate operations
+  - TaskModal: multi-value input per field with +/− buttons, drag-to-reorder types via dnd-kit, inline rename on click,
+  delete type button with Trash2 icon
+  - ParameterModal: multi-value filter inputs per field with +/− per value
+  - TasksPage: comma-separated display of multi-value fields
+  - Migration button moved from TaskModal to Sidebar (DatabaseZap icon)
+  - Print: @media print CSS with print-color-adjust, overflow unlock, grid opacity boost; Electron webContents.print()
+  via new window:print IPC channel; Print button in timeline toolbar
+  - TaskBar: Globe icon enlarged to size 11, click zone increased to w-5 h-full, onMouseDown stopPropagation prevents
+  drag on link click
+
+✻ Conversation compacted (ctrl+o for history)
+
+
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the
+     earlier portion of the conversation.
+
+     Summary:
+     1. Primary Request and Intent:
+        - **Print support**: Fix browser printing (colors/grid lost without `print-color-adjust`), add Electron print
+     via IPC (`webContents.print()`), add Print button to timeline toolbar
+        - **Multi-value custom fields**: Extend `customFields` and `filters` from `Record<string, string>` to
+     `Record<string, string[]>`. AND-logic matching. `+` button per field type adds new Autocomplete input.
+     Drag-to-reorder types via dnd-kit. Inline rename on click. Auto-migration on load. Migration button temporarily in
+     UI
+        - **ParameterModal multi-value filters**: Same `string[]` format, `+` button per filter entry adds more value
+     inputs, AND logic within field
+        - **CustomFieldType management**: `rename()`, `reorder()`, `migrate()` operations in store
+        - **Warning text fix**: Changed text in TaskModal empty-filters warning (corrected typo "предложено")
+        - **TaskBar link UX**: Enlarge Globe icon, widen click zone, prevent drag on link mousedown via
+     `stopPropagation`
+        - **Migration button relocation**: Move from `TaskModal` to `Sidebar` (bottom actions block, `DatabaseZap` icon)
+        - **Delete field type**: Add `Trash2` button to `SortableFieldRow` header (left of `+`) to delete entire field
+     type
+        - **Security review**: User asked if changes introduced security issues — confirmed clean
+        - **Git commit message**: Provided text summary of all changes
+
+     2. Key Technical Concepts:
+        - `print-color-adjust: exact` — forces browsers to print background colors/images
+        - `@media print` CSS with `.print-hidden`, `.print-overflow`, `.print-grid` utility classes
+        - Electron `webContents.print({ silent: false, printBackground: true })` via IPC
+        - `Record<string, string[]>` — multi-value custom fields and timeline filters
+        - AND-logic filter matching: task must contain ALL filter values per field key
+        - `toStringArray(v: unknown): string[]` — normalizes old string values to arrays on load
+        - Auto-migration in `parseStoredAppData` (transparent, on every load/import)
+        - dnd-kit `useSortable` + `DndContext` + `SortableContext` for drag-to-reorder field types in TaskModal
+        - Inline rename: click span → input, blur/Enter confirms, Escape cancels
+        - `contextIsolation: true`, `nodeIntegration: false` — Electron security baseline (unchanged)
+
+     3. Files and Code Sections:
+        - **`frontend/src/index.css`**
+          - Added `@media print` block at bottom:
+          ```css
+          @media print {
+            * { print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; }
+            @page { size: landscape; margin: 8mm; }
+            .print-hidden { display: none !important; }
+            .print-overflow { overflow: visible !important; height: auto !important; max-height: none !important; }
+            .print-grid { opacity: 0.65 !important; }
+          }
+          ```
+
+        - **`electron/ipcChannels.ts`**
+          - Added `PRINT: 'window:print'`
+
+        - **`electron/main.ts`**
+          - Added print IPC handler:
+          ```ts
+          ipcMain.on(IPC.PRINT, () => {
+            mainWindow?.webContents.print(
+              { silent: false, printBackground: true },
+              (success, failureReason) => { if (!success) console.error('Print failed:', failureReason); }
+            );
+          });
+          ```
+
+        - **`electron/preload.ts`**
+          - Added `print: (): void => ipcRenderer.send(IPC.PRINT)`
+
+        - **`frontend/src/electronApi.ts`**
+          - Added `print: () => void` to `ElectronAPI` interface
+
+        - **`frontend/src/store.ts`**
+          - Type changes: `Task.customFields?: Record<string, string[]>`, `TimelineParameter.filters: Record<string,
+     string[]>`
+          - Added `toStringArray(v: unknown): string[]` helper
+          - Updated `parseStoredAppData` to auto-migrate string → string[] for both tasks and filters, also handles
+     import validation
+          - Updated `matchesTaskFilters`:
+          ```ts
+          export const matchesTaskFilters = (task: Task, filters: Record<string, string[]>): boolean => {
+            if (Object.keys(filters).length === 0) return false;
+            return Object.entries(filters).every(([key, filterValues]) => {
+              if (!filterValues || filterValues.length === 0) return true;
+              if (key === 'id') return filterValues.includes(task.id);
+              const taskValues = task.customFields?.[key] ?? [];
+              return filterValues.every(fv => taskValues.includes(fv));
+            });
+          };
+          ```
+          - Added `renameCustomFieldType`, `reorderCustomFieldTypes`, `migrateCustomFieldsToArrays`
+          - Exported via `customFieldTypes: { add, getAll, delete, rename, reorder, migrate }`
+
+        - **`frontend/src/pages/Timeline/TaskModal.tsx`**
+          - Added imports: `Minus, GripVertical, Trash2` from lucide-react; dnd-kit imports
+          - Added `SortableFieldRow` component with `useSortable`, drag handle, inline rename, `+` (add value), `Trash2`
+      (delete type) buttons
+          - Props interface updated: added `onDeleteCustomFieldType?`, `onRenameCustomFieldType?`,
+     `onReorderCustomFieldTypes?`
+          - `customFieldValues` state: `Record<string, string[]>` initialized from task or initialFilters
+          - Added `editingTypeId`, `editingTypeName` state
+          - Handlers: `handleCustomFieldChange(id, index, val)`, `handleAddFieldValue(id)`, `handleRemoveFieldValue(id,
+     idx)`, `handleFieldDragEnd`
+          - `handleSubmit` filters empty values before saving
+          - Custom Fields section wrapped in `DndContext` + `SortableContext`
+          - Warning text: `"Данная строка не имеет фильтров для отображения задач. Вам будет предложено добавить фильтр
+     позже."`
+
+        - **`frontend/src/pages/Timeline/ParameterModal.tsx`**
+          - `filterFields` state: `Record<string, string[]>`
+          - Initialization in edit mode normalizes to arrays
+          - `valueOptionsByFieldId` collects from arrays
+          - New handlers: `handleFilterValueChange(key, index, val)`, `handleAddFilterValue(key)`,
+     `handleRemoveFilterValue(key, idx)`
+          - `handleAddFilterField` creates entry with `['']`
+          - `handleSubmit` filters empty values
+          - UI: each filter entry shows field selector row with `+`/`−` buttons, then list of value Autocomplete inputs
+     indented
+
+        - **`frontend/src/pages/Timeline/TimelinePage.tsx`**
+          - `TaskModalState.initialFilters`: `Record<string, string[]>`
+          - `customFieldOptions` useMemo updated to collect from `string[]` values
+          - `initialFilters` computation updated: `.map(([key, vals]) => [key, Array.isArray(vals) ? vals : [vals]])`
+          - Gantt filter: `filters: { id: [newTask.id] }` (fixed from `{ id: newTask.id }`)
+          - Added `handlePrint()` function, Print button in toolbar
+          - `print-hidden` on toolbar, `print-overflow` on containers, `print-grid` on 4 grid line divs
+          - Added `onDeleteCustomFieldType`, `onRenameCustomFieldType`, `onReorderCustomFieldTypes` to TaskModal call
+
+        - **`frontend/src/pages/Tasks/TasksPage.tsx`**
+          - Table cell: `{(task.customFields?.[field.id] ?? []).join(', ') || '—'}`
+          - Added `onDeleteCustomFieldType`, `onRenameCustomFieldType`, `onReorderCustomFieldTypes` to TaskModal call
+
+        - **`frontend/src/pages/Timeline/TaskBar.tsx`**
+          - Link element: added `onMouseDown={(e) => e.stopPropagation()}`, icon `size={10}→11`, class changed to `flex
+     items-center justify-center w-5 h-full mr-1`
+
+        - **`frontend/src/components/layout/Sidebar.tsx`**
+          - Added `DatabaseZap` to lucide imports
+          - Added migration button after "Новый проект":
+          ```tsx
+          <button
+            onClick={() => store.customFieldTypes.migrate()}
+            className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'p-3'} rounded-xl transition-all
+      group relative text-orange-500 hover:bg-orange-50`}
+            ...
+          >
+            <DatabaseZap size={20} className="min-w-[20px] transition-colors group-hover:text-orange-600" />
+            {!isCollapsed && <span className="ml-3 font-semibold text-sm">Мигрировать</span>}
+          </button>
+          ```
+
+     4. Errors and fixes:
+        - **TS error `TimelinePage.tsx:806` — `string` not assignable to `string[]`**: `filters: { id: newTask.id }` →
+     `filters: { id: [newTask.id] }`
+        - **TS error `store.ts:502` — `Record<string, string>` not assignable to `Record<string, string[]>`**: Updated
+     import data handler to use `toStringArray()` via `Object.fromEntries(Object.entries(...).map(...))`
+        - **TS error `store.ts:519` — incompatible type cast**: Changed `task.customFields as Record<string, string>` to
+      proper `Object.fromEntries(Object.entries(...).map(([k,v]) => [k, toStringArray(v)]))`
+
+     5. Problem Solving:
+        - Auto-migration on load makes old JSON exports work transparently without user action
+        - `stopPropagation` on link `mouseDown` cleanly prevents drag activation without touching `useTaskDragResize`
+        - Migration button moved to Sidebar as it's a one-time service action unrelated to task editing
+        - `onDeleteCustomFieldType` added as optional prop rather than direct store access (TaskModal has no store
+     access)
+
+     6. All user messages:
+        - "Нужно устранить проблему печати таймлайна: в браузере при печати теряются цвета задач и сетка таблицы, а в
+     Electron такого сценария печати сейчас нет..." [full detailed spec]
+        - "PDF в плохом качестве, можно заменить на векторную?" [interrupted]
+        - "PDF в плохом качестве, чем рисковано использовать векторную графику?"
+        - "Нужно расширить систему пользовательских параметров задач..." [full spec, interrupted]
+        - "Нужно расширить систему пользовательских параметров задач... - сделай уточняющие вопросы. /plan"
+        - "1. должна быть логика 'и'... 2. не понимаю, какая пара?... 3. В рамках поля 'кастомные параметры'... 4. Это
+     будет типа скрипт внутри программы?... 5. Через запятую... 6. порядок не имеет значения. 7. Ты не обсудил
+     функционал добавляения нового значения... 5.2 как будет отображаться?"
+        - "По Q4 (миграция): - добавь временно кнопку снизу... A. добавь '+' справа от назания параметра... B. нет не
+     нужно. C. да и да"
+        - "приступай"
+        - "'⚠️ Примечание: Для данного параметра фильтры не настроены...' Измени текст: 'Данная строка не имеет
+     фильтров...' - проверь на грамотность и исправь текст."
+        - "Нужно исправить UX ссылки на плашке задачи в timeline..." [full spec]
+        - "Нужно исправить неверно выполненную доработку кнопки миграции старых данных..." [full spec]
+        - "Нужно доработать блок редактирования пользовательских полей в TaskModal: сейчас... нет быстрого удаления
+     самого параметра." [full spec]
+        - "как собрать" [interrupted]
+        - "как обновить сборку на desctop"
+        - "эти изменения, file:///... не повлияли на безопасность приложения? оно не излучает зло?"
+        - "сделай описание для git сюда текстом без ковычек"
+        - [Summary request — current message]
+
+     7. Pending Tasks:
+        - None. All requested tasks completed.
+
+     8. Current Work:
+        The last completed task before this summary was providing a git commit message text. Before that: adding
+     `Trash2` delete button to `SortableFieldRow` in `TaskModal.tsx`, with `onDeleteCustomFieldType` prop wired through
+     `TimelinePage.tsx` and `TasksPage.tsx`. All builds verified clean (`✓ built in 3.63s`).
+
+     9. Optional Next Step:
+        No pending tasks. All explicitly requested work has been completed and verified with clean builds. Awaiting new
+     user requests.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you
+     generated), read the full transcript at: C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--T
+     imeLineManager-4-18-02-2026\3937f4d3-c878-4b7f-bedd-c24916459fd8.jsonl
+
+
+
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Read frontend\src\pages\Tasks\TasksPage.tsx (283 lines)
+  ⎿  Referenced file frontend\src\pages\Timeline\TimelinePage.tsx
+  ⎿  Referenced file frontend\src\pages\Timeline\TaskModal.tsx
+  ⎿  Referenced file frontend\src\components\layout\Sidebar.tsx
+  ⎿  Read frontend\src\pages\Timeline\TaskBar.tsx (144 lines)

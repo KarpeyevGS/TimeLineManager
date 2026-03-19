@@ -16,6 +16,7 @@ import {
   SquarePen,
   Copy,
   Trash2,
+  DatabaseZap,
   LucideIcon
 } from 'lucide-react';
 import { useAppStore } from '../../store';
@@ -323,6 +324,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
           {!isCollapsed && (
             <span className="ml-3 font-semibold text-sm">Новый</span>
+          )}
+        </button>
+
+        {/* Кнопка миграции данных (разовая сервисная операция) */}
+        <button
+          onClick={() => store.customFieldTypes.migrate()}
+          className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'p-3'} rounded-xl transition-all group relative text-orange-500 hover:bg-orange-50`}
+          onMouseEnter={isCollapsed ? (e) => showTooltip(e, 'Мигрировать данные') : undefined}
+          onMouseLeave={isCollapsed ? hideTooltip : undefined}
+          title="Мигрировать старые данные (разово)"
+        >
+          <DatabaseZap
+            size={20}
+            className="min-w-[20px] transition-colors group-hover:text-orange-600"
+          />
+          {!isCollapsed && (
+            <span className="ml-3 font-semibold text-sm">Мигрировать</span>
           )}
         </button>
       </div>

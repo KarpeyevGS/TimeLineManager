@@ -16,4 +16,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => { ipcRenderer.removeListener(IPC.WINDOW_CLOSING, cb); };
   },
   closeConfirmed:   (): void => ipcRenderer.send(IPC.WINDOW_CLOSE_CONFIRMED),
+  print:            (): void => ipcRenderer.send(IPC.PRINT),
 });

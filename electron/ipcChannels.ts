@@ -9,4 +9,5 @@ export const IPC = {
   APP_VERSION:           'app:version',
   WINDOW_CLOSING:        'window:closing',
   WINDOW_CLOSE_CONFIRMED:'window:closeConfirmed',
+  PRINT:                 'window:print',
 } as const;

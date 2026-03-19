@@ -2,7 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { eachDayOfInterval, isWeekend } from 'date-fns';
 import { DateRange } from 'react-day-picker';
-import { X, ChevronRight, ChevronDown, Plus } from 'lucide-react';
+import { X, ChevronRight, ChevronDown, Plus, Minus, GripVertical, Trash2 } from 'lucide-react';
+import {
+  DndContext, closestCenter, type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext, useSortable, verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { CSS } from '@dnd-kit/utilities';
 import { DateRangePicker } from '../../components/ui/DateRangePicker';
 import { Autocomplete } from '../../components/ui/Autocomplete';
 import type { Task } from '../../store';
@@ -19,16 +27,129 @@ interface TaskModalProps {
   paramId?: string;
   initialDate?: Date;
   hasEmptyFilters?: boolean;
-  initialFilters?: Record<string, string>;  // ← предзаполнение customFields из фильтров строки
+  initialFilters?: Record<string, string[]>;  // ← предзаполнение customFields из фильтров строки
   customFieldOptions?: Record<string, string[]>;  // ← варианты автодополнения: fieldTypeId → []string
   ganttMode?: boolean;
   customFieldTypes: CustomFieldTypeDef[];
   onAddCustomFieldType: (name: string) => CustomFieldTypeDef;
+  onDeleteCustomFieldType?: (id: string) => void;
+  onRenameCustomFieldType?: (id: string, name: string) => void;
+  onReorderCustomFieldTypes?: (orderedIds: string[]) => void;
   onSave: (data: Omit<Task, 'id'> & { id?: string }) => void;
   onDelete?: () => void;
   onEditParameter?: (pendingTask: Omit<Task, 'id'> & { id?: string }) => void;
   onClose: () => void;
 }
+
+// Sortable row для одного типа кастомного поля
+interface SortableFieldRowProps {
+  id: string;
+  name: string;
+  values: string[];
+  options: string[];
+  isEditing: boolean;
+  editingName: string;
+  inputCls: () => string;
+  labelCls: string;
+  onStartRename: () => void;
+  onEditNameChange: (v: string) => void;
+  onConfirmRename: () => void;
+  onCancelRename: () => void;
+  onAddValue: () => void;
+  onDeleteType: () => void;
+  onChangeValue: (idx: number, val: string) => void;
+  onRemoveValue: (idx: number) => void;
+}
+
+const SortableFieldRow: React.FC<SortableFieldRowProps> = ({
+  id, name, values, options, isEditing, editingName,
+  inputCls, labelCls, onStartRename, onEditNameChange, onConfirmRename,
+  onCancelRename, onAddValue, onDeleteType, onChangeValue, onRemoveValue,
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="flex flex-col gap-1">
+      {/* Header: drag + name + add-value button */}
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="flex-shrink-0 cursor-grab text-app-text-muted hover:text-app-primary transition-colors"
+          tabIndex={-1}
+        >
+          <GripVertical size={12} />
+        </button>
+        {isEditing ? (
+          <input
+            autoFocus
+            value={editingName}
+            onChange={e => onEditNameChange(e.target.value)}
+            onBlur={onConfirmRename}
+            onKeyDown={e => {
+              if (e.key === 'Enter') { e.preventDefault(); onConfirmRename(); }
+              if (e.key === 'Escape') { e.preventDefault(); onCancelRename(); }
+              e.stopPropagation();
+            }}
+            onMouseDown={e => e.stopPropagation()}
+            className="flex-1 text-[10px] font-semibold border border-app-primary rounded px-1 h-5 outline-none bg-white"
+          />
+        ) : (
+          <span
+            className={`${labelCls} text-[10px] flex-1 cursor-text hover:text-app-primary transition-colors select-none`}
+            onClick={onStartRename}
+          >
+            {name}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={onDeleteType}
+          className="flex-shrink-0 w-4 h-4 flex items-center justify-center text-app-text-muted hover:text-app-error transition-colors"
+          title="Удалить параметр"
+        >
+          <Trash2 size={10} />
+        </button>
+        <button
+          type="button"
+          onClick={onAddValue}
+          className="flex-shrink-0 w-4 h-4 flex items-center justify-center text-app-text-muted hover:text-app-primary transition-colors"
+          title="Добавить значение"
+        >
+          <Plus size={10} />
+        </button>
+      </div>
+      {/* Value inputs */}
+      {values.map((val, idx) => (
+        <div key={idx} className="flex items-center gap-1 pl-4">
+          <Autocomplete
+            options={options}
+            value={val}
+            onChange={v => onChangeValue(idx, v)}
+            placeholder={`Enter ${name}`}
+            inputClassName={inputCls()}
+            className="flex-1"
+          />
+          {values.length > 1 && (
+            <button
+              type="button"
+              onClick={() => onRemoveValue(idx)}
+              className="flex-shrink-0 w-5 h-8 flex items-center justify-center text-app-text-muted hover:text-app-error transition-colors"
+              title="Удалить значение"
+            >
+              <Minus size={10} />
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 export const TaskModal: React.FC<TaskModalProps> = ({
   mode,
@@ -41,6 +162,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   ganttMode,
   customFieldTypes,
   onAddCustomFieldType,
+  onDeleteCustomFieldType,
+  onRenameCustomFieldType,
+  onReorderCustomFieldTypes,
   onSave,
   onDelete,
   onEditParameter,
@@ -59,9 +183,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [priority, setPriority] = useState<'low' | 'medium' | 'blocker'>(task?.priority ?? 'medium');
   const [status, setStatus] = useState<'not_started' | 'in_progress' | 'done'>(task?.status ?? 'not_started');
   const [description, setDescription] = useState(task?.description ?? '');
-  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>(
-    task?.customFields ?? initialFilters ?? {}
-  );
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string[]>>(() => {
+    const source = task?.customFields ?? initialFilters ?? {};
+    const result: Record<string, string[]> = {};
+    for (const [k, v] of Object.entries(source)) {
+      result[k] = Array.isArray(v) ? v : [v as string];
+    }
+    return result;
+  });
+  const [editingTypeId, setEditingTypeId] = useState<string | null>(null);
+  const [editingTypeName, setEditingTypeName] = useState('');
   const [color, setColor] = useState(task?.color ?? '#B0BEC5');
   const [customFieldsOpen, setCustomFieldsOpen] = useState(
     mode === 'add' && (
@@ -104,8 +235,38 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     }
   };
 
-  const handleCustomFieldChange = (id: string, value: string) => {
-    setCustomFieldValues(prev => ({ ...prev, [id]: value }));
+  const handleCustomFieldChange = (id: string, index: number, value: string) => {
+    setCustomFieldValues(prev => ({
+      ...prev,
+      [id]: (prev[id] ?? ['']).map((v, i) => i === index ? value : v),
+    }));
+  };
+
+  const handleAddFieldValue = (id: string) => {
+    setCustomFieldValues(prev => ({
+      ...prev,
+      [id]: [...(prev[id] ?? []), ''],
+    }));
+  };
+
+  const handleRemoveFieldValue = (id: string, index: number) => {
+    setCustomFieldValues(prev => {
+      const next = (prev[id] ?? []).filter((_, i) => i !== index);
+      return { ...prev, [id]: next.length > 0 ? next : [''] };
+    });
+  };
+
+  const handleFieldDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const ids = customFieldTypes.map(t => t.id);
+    const oldIdx = ids.indexOf(active.id as string);
+    const newIdx = ids.indexOf(over.id as string);
+    if (oldIdx === -1 || newIdx === -1) return;
+    const reordered = [...ids];
+    reordered.splice(oldIdx, 1);
+    reordered.splice(newIdx, 0, active.id as string);
+    onReorderCustomFieldTypes?.(reordered);
   };
 
   const handleSubmit = () => {
@@ -120,7 +281,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       priority,
       status,
       description: description.trim() || undefined,
-      customFields: Object.keys(customFieldValues).length > 0 ? customFieldValues : undefined,
+      customFields: (() => {
+        const clean: Record<string, string[]> = {};
+        for (const [k, vals] of Object.entries(customFieldValues)) {
+          const nonEmpty = vals.filter(v => v.trim());
+          if (nonEmpty.length > 0) clean[k] = nonEmpty;
+        }
+        return Object.keys(clean).length > 0 ? clean : undefined;
+      })(),
       color,
       fix,
       milestone,
@@ -297,7 +465,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           {hasEmptyFilters && mode === 'add' && (
             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-xs text-yellow-900 leading-relaxed">
-                <span className="font-semibold">⚠️ Примечание:</span> Для данного параметра фильтры не настроены. Вы можете создать новые параметры и назначить их позже.
+                <span className="font-semibold">⚠️ Примечание:</span> Данная строка не имеет фильтров для отображения задач. Вам будет предложено добавить фильтр позже.
               </p>
             </div>
           )}
@@ -501,18 +669,41 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
           {customFieldsOpen && (
             <div className="flex flex-col gap-2 border border-app-border rounded p-3 -mt-1">
-              {customFieldTypes.map(({ id, name }) => (
-                <div key={id} className="flex flex-col gap-1">
-                  <label className={`${labelCls} text-[10px]`}>{name}</label>
-                  <Autocomplete
-                    options={customFieldOptions?.[id] ?? []}
-                    value={customFieldValues[id] ?? ''}
-                    onChange={val => handleCustomFieldChange(id, val)}
-                    placeholder={`Enter ${name}`}
-                    inputClassName={inputCls()}
-                  />
-                </div>
-              ))}
+              <DndContext
+                modifiers={[restrictToVerticalAxis]}
+                collisionDetection={closestCenter}
+                onDragEnd={handleFieldDragEnd}
+              >
+                <SortableContext
+                  items={customFieldTypes.map(t => t.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {customFieldTypes.map(({ id, name }) => (
+                    <SortableFieldRow
+                      key={id}
+                      id={id}
+                      name={name}
+                      values={customFieldValues[id] ?? ['']}
+                      options={customFieldOptions?.[id] ?? []}
+                      isEditing={editingTypeId === id}
+                      editingName={editingTypeName}
+                      inputCls={inputCls}
+                      labelCls={labelCls}
+                      onStartRename={() => { setEditingTypeId(id); setEditingTypeName(name); }}
+                      onEditNameChange={setEditingTypeName}
+                      onConfirmRename={() => {
+                        if (editingTypeName.trim()) onRenameCustomFieldType?.(id, editingTypeName.trim());
+                        setEditingTypeId(null);
+                      }}
+                      onCancelRename={() => setEditingTypeId(null)}
+                      onDeleteType={() => onDeleteCustomFieldType?.(id)}
+                      onAddValue={() => handleAddFieldValue(id)}
+                      onChangeValue={(idx, val) => handleCustomFieldChange(id, idx, val)}
+                      onRemoveValue={(idx) => handleRemoveFieldValue(id, idx)}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
 
               {/* Add New Type Button / Input */}
               {!addingNewType ? (
@@ -550,6 +741,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   </button>
                 </div>
               )}
+
             </div>
           )}
         </div>

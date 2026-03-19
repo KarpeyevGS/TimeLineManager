@@ -1,0 +1,1058 @@
+{
+  "meta": {
+    "version": "1.0",
+    "appName": "Timeline Planner",
+    "created": "2026-02-20T18:34:48.558Z",
+    "lastModified": "2026-03-19T19:50:38.492Z"
+  },
+  "customFieldTypes": [
+    {
+      "id": "cft_1771612601435",
+      "name": "Тип задачи"
+    },
+    {
+      "id": "cft_1771612614943",
+      "name": "Платформа"
+    },
+    {
+      "id": "cft_1772062406035",
+      "name": "Участок"
+    },
+    {
+      "id": "cft_1773778182046",
+      "name": "Исполнитель"
+    }
+  ],
+  "resources": [
+    {
+      "id": "res_1",
+      "name": "Иван Иванов",
+      "role": "Developer"
+    },
+    {
+      "id": "res_2",
+      "name": "Мария Петрова",
+      "role": "Designer"
+    }
+  ],
+  "projects": [
+    {
+      "id": "proj_1",
+      "name": "Project A",
+      "color": "#4a7a85"
+    },
+    {
+      "id": "proj_2",
+      "name": "Project B",
+      "color": "#3b82f6"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task_1771612640833_24hf2sa486j",
+      "name": "Сборка в узбекестане",
+      "startDate": "2026-01-04T21:00:00.000Z",
+      "endDate": "2026-01-17T21:00:00.000Z",
+      "priority": "medium",
+      "status": "not_started",
+      "link": "https://dzen.ru/",
+      "color": "#80DEEA",
+      "fix": false,
+      "milestone": false,
+      "customFields": {
+        "cft_1771612601435": "Сборка",
+        "cft_1771612614943": "Мерседес"
+      }
+    },
+    {
+      "id": "task_1771615026333_khqvg6jogbp",
+      "name": "Сборка в узбекестане (копия)",
+      "startDate": "2026-02-02T21:00:00.000Z",
+      "endDate": "2026-02-02T21:00:00.000Z",
+      "priority": "blocker",
+      "status": "not_started",
+      "link": "https://dzen.ru/",
+      "color": "#D1C4E9",
+      "fix": false,
+      "milestone": true,
+      "customFields": {
+        "cft_1771612601435": "Сборка",
+        "cft_1771612614943": "Мерседес"
+      }
+    },
+    {
+      "id": "task_1771615073928_ogdzij8xkmj",
+      "name": "Сборка в узбекестане",
+      "startDate": "2026-01-20T21:00:00.000Z",
+      "endDate": "2026-01-25T21:00:00.000Z",
+      "priority": "medium",
+      "status": "not_started",
+      "link": "https://dzen.ru/",
+      "color": "#90CAF9",
+      "fix": false,
+      "milestone": false,
+      "customFields": {
+        "cft_1771612601435": "Сборка",
+        "cft_1771612614943": "Мерседес"
+      }
+    },
+    {
+      "id": "task_1771615076890_cnhox5k9ovt",
+      "name": "Сборка в узбекестане (копия) (копия) (копия)",
+      "startDate": "2026-02-15T21:00:00.000Z",
+      "endDate": "2026-02-20T21:00:00.000Z",
+      "priority": "medium",
+      "status": "not_started",
+      "link": "https://dzen.ru/",
+      "color": "#CE93D8",
+      "customFields": {
+        "cft_1771612601435": "Сборка",
+        "cft_1771612614943": "Мерседес"
+      }
+    },
+    {
+      "id": "task_1771615201068_xrdxzdd6pk",
+      "name": "#1 Сборка в узбекестане",
+      "startDate": "2026-02-10T21:00:00.000Z",
+      "endDate": "2026-02-12T21:00:00.000Z",
+      "priority": "medium",
+      "status": "not_started",
+      "link": "https://dzen.ru/",
+      "color": "#80DEEA",
+      "customFields": {
+        "cft_1771612601435": "",
+        "cft_1771612614943": "Мерседес"
+      }
+    },
+    {
+      "id": "task_1771615589712_tdp5lt5c43",
+      "name": "#2 Сборка в узбекестане",
+      "startDate": "2026-01-11T21:00:00.000Z",
+      "endDate": "2026-01-20T21:00:00.000Z",
+      "priority": "medium",
+      "status": "not_started",
+      "link": "https://dzen.ru/",
+      "color": "#26A69A",
+      "customFields": {
+        "cft_1771612601435": "",
+        "cft_1771612614943": "Мерседес"
+      }
+    },
+    {
+      "id": "task_1771615621657_doxw8yde604",
+      "name": "#3 Сборка в узбекестане",
+      "startDate": "2026-03-08T21:00:00.000Z",
+      "endDate": "2026-03-12T21:00:00.000Z",
+      "priority": "medium",
+      "status": "done",
+      "link": "https://dzen.ru/",
+      "color": "#F57F17",
+      "customFields": {
+        "cft_1771612601435": "",
+        "cft_1771612614943": "Мерседес"
+      }
+    },
+    {
+      "id": "task_1771616495169_zd1qrd4rmga",
+      "name": "#4 Сборка в узбекестане",
+      "startDate": "2026-03-22T21:00:00.000Z",
+      "endDate": "2026-05-09T21:00:00.000Z",
+      "priority": "medium",
+      "status": "not_started",
+      "link": "https://dzen.ru/",
+      "color": "#80DEEA",
+      "customFields": {
+        "cft_1771612601435": "",
+        "cft_1771612614943": "Мерседес"
+      }
+    },
+    {
+      "id": "task_1771620126535_ou7x403hwe",
+      "name": "#1 Сборка Шасси",
+      "startDate": "2026-01-05T21:00:00.000Z",
+      "endDate": "2026-01-06T21:00:00.000Z",
+      "priority": "medium",
+      "status": "not_started",
+      "color": "#26A69A",
+      "customFields": {
+        "cft_1771612601435": "Сборка Шасси"
+      }
+    },
+    {
+      "id": "task_1771620141616_28vv88fdb0j",
+      "name": "#2 Сборка Шасси",
+      "startDate": "2026-01-08T21:00:00.000Z",
+      "endDate": "2026-01-09T21:00:00.000Z",
+      "priority": "medium",
+      "status": "not_started",
+      "color": "#26A69A",
+      "customFields": {
+        "cft_1771612601435": "Сборка Шасси"
+      }
+    },
+    {
+      "id": "task_1771875030131_h96vqmemdtj",
+      "name": "1# Сборка трактора",
+      "startDate": "2026-02-08T21:00:00.000Z",
+      "endDate": "2026-02-10T21:00:00.000Z",
+      "priority": "medium",
+      "status": "not_started",
+      "color": "#F57F17",
+      "customFields": {
+        "cft_1771612601435": "Сборка",
+        "cft_1771612614943": "Трактор"
+      }
+    },
+    {
+      "id": "task_1771875045731_b4gf4gt6pb8",
+      "name": "2# Сборка трактора",
+      "startDate": "2026-01-11T21:00:00.000Z",
+      "endDate": "2026-01-30T21:00:00.000Z",
+      "priority": "medium",
+      "status": "not_started",
+      "color": "#B0BEC5",
+      "customFields": {
+        "cft_1771612601435": "Сборка",
+        "cft_1771612614943": "Трактор"
+      }
+    },
+    {
+      "id": "task_1772059971883_j81t69czoxj",
+      "name": "Гант задача",
+      "startDate": "2026-01-18T21:00:00.000Z",
+      "endDate": "2026-01-22T21:00:00.000Z",
+      "priority": "medium",
+      "status": "not_started",
+      "color": "#BCAAA4"
+    },
+    {
+      "id": "task_1772061616270_wbgxhmocjb",
+      "name": "Gantt",
+      "startDate": "2026-01-04T21:00:00.000Z",
+      "endDate": "2026-01-06T21:00:00.000Z",
+      "priority": "medium",
+      "status": "not_started",
+      "color": "#F48FB1",
+      "customFields": {
+        "cft_1772062406035": "Главной сборки"
+      }
+    },
+    {
+      "id": "task_1772228607210_jwvyon8m03",
+      "name": "123132",
+      "startDate": "2026-02-22T21:00:00.000Z",
+      "endDate": "2026-02-27T21:00:00.000Z",
+      "priority": "medium",
+      "status": "not_started",
+      "color": "#CE93D8",
+      "customFields": {
+        "cft_1771612601435": "Харакири"
+      }
+    },
+    {
+      "id": "task_1772914426595_zn6g5go55ho",
+      "name": "#4 Сборка в узбекестане",
+      "startDate": "2026-03-02T21:00:00.000Z",
+      "endDate": "2026-03-06T21:00:00.000Z",
+      "priority": "medium",
+      "status": "done",
+      "link": "https://dzen.ru/",
+      "color": "#F57F17",
+      "customFields": {
+        "cft_1771612601435": "",
+        "cft_1771612614943": "Мерседес"
+      }
+    },
+    {
+      "id": "task_1772914439685_bu5lvce8yr8",
+      "name": "#5 Сборка в узбекестане",
+      "startDate": "2026-03-15T21:00:00.000Z",
+      "endDate": "2026-03-19T21:00:00.000Z",
+      "priority": "medium",
+      "status": "not_started",
+      "link": "https://dzen.ru/",
+      "color": "#F57F17",
+      "customFields": {
+        "cft_1771612601435": "",
+        "cft_1771612614943": "Мерседес"
+      }
+    },
+    {
+      "id": "task_1773439124782_8whftjcwhj",
+      "name": "123132",
+      "startDate": "2026-02-01T21:00:00.000Z",
+      "endDate": "2026-02-01T21:00:00.000Z",
+      "priority": "medium",
+      "status": "not_started",
+      "color": "#B0BEC5",
+      "fix": false,
+      "milestone": false
+    },
+    {
+      "id": "task_1773778315437_i9vry2wq6d",
+      "name": "1123",
+      "startDate": "2026-01-06T21:00:00.000Z",
+      "endDate": "2026-01-06T21:00:00.000Z",
+      "priority": "medium",
+      "status": "not_started",
+      "color": "#B0BEC5",
+      "fix": false,
+      "milestone": false,
+      "customFields": {
+        "cft_1773778182046": "Вася"
+      }
+    },
+    {
+      "id": "task_1773779065914_3shm73yny1b",
+      "name": "123",
+      "startDate": "2026-01-05T21:00:00.000Z",
+      "endDate": "2026-01-05T21:00:00.000Z",
+      "priority": "medium",
+      "status": "not_started",
+      "color": "#B0BEC5",
+      "fix": false,
+      "milestone": false,
+      "customFields": {
+        "cft_1773778182046": "Вася"
+      }
+    }
+  ],
+  "timelineConfigs": [
+    {
+      "id": "timeline_default",
+      "name": "Main",
+      "description": "Добавьте параметры через UI",
+      "parameters": [
+        {
+          "name": "Сборка",
+          "level": 0,
+          "filters": {
+            "cft_1771612601435": "Сборка"
+          },
+          "id": "param_1771620720909_h6edn18iii6"
+        },
+        {
+          "name": "Разработка",
+          "level": 0,
+          "filters": {
+            "cft_1771612614943": "Мерседес"
+          },
+          "id": "param_1771619743530_9hclanvhm4l"
+        },
+        {
+          "name": "Покраска",
+          "level": 0,
+          "filters": {},
+          "id": "param_1771783661947_kl5oq2t3vz"
+        },
+        {
+          "name": "Подсборка",
+          "level": 1,
+          "filters": {
+            "cft_1771612614943": "Мерседес"
+          },
+          "id": "param_1771615194394_d2sy5hym2xi",
+          "parentId": "param_1771615194394_d2sy5hym2xi"
+        },
+        {
+          "name": "Покраска кузовной цех",
+          "level": 2,
+          "filters": {
+            "cft_1771612601435": "Покраска"
+          },
+          "id": "param_1771615833843_vqgsgrffmep",
+          "parentId": "param_1771615194394_d2sy5hym2xi"
+        },
+        {
+          "name": "Сборка",
+          "level": 1,
+          "filters": {
+            "cft_1771612601435": "Сборка",
+            "cft_1771612614943": "Мерседес"
+          },
+          "id": "param_1771612658551_aujtrabnzu",
+          "parentId": "param_1771612658551_aujtrabnzu"
+        },
+        {
+          "name": "Сборка двигателя",
+          "level": 2,
+          "filters": {},
+          "id": "param_1771619723292_ubswhf7eqa",
+          "parentId": "param_1771612658551_aujtrabnzu"
+        },
+        {
+          "name": "Закупка",
+          "level": 2,
+          "filters": {},
+          "id": "param_1771619729700_swpyqrarry",
+          "parentId": "param_1771612658551_aujtrabnzu"
+        },
+        {
+          "name": "Сборка шасси",
+          "level": 2,
+          "filters": {
+            "cft_1771612601435": "Сборка Шасси"
+          },
+          "id": "param_1771617780887_otcyupiuxx",
+          "parentId": "param_1771612658551_aujtrabnzu"
+        },
+        {
+          "name": "изготовление двигателя",
+          "level": 1,
+          "filters": {},
+          "id": "param_1771783678780_qpc8h0u69jh",
+          "parentId": "param_1771783661947_kl5oq2t3vz"
+        },
+        {
+          "name": "22",
+          "level": 2,
+          "parentId": "param_1771783678780_qpc8h0u69jh",
+          "filters": {},
+          "id": "param_1772311412123_ac94g5o7jb"
+        },
+        {
+          "name": "Грунтование",
+          "level": 1,
+          "parentId": "param_1771783661947_kl5oq2t3vz",
+          "filters": {},
+          "id": "param_1771786516185_4we9foi2qxm"
+        },
+        {
+          "name": "Покраска",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772915761958_ivls51xk6ca"
+        },
+        {
+          "name": "изготовление двигателя",
+          "level": 1,
+          "parentId": "param_1772915761958_ivls51xk6ca",
+          "filters": {},
+          "id": "param_1772915761959_rm95luugewb"
+        },
+        {
+          "name": "22",
+          "level": 1,
+          "parentId": "param_1772915761958_ivls51xk6ca",
+          "filters": {},
+          "id": "param_1772915761959_ldfl102lb4"
+        },
+        {
+          "name": "Грунтование",
+          "level": 1,
+          "parentId": "param_1772915761958_ivls51xk6ca",
+          "filters": {},
+          "id": "param_1772915761958_92qr2qpta1o"
+        },
+        {
+          "name": "Участок Главной сборки",
+          "level": 0,
+          "filters": {
+            "cft_1772062406035": "Главной сборки"
+          },
+          "id": "param_1772059971883_hu51xd9z5nh"
+        },
+        {
+          "name": "123123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228393164_j0ukx5395xg"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228383203_ghn8lokq5tb"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228390820_rfiwqtyb0w8"
+        },
+        {
+          "name": "123123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228397044_bvqrqcl3erh"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229241920_hzwrdzs4x3a"
+        },
+        {
+          "name": "123123123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228399256_7wew92qhacs"
+        },
+        {
+          "name": "123123132",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228401231_lahpc6r7wdl"
+        },
+        {
+          "name": "123123123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228403078_ifip29z7ck"
+        },
+        {
+          "name": "123123123123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228407251_l31jzgay39i"
+        },
+        {
+          "name": "123123123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228413428_6zm0ertuai"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229238953_ti3r2t7uc4c"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229246146_2l400w6i3ts"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229235720_8dj5lz8jqrk"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229232855_8zkz7obr94"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229230202_95v6c45usl5"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229224424_jzqh1gavmqe"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229289005_hdaq6arpbh6"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229295290_7mn2hr2kma8"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229280232_x56ssqmpw4"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229301205_betudxepw5"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229282726_mav78egj2dh"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229227199_4chnqrkma0i"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229285908_1qmkmhegwwj"
+        }
+      ]
+    },
+    {
+      "id": "timeline_1771871106600_u0gc2kdtcje",
+      "name": "Трактор!",
+      "parameters": [
+        {
+          "name": "Трактор",
+          "level": 0,
+          "filters": {
+            "cft_1771612601435": "Сборка",
+            "cft_1771612614943": "Трактор"
+          },
+          "id": "param_1771875006129_dih4aqtlr1n"
+        },
+        {
+          "name": "123123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772915440911_t9jlmin1o6f"
+        },
+        {
+          "name": "Участок Главной сборки",
+          "level": 0,
+          "filters": {
+            "cft_1772062406035": "Главной сборки"
+          },
+          "id": "param_1772915465251_mnbv40x04mf"
+        },
+        {
+          "name": "123123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772915465252_dm27oa597us"
+        },
+        {
+          "name": "Сборка",
+          "level": 0,
+          "filters": {
+            "cft_1771612601435": "Сборка"
+          },
+          "id": "param_1772915475821_y3vm329c6c"
+        },
+        {
+          "name": "Разработка",
+          "level": 0,
+          "filters": {
+            "cft_1771612614943": "Мерседес"
+          },
+          "id": "param_1772915475821_4kbi3monrhf"
+        },
+        {
+          "name": "Покраска",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772915525521_rfmkdjy0vdj"
+        },
+        {
+          "name": "Грунтование",
+          "level": 1,
+          "parentId": "param_1772915536006_15cvdbxcnam",
+          "filters": {},
+          "id": "param_1772915536006_lko7thn8dxp"
+        },
+        {
+          "name": "22",
+          "level": 1,
+          "parentId": "param_1772915536006_15cvdbxcnam",
+          "filters": {},
+          "id": "param_1772915536006_4l5b298vus9"
+        },
+        {
+          "name": "изготовление двигателя",
+          "level": 2,
+          "parentId": "param_1772915536006_4l5b298vus9",
+          "filters": {},
+          "id": "param_1772916202529_7l2yri997c7"
+        },
+        {
+          "name": "изготовление двигателя",
+          "level": 2,
+          "parentId": "param_1772915536006_4l5b298vus9",
+          "filters": {},
+          "id": "param_1772915536007_twcegonoil"
+        }
+      ]
+    },
+    {
+      "id": "timeline_1772056868425_hzwytx4pja",
+      "name": "Старый мельник",
+      "parameters": [
+        {
+          "name": "123132",
+          "level": 0,
+          "filters": {
+            "cft_1771612601435": "Харакири"
+          },
+          "id": "param_1772228607210_k8ynaaescyn"
+        }
+      ]
+    },
+    {
+      "id": "timeline_1772228997332_gbrsndjdchm",
+      "name": "Сам ты бездельник",
+      "parameters": []
+    },
+    {
+      "id": "timeline_1772228999312_lqslgiq2cg9",
+      "name": "привет",
+      "parameters": []
+    },
+    {
+      "id": "timeline_1772229017566_3ajt2ogf0hm",
+      "name": "Main (копия)",
+      "description": "Добавьте параметры через UI",
+      "parameters": [
+        {
+          "name": "Сборка",
+          "level": 0,
+          "filters": {
+            "cft_1771612601435": "Сборка"
+          },
+          "id": "param_1771620720909_h6edn18iii6"
+        },
+        {
+          "name": "Разработка",
+          "level": 0,
+          "filters": {
+            "cft_1771612614943": "Мерседес"
+          },
+          "id": "param_1771619743530_9hclanvhm4l"
+        },
+        {
+          "name": "Покраска",
+          "level": 0,
+          "filters": {},
+          "id": "param_1771783661947_kl5oq2t3vz"
+        },
+        {
+          "name": "Подсборка",
+          "level": 1,
+          "filters": {
+            "cft_1771612614943": "Мерседес"
+          },
+          "id": "param_1771615194394_d2sy5hym2xi",
+          "parentId": "param_1771615194394_d2sy5hym2xi"
+        },
+        {
+          "name": "Покраска кузовной цех",
+          "level": 2,
+          "filters": {
+            "cft_1771612601435": "Покраска"
+          },
+          "id": "param_1771615833843_vqgsgrffmep",
+          "parentId": "param_1771615194394_d2sy5hym2xi"
+        },
+        {
+          "name": "Сборка",
+          "level": 1,
+          "filters": {
+            "cft_1771612601435": "Сборка",
+            "cft_1771612614943": "Мерседес"
+          },
+          "id": "param_1771612658551_aujtrabnzu",
+          "parentId": "param_1771612658551_aujtrabnzu"
+        },
+        {
+          "name": "Сборка двигателя",
+          "level": 2,
+          "filters": {},
+          "id": "param_1771619723292_ubswhf7eqa",
+          "parentId": "param_1771612658551_aujtrabnzu"
+        },
+        {
+          "name": "Закупка",
+          "level": 2,
+          "filters": {},
+          "id": "param_1771619729700_swpyqrarry",
+          "parentId": "param_1771612658551_aujtrabnzu"
+        },
+        {
+          "name": "Сборка шасси",
+          "level": 2,
+          "filters": {
+            "cft_1771612601435": "Сборка Шасси"
+          },
+          "id": "param_1771617780887_otcyupiuxx",
+          "parentId": "param_1771612658551_aujtrabnzu"
+        },
+        {
+          "name": "Грунтование",
+          "level": 1,
+          "parentId": "param_1771783661947_kl5oq2t3vz",
+          "filters": {},
+          "id": "param_1771786516185_4we9foi2qxm"
+        },
+        {
+          "name": "изготовление двигателя",
+          "level": 1,
+          "filters": {},
+          "id": "param_1771783678780_qpc8h0u69jh",
+          "parentId": "param_1771783661947_kl5oq2t3vz"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229184698_s04p9qhgrx"
+        },
+        {
+          "name": "123123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229188884_f3bqys7j0xu"
+        }
+      ]
+    },
+    {
+      "id": "timeline_1772914470418_7j5dmclaa3q",
+      "name": "Main _",
+      "description": "Добавьте параметры через UI",
+      "parameters": [
+        {
+          "name": "Сборка",
+          "level": 0,
+          "filters": {
+            "cft_1771612601435": "Сборка"
+          },
+          "id": "param_1771620720909_h6edn18iii6"
+        },
+        {
+          "name": "Разработка",
+          "level": 0,
+          "filters": {
+            "cft_1771612614943": "Мерседес"
+          },
+          "id": "param_1771619743530_9hclanvhm4l"
+        },
+        {
+          "name": "Покраска",
+          "level": 0,
+          "filters": {},
+          "id": "param_1771783661947_kl5oq2t3vz"
+        },
+        {
+          "name": "Подсборка",
+          "level": 1,
+          "filters": {
+            "cft_1771612614943": "Мерседес"
+          },
+          "id": "param_1771615194394_d2sy5hym2xi",
+          "parentId": "param_1771615194394_d2sy5hym2xi"
+        },
+        {
+          "name": "Покраска кузовной цех",
+          "level": 2,
+          "filters": {
+            "cft_1771612601435": "Покраска"
+          },
+          "id": "param_1771615833843_vqgsgrffmep",
+          "parentId": "param_1771615194394_d2sy5hym2xi"
+        },
+        {
+          "name": "Сборка",
+          "level": 1,
+          "filters": {
+            "cft_1771612601435": "Сборка",
+            "cft_1771612614943": "Мерседес"
+          },
+          "id": "param_1771612658551_aujtrabnzu",
+          "parentId": "param_1771612658551_aujtrabnzu"
+        },
+        {
+          "name": "Сборка двигателя",
+          "level": 2,
+          "filters": {},
+          "id": "param_1771619723292_ubswhf7eqa",
+          "parentId": "param_1771612658551_aujtrabnzu"
+        },
+        {
+          "name": "Закупка",
+          "level": 2,
+          "filters": {},
+          "id": "param_1771619729700_swpyqrarry",
+          "parentId": "param_1771612658551_aujtrabnzu"
+        },
+        {
+          "name": "Сборка шасси",
+          "level": 2,
+          "filters": {
+            "cft_1771612601435": "Сборка Шасси"
+          },
+          "id": "param_1771617780887_otcyupiuxx",
+          "parentId": "param_1771612658551_aujtrabnzu"
+        },
+        {
+          "name": "Грунтование",
+          "level": 1,
+          "parentId": "param_1771783661947_kl5oq2t3vz",
+          "filters": {},
+          "id": "param_1771786516185_4we9foi2qxm"
+        },
+        {
+          "name": "22",
+          "level": 1,
+          "parentId": "param_1771783661947_kl5oq2t3vz",
+          "filters": {},
+          "id": "param_1772311412123_ac94g5o7jb"
+        },
+        {
+          "name": "изготовление двигателя",
+          "level": 1,
+          "filters": {},
+          "id": "param_1771783678780_qpc8h0u69jh",
+          "parentId": "param_1771783661947_kl5oq2t3vz"
+        },
+        {
+          "name": "Участок Главной сборки",
+          "level": 0,
+          "filters": {
+            "cft_1772062406035": "Главной сборки"
+          },
+          "id": "param_1772059971883_hu51xd9z5nh"
+        },
+        {
+          "name": "123123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228393164_j0ukx5395xg"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228383203_ghn8lokq5tb"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228390820_rfiwqtyb0w8"
+        },
+        {
+          "name": "123123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228397044_bvqrqcl3erh"
+        },
+        {
+          "name": "123123123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228399256_7wew92qhacs"
+        },
+        {
+          "name": "123123132",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228401231_lahpc6r7wdl"
+        },
+        {
+          "name": "123123123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228403078_ifip29z7ck"
+        },
+        {
+          "name": "123123123123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228407251_l31jzgay39i"
+        },
+        {
+          "name": "123123123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772228413428_6zm0ertuai"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229241920_hzwrdzs4x3a"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229238953_ti3r2t7uc4c"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229246146_2l400w6i3ts"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229235720_8dj5lz8jqrk"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229232855_8zkz7obr94"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229230202_95v6c45usl5"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229224424_jzqh1gavmqe"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229289005_hdaq6arpbh6"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229295290_7mn2hr2kma8"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229280232_x56ssqmpw4"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229301205_betudxepw5"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229282726_mav78egj2dh"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229227199_4chnqrkma0i"
+        },
+        {
+          "name": "123",
+          "level": 0,
+          "filters": {},
+          "id": "param_1772229285908_1qmkmhegwwj"
+        }
+      ]
+    }
+  ]
+}

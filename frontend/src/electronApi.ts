@@ -10,6 +10,7 @@ export interface ElectronAPI {
   appVersion:       () => Promise<string>;
   onWindowClosing:  (cb: () => void) => (() => void);
   closeConfirmed:   () => void;
+  print:            () => void;
 }
 
 declare global {

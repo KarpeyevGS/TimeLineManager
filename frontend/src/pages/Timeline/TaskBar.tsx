@@ -128,9 +128,10 @@ export const TaskBar: React.FC<TaskBarProps> = ({
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="flex-shrink-0 mr-2 opacity-70 hover:opacity-100 transition-opacity"
+          onMouseDown={(e) => e.stopPropagation()}
+          className="flex-shrink-0 flex items-center justify-center w-5 h-full mr-1 opacity-70 hover:opacity-100 transition-opacity"
         >
-          <Globe size={10} />
+          <Globe size={11} />
         </a>
       )}
       <div

@@ -127,6 +127,17 @@ ipcMain.handle(IPC.IMPORT_JSON, async (): Promise<string | null> => {
 
 ipcMain.handle(IPC.APP_VERSION, (): string => app.getVersion());
 
+// ---- IPC: Print ----
+
+ipcMain.on(IPC.PRINT, () => {
+  mainWindow?.webContents.print(
+    { silent: false, printBackground: true },
+    (success, failureReason) => {
+      if (!success) console.error('Print failed:', failureReason);
+    }
+  );
+});
+
 // ---- IPC: Window Close ----
 
 ipcMain.on(IPC.WINDOW_CLOSE_CONFIRMED, () => {

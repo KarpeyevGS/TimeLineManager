@@ -80,7 +80,7 @@ export interface Task {
   link?: string;
   projectId?: string;
   resourceIds?: string[];
-  customFields?: Record<string, string>;
+  customFields?: Record<string, string[]>;
   color?: string; // HEX цвет для задачи
   fix?: boolean; // Закреплённая задача — нельзя двигать на timeline
   milestone?: boolean; // Веха — 1 день, отображается ромбом
@@ -92,7 +92,7 @@ export interface TimelineParameter {
   name: string;
   level: number;
   parentId?: string;
-  filters: Record<string, string>;  // ← ФИЛЬТРЫ встроены
+  filters: Record<string, string[]>;  // ← ФИЛЬТРЫ встроены
 }
 
 // Конфигурация Timeline
@@ -144,19 +144,19 @@ const createInitialAppData = (): AppData => ({
 // ============= Утилиты для группировки задач =============
 
 /**
- * Проверяет, соответствует ли задача всем фильтрам параметра
- * Если фильтры пустые — возвращает false (параметр без фильтров не показывает задачи)
+ * Проверяет, соответствует ли задача всем фильтрам параметра.
+ * Логика: И по разным полям, И по значениям внутри одного поля.
+ * Если фильтры пустые — возвращает false (параметр без фильтров не показывает задачи).
  */
-export const matchesTaskFilters = (task: Task, filters: Record<string, string>): boolean => {
-  // Если фильтры пустые, ни одна задача не совпадает с параметром
-  if (Object.keys(filters).length === 0) {
-    return false;
-  }
+export const matchesTaskFilters = (task: Task, filters: Record<string, string[]>): boolean => {
+  if (Object.keys(filters).length === 0) return false;
 
-  return Object.entries(filters).every(([key, value]) => {
-    if (key === 'id') return task.id === value;
-    const taskValue = task.customFields?.[key];
-    return taskValue === value;
+  return Object.entries(filters).every(([key, filterValues]) => {
+    if (!filterValues || filterValues.length === 0) return true;
+    if (key === 'id') return filterValues.includes(task.id);
+    const taskValues = task.customFields?.[key] ?? [];
+    // AND: задача должна иметь ВСЕ значения из фильтра
+    return filterValues.every(fv => taskValues.includes(fv));
   });
 };
 
@@ -187,6 +187,13 @@ export const groupTasksByFilters = (
 
 const STORAGE_KEY = 'timeline_app_data';
 
+// Нормализует одиночное значение или массив в string[]
+const toStringArray = (v: unknown): string[] => {
+  if (Array.isArray(v)) return (v as string[]).filter(s => typeof s === 'string' && s.trim());
+  if (typeof v === 'string' && v.trim()) return [v];
+  return [];
+};
+
 // Shared JSON → AppData converter (used by both sync and async loaders)
 const parseStoredAppData = (json: string): AppData => {
   const parsed = JSON.parse(json) as AppData;
@@ -197,12 +204,24 @@ const parseStoredAppData = (json: string): AppData => {
       ...task,
       startDate: new Date(task.startDate),
       endDate: new Date(task.endDate),
+      customFields: task.customFields
+        ? Object.fromEntries(
+            Object.entries(task.customFields)
+              .map(([k, v]) => [k, toStringArray(v)])
+              .filter(([, arr]) => (arr as string[]).length > 0)
+          )
+        : undefined,
     })) ?? [],
     timelineConfigs: (parsed.timelineConfigs ?? [createDefaultTimelineConfig()]).map(cfg => ({
       ...cfg,
-      parameters: cfg.parameters.filter(p =>
-        Object.keys(p.filters ?? {}).every(k => customFieldIds.has(k))
-      ),
+      parameters: cfg.parameters
+        .filter(p => Object.keys(p.filters ?? {}).every(k => k === 'id' || customFieldIds.has(k)))
+        .map(p => ({
+          ...p,
+          filters: Object.fromEntries(
+            Object.entries(p.filters ?? {}).map(([k, v]) => [k, toStringArray(v)])
+          ),
+        })),
     })),
   };
 };
@@ -391,6 +410,52 @@ export const useAppStore = () => {
     notifySubscribers();
   }, []);
 
+  const renameCustomFieldType = useCallback((id: string, name: string): void => {
+    pushUndo();
+    globalAppData = {
+      ...globalAppData,
+      customFieldTypes: globalAppData.customFieldTypes.map(t =>
+        t.id === id ? { ...t, name } : t
+      ),
+    };
+    notifySubscribers();
+  }, []);
+
+  const reorderCustomFieldTypes = useCallback((orderedIds: string[]): void => {
+    pushUndo();
+    const map = new Map(globalAppData.customFieldTypes.map(t => [t.id, t]));
+    const reordered = orderedIds.map(id => map.get(id)).filter(Boolean) as CustomFieldType[];
+    globalAppData = { ...globalAppData, customFieldTypes: reordered };
+    notifySubscribers();
+  }, []);
+
+  const migrateCustomFieldsToArrays = useCallback((): void => {
+    pushUndo();
+    const migratedTasks = globalAppData.tasks.map(task => ({
+      ...task,
+      customFields: task.customFields
+        ? Object.fromEntries(
+            Object.entries(task.customFields).map(([k, v]) => [
+              k, Array.isArray(v) ? v : [v as unknown as string],
+            ])
+          )
+        : undefined,
+    }));
+    const migratedConfigs = globalAppData.timelineConfigs.map(cfg => ({
+      ...cfg,
+      parameters: cfg.parameters.map(p => ({
+        ...p,
+        filters: Object.fromEntries(
+          Object.entries(p.filters).map(([k, v]) => [
+            k, Array.isArray(v) ? v : [v as unknown as string],
+          ])
+        ),
+      })),
+    }));
+    globalAppData = { ...globalAppData, tasks: migratedTasks, timelineConfigs: migratedConfigs };
+    notifySubscribers();
+  }, []);
+
   // ===== Операции с ресурсами =====
   const getResources = useCallback((): Resource[] => {
     return globalAppData.resources;
@@ -451,7 +516,9 @@ export const useAppStore = () => {
                             ? (task.resourceIds as unknown[]).filter((r): r is string => typeof r === 'string')
                             : undefined,
             customFields: task.customFields && typeof task.customFields === 'object' && !Array.isArray(task.customFields)
-                            ? task.customFields as Record<string, string>
+                            ? Object.fromEntries(
+                                Object.entries(task.customFields as Record<string, unknown>).map(([k, v]) => [k, toStringArray(v)])
+                              )
                             : undefined,
           })),
           timelineConfigs: parsed.timelineConfigs ?? [createDefaultTimelineConfig()],
@@ -846,6 +913,9 @@ export const useAppStore = () => {
       add: addCustomFieldType,
       getAll: getCustomFieldTypes,
       delete: deleteCustomFieldType,
+      rename: renameCustomFieldType,
+      reorder: reorderCustomFieldTypes,
+      migrate: migrateCustomFieldsToArrays,
     },
     resources: {
       getAll: getResources,

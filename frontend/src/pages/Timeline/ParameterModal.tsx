@@ -29,7 +29,7 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
 }) => {
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState<string | undefined>(undefined);
-  const [filterFields, setFilterFields] = useState<Record<string, string>>({});
+  const [filterFields, setFilterFields] = useState<Record<string, string[]>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Все hooks ДОЛЖНЫ быть вызваны ДО условного return!
@@ -48,7 +48,13 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
     if (isOpen && mode === 'edit' && editingParameter) {
       setName(editingParameter.name);
       setParentId(editingParameter.parentId);
-      setFilterFields(editingParameter.filters ?? {});
+      setFilterFields(
+        Object.fromEntries(
+          Object.entries(editingParameter.filters ?? {}).map(([k, v]) => [
+            k, Array.isArray(v) ? v : [v as string],
+          ])
+        )
+      );
       setErrors({});
     } else if (isOpen && mode === 'add') {
       setName('');
@@ -81,9 +87,11 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
   const valueOptionsByFieldId = useMemo(() => {
     const map: Record<string, string[]> = {};
     (availableTasks ?? []).forEach(task => {
-      Object.entries(task.customFields ?? {}).forEach(([fieldId, val]) => {
+      Object.entries(task.customFields ?? {}).forEach(([fieldId, vals]) => {
         if (!map[fieldId]) map[fieldId] = [];
-        if (val && !map[fieldId].includes(val)) map[fieldId].push(val);
+        (Array.isArray(vals) ? vals : [vals as string]).forEach(val => {
+          if (val && !map[fieldId].includes(val)) map[fieldId].push(val);
+        });
       });
     });
     return map;
@@ -101,16 +109,15 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
   };
 
   const handleAddFilterField = () => {
-    // Добавляем пустую запись с временным ключом-заглушкой
     const placeholder = `__new_${Date.now()}`;
-    setFilterFields(prev => ({ ...prev, [placeholder]: '' }));
+    setFilterFields(prev => ({ ...prev, [placeholder]: [''] }));
   };
 
   // Обновить ключ фильтра (поле) — пользователь выбрал name, конвертируем в id
   const handleFilterFieldNameChange = (oldKey: string, newFieldName: string) => {
     const newId = fieldNameToId[newFieldName] ?? oldKey;
     setFilterFields(prev => {
-      const next: Record<string, string> = {};
+      const next: Record<string, string[]> = {};
       for (const [k, v] of Object.entries(prev)) {
         next[k === oldKey ? newId : k] = v;
       }
@@ -118,9 +125,33 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
     });
   };
 
-  // Обновить значение фильтра
-  const handleFilterValueChange = (key: string, value: string) => {
-    setFilterFields(prev => ({ ...prev, [key]: value }));
+  // Обновить конкретное значение фильтра по индексу
+  const handleFilterValueChange = (key: string, index: number, value: string) => {
+    setFilterFields(prev => ({
+      ...prev,
+      [key]: (prev[key] ?? ['']).map((v, i) => i === index ? value : v),
+    }));
+  };
+
+  // Добавить ещё одно значение к существующему полю фильтра
+  const handleAddFilterValue = (key: string) => {
+    setFilterFields(prev => ({
+      ...prev,
+      [key]: [...(prev[key] ?? ['']), ''],
+    }));
+  };
+
+  // Удалить конкретное значение; если последнее — удалить весь фильтр
+  const handleRemoveFilterValue = (key: string, index: number) => {
+    setFilterFields(prev => {
+      const next = (prev[key] ?? []).filter((_, i) => i !== index);
+      if (next.length === 0) {
+        const result = { ...prev };
+        delete result[key];
+        return result;
+      }
+      return { ...prev, [key]: next };
+    });
   };
 
   const handleRemoveFilter = (key: string) => {
@@ -142,7 +173,9 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
       parentId: parentId || undefined,
       // Исключаем незаполненные строки (временные ключи-заглушки и пустые значения)
       filters: Object.fromEntries(
-        Object.entries(filterFields).filter(([k, v]) => !k.startsWith('__new_') && k && v)
+        Object.entries(filterFields)
+          .filter(([k, vals]) => !k.startsWith('__new_') && k && vals.some(v => v.trim()))
+          .map(([k, vals]) => [k, vals.filter(v => v.trim())])
       ),
     };
 
@@ -237,7 +270,7 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
                   Нажмите кнопку ниже, чтобы добавить фильтр
                 </p>
               ) : (
-                Object.entries(filterFields).map(([fieldKey, fieldValue]) => {
+                Object.entries(filterFields).map(([fieldKey, fieldValues]) => {
                   // Специальный случай: фильтр по ID задачи (Ганта)
                   if (fieldKey === 'id') {
                     return (
@@ -245,8 +278,8 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
                         <div className="flex-1 h-7 px-2 text-xs flex items-center border border-app-border rounded bg-white text-app-text-head select-none font-medium">
                           ID задачи
                         </div>
-                        <div className="flex-1 h-7 px-2 text-xs flex items-center border border-app-border rounded bg-white text-app-text-head truncate font-mono" title={fieldValue}>
-                          {fieldValue}
+                        <div className="flex-1 h-7 px-2 text-xs flex items-center border border-app-border rounded bg-white text-app-text-head truncate font-mono" title={fieldValues[0]}>
+                          {fieldValues[0]}
                         </div>
                         <button
                           type="button"
@@ -259,42 +292,60 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
                     );
                   }
 
-                  // Определяем отображаемое имя поля (для autocomplete)
                   const fieldName = fieldIdToName[fieldKey] ?? '';
-                  // Доступные значения для выбранного поля
                   const valueOptions = valueOptionsByFieldId[fieldKey] ?? [];
-                  // Поле является «настоящим» id, если нашли в словаре
                   const isValidField = fieldKey in fieldIdToName;
 
                   return (
-                    <div key={fieldKey} className="flex gap-2 items-center">
-                      {/* Field autocomplete */}
-                      <Autocomplete
-                        options={fieldNameOptions}
-                        value={fieldName}
-                        onChange={newName => handleFilterFieldNameChange(fieldKey, newName)}
-                        placeholder="Поле..."
-                        className="flex-1 min-w-0"
-                      />
-
-                      {/* Value autocomplete */}
-                      <Autocomplete
-                        options={valueOptions}
-                        value={fieldValue}
-                        onChange={val => handleFilterValueChange(fieldKey, val)}
-                        placeholder={isValidField ? 'Значение...' : 'Сначала поле'}
-                        disabled={!isValidField}
-                        className="flex-1 min-w-0"
-                      />
-
-                      {/* Remove button */}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFilter(fieldKey)}
-                        className="flex-shrink-0 px-2 h-7 text-xs font-semibold text-app-error rounded border border-app-error/30 hover:bg-app-error/10 transition-colors"
-                      >
-                        −
-                      </button>
+                    <div key={fieldKey} className="flex flex-col gap-1">
+                      {/* Строка выбора поля + кнопки */}
+                      <div className="flex gap-2 items-center">
+                        <Autocomplete
+                          options={fieldNameOptions}
+                          value={fieldName}
+                          onChange={newName => handleFilterFieldNameChange(fieldKey, newName)}
+                          placeholder="Поле..."
+                          className="flex-1 min-w-0"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleAddFilterValue(fieldKey)}
+                          className="flex-shrink-0 px-2 h-7 text-xs font-semibold text-app-primary rounded border border-app-primary/30 hover:bg-app-primary/10 transition-colors"
+                          title="Добавить значение"
+                        >
+                          +
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFilter(fieldKey)}
+                          className="flex-shrink-0 px-2 h-7 text-xs font-semibold text-app-error rounded border border-app-error/30 hover:bg-app-error/10 transition-colors"
+                          title="Удалить фильтр"
+                        >
+                          −
+                        </button>
+                      </div>
+                      {/* Строки значений */}
+                      {fieldValues.map((val, idx) => (
+                        <div key={idx} className="flex gap-2 items-center pl-2">
+                          <Autocomplete
+                            options={valueOptions}
+                            value={val}
+                            onChange={v => handleFilterValueChange(fieldKey, idx, v)}
+                            placeholder={isValidField ? 'Значение...' : 'Сначала поле'}
+                            disabled={!isValidField}
+                            className="flex-1 min-w-0"
+                          />
+                          {fieldValues.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveFilterValue(fieldKey, idx)}
+                              className="flex-shrink-0 px-2 h-7 text-xs font-semibold text-app-text-muted rounded border border-app-border hover:bg-app-bg/50 transition-colors"
+                            >
+                              −
+                            </button>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   );
                 })

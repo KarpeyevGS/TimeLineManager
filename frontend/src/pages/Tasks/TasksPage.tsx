@@ -192,7 +192,7 @@ export const TasksPage: React.FC = () => {
                     </td>
                     {customFieldTypes.map(field => (
                       <td key={field.id} className="px-4 py-3 text-app-text-main text-sm">
-                        {task.customFields?.[field.id] || '—'}
+                        {(task.customFields?.[field.id] ?? []).join(', ') || '—'}
                       </td>
                     ))}
                     <td className="px-4 py-3 text-sm">
@@ -255,6 +255,9 @@ export const TasksPage: React.FC = () => {
           initialDate={taskModal.initialDate}
           customFieldTypes={customFieldTypes}
           onAddCustomFieldType={handleAddCustomFieldType}
+          onDeleteCustomFieldType={(id) => store.customFieldTypes.delete(id)}
+          onRenameCustomFieldType={(id, name) => store.customFieldTypes.rename(id, name)}
+          onReorderCustomFieldTypes={(ids) => store.customFieldTypes.reorder(ids)}
           onSave={handleSaveTask}
           onDelete={taskModal.mode === 'edit' ? handleDeleteTask : undefined}
           onClose={() => setTaskModal(null)}

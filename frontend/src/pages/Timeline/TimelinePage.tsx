@@ -10,7 +10,7 @@ import {
   isToday
 } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { Plus, Minus, Pencil, Trash2, Copy, GripVertical, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Minus, Pencil, Trash2, Copy, GripVertical, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Printer } from 'lucide-react';
 
 const PinIcon: React.FC<{ size?: number; className?: string }> = ({ size = 12, className }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className={className} xmlns="http://www.w3.org/2000/svg">
@@ -54,7 +54,7 @@ interface TaskModalState {
   initialDate?: Date;
   hasEmptyFilters?: boolean;  // ← Флаг для параметра без фильтров
   isGanttMode?: boolean;  // ← Создание задачи как Gantt-объекта (авто-строка)
-  initialFilters?: Record<string, string>;  // ← Предзаполнение customFields из фильтров строки
+  initialFilters?: Record<string, string[]>;  // ← Предзаполнение customFields из фильтров строки
 }
 
 interface ParameterModalState {
@@ -316,9 +316,11 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   const customFieldOptions = useMemo(() => {
     const map: Record<string, string[]> = {};
     store.appData.tasks.forEach(task => {
-      Object.entries(task.customFields ?? {}).forEach(([fieldId, val]) => {
+      Object.entries(task.customFields ?? {}).forEach(([fieldId, vals]) => {
         if (!map[fieldId]) map[fieldId] = [];
-        if (val && !map[fieldId].includes(val)) map[fieldId].push(val);
+        (Array.isArray(vals) ? vals : [vals as string]).forEach(val => {
+          if (val && !map[fieldId].includes(val)) map[fieldId].push(val);
+        });
       });
     });
     return map;
@@ -801,7 +803,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         store.timelines.addParameter(selectedTimelineId, {
           name: newTask.name,
           level: 0,
-          filters: { id: newTask.id },
+          filters: { id: [newTask.id] },
         });
         setGanttNotification(`Задача "${newTask.name}" создана. Строка добавлена в Timeline.`);
         setTimeout(() => setGanttNotification(null), 4000);
@@ -924,10 +926,18 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const handlePrint = () => {
+    if (window.electronAPI) {
+      window.electronAPI.print();
+    } else {
+      window.print();
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden">
+    <div className="flex flex-col h-full w-full overflow-hidden print-overflow">
       {/* Заголовок страницы - фиксирован */}
-      <div className="px-4 py-2 bg-app-surface z-50 flex-shrink-0 border-b border-app-border flex justify-between items-center">
+      <div className="print-hidden px-4 py-2 bg-app-surface z-50 flex-shrink-0 border-b border-app-border flex justify-between items-center">
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-bold text-app-text-head">{timelineConfig?.name ?? 'Timeline'}</h2>
         </div>
@@ -960,6 +970,14 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
               </div>
             </div>
           </div>
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-app-text-main hover:text-app-primary hover:bg-app-primary/10 transition-colors border border-app-border"
+            title="Печать таймлайна"
+          >
+            <Printer size={14} />
+            Печать
+          </button>
         </div>
       </div>
 
@@ -1096,7 +1114,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
             {/* Строка 2: Недели или Месяцы */}
             <div className="h-[24px] min-h-[24px] shadow-[inset_0_-1px_0_0_var(--color-app-border)] flex text-app-text-main bg-app-surface relative">
               <div
-                className="absolute inset-0 pointer-events-none"
+                className="absolute inset-0 pointer-events-none print-grid"
                 style={{
                   backgroundImage: `linear-gradient(to right, var(--color-app-border) 1px, transparent 1px)`,
                   backgroundSize: `${dayWidth * 7}px 100%`,
@@ -1140,7 +1158,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
             {/* Строка 3: Дни или Номера недель */}
             <div className="h-[24px] min-h-[24px] shadow-[inset_0_-1px_0_0_var(--color-app-border)] flex text-app-text-main bg-app-surface relative">
               <div
-                className="absolute inset-0 pointer-events-none"
+                className="absolute inset-0 pointer-events-none print-grid"
                 style={{
                   backgroundImage: `linear-gradient(to right, var(--color-app-border) 1px, transparent 1px)`,
                   backgroundSize: `${dayWidth < 12 ? dayWidth * 7 : dayWidth}px 100%`,
@@ -1205,7 +1223,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
 
       {/* ЗАМОРОЖЕННЫЕ СТРОКИ (если есть) */}
       {frozenRows.length > 0 && (
-        <div className="flex flex-row flex-shrink-0 border-b-2 border-app-primary/30 bg-app-surface">
+        <div className="flex flex-row flex-shrink-0 print-overflow border-b-2 border-app-primary/30 bg-app-surface">
           <div className="flex-shrink-0 border-r border-app-border bg-app-surface" style={{ width: sidebarWidth, minWidth: sidebarWidth }}>
             {frozenRows.map((param) => {
               const layers = getTaskLayers(param.id);
@@ -1265,12 +1283,12 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
           <div
             ref={frozenTimelineRef}
             onScroll={syncFromFrozenTimeline}
-            className="flex-1 overflow-auto hide-scrollbar"
+            className="flex-1 overflow-auto hide-scrollbar print-overflow"
           >
             <div style={{ width: totalWidth }} className="relative">
               {/* Слой вертикальных линий */}
               <div
-                className="absolute inset-0 pointer-events-none"
+                className="absolute inset-0 pointer-events-none print-grid"
                 style={{
                   backgroundImage: `linear-gradient(to right, var(--color-app-border) 1px, transparent 1px)`,
                   backgroundSize: `${dayWidth < 12 ? dayWidth * 7 : dayWidth}px 100%`,
@@ -1350,13 +1368,13 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
       )}
 
       {/* ПРОКРУЧИВАЕМЫЙ РАЗДЕЛ */}
-      <div className="flex-1 flex overflow-hidden min-h-0">
+      <div className="flex-1 flex overflow-hidden min-h-0 print-overflow">
         {/* ЛЕВАЯ КОЛОНКА */}
         <div className="flex-shrink-0 border-r border-app-border" style={{ width: sidebarWidth, minWidth: sidebarWidth }}>
           <div
             ref={sidebarRef}
             onScroll={syncFromSidebar}
-            className="h-full bg-app-surface overflow-y-auto overflow-x-hidden hide-scrollbar select-none"
+            className="h-full bg-app-surface overflow-y-auto overflow-x-hidden hide-scrollbar select-none print-overflow"
           >
             <DndContext
               sensors={dndSensors}
@@ -1400,7 +1418,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                 })}
               </SortableContext>
             </DndContext>
-            <div ref={addButtonRef} className="flex sticky bottom-0 z-10 border-t border-app-border bg-app-surface">
+            <div ref={addButtonRef} className="print-hidden flex sticky bottom-0 z-10 border-t border-app-border bg-app-surface">
               <button
                 onClick={() => { onTimelineParameterModalChange?.(true); }}
                 className="flex items-center gap-1 px-2 py-1 font-semibold text-app-text-main hover:text-app-primary transition-colors"
@@ -1427,7 +1445,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         <div
           ref={timelineRef}
           onScroll={syncFromTimeline}
-          className="flex-1 overflow-y-auto overflow-x-hidden bg-app-surface relative"
+          className="flex-1 overflow-y-auto overflow-x-hidden bg-app-surface relative print-overflow"
         >
           <div
             style={{
@@ -1441,7 +1459,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
             <div className="flex-1 relative bg-app-surface" onClick={() => { setSelectedParamIds(new Set()); setSelectedColumnDates(new Set()); }}>
               {/* Слой вертикальных линий */}
               <div
-                className="absolute inset-0 pointer-events-none"
+                className="absolute inset-0 pointer-events-none print-grid"
                 style={{
                   backgroundImage: `linear-gradient(to right, var(--color-app-border) 1px, transparent 1px)`,
                   backgroundSize: `${dayWidth < 12 ? dayWidth * 7 : dayWidth}px 100%`,
@@ -1626,7 +1644,9 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
               const hasEmpty = Object.keys(filters).length === 0;
               // Фильтры по 'id' не наследуем — они указывают на конкретную задачу
               const initialFilters = Object.fromEntries(
-                Object.entries(filters).filter(([key]) => key !== 'id')
+                Object.entries(filters)
+                  .filter(([key]) => key !== 'id')
+                  .map(([key, vals]) => [key, Array.isArray(vals) ? vals : [vals as string]])
               );
               setTaskModal({
                 mode: 'add',
@@ -1693,6 +1713,9 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
           customFieldTypes={store.customFieldTypes.getAll()}
           customFieldOptions={customFieldOptions}
           onAddCustomFieldType={(name) => store.customFieldTypes.add(name)}
+          onDeleteCustomFieldType={(id) => store.customFieldTypes.delete(id)}
+          onRenameCustomFieldType={(id, name) => store.customFieldTypes.rename(id, name)}
+          onReorderCustomFieldTypes={(ids) => store.customFieldTypes.reorder(ids)}
           onSave={handleSaveTask}
           onDelete={taskModal.mode === 'edit' ? handleDeleteTask : undefined}
           onEditParameter={(pendingTask) => {
