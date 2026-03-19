@@ -15,7 +15,7 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+      if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
         const target = e.target as HTMLElement;
         // Не перехватываем Ctrl+Z внутри текстовых полей
         if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;

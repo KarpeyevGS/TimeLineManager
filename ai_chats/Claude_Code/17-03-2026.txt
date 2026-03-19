@@ -416,5 +416,266 @@
   ⎿  Read index.html (23 lines)
   ⎿  Plan file referenced (~\.claude\plans\proud-shimmying-anchor.md)
 
+  - Added three-layer Electron architecture: main process, preload bridge via contextBridge, renderer
+  - IPC channels for data load/save/clear, view state, export/import, app version, window close interception
+  - Session-only data model: app always starts empty, data lives in memory only, no persistence between launches
+  - Safe close dialog: intercepts window close, offers export before quit, cancellable
+  - Safe import dialog: confirmation before replacing session data, with optional backup export first
+  - Fixed new project reset: export awaited before reset, reset skipped if export cancelled
+  - App icon: custom Gantt-chart style 256x256 ICO
+  - electron-builder NSIS + portable targets, forceCodeSigning disabled for unsigned local builds
+  - vite base set to ./ for file-protocol compatibility in production build
+  - CSP relaxed for Vite HMR and Google Fonts in development
 
+✻ Conversation compacted (ctrl+o for history)
+
+
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the
+     earlier portion of the conversation.
+
+     Summary:
+     1. Primary Request and Intent:
+        - Implement Phase 4: Electron Desktop Integration — convert the React/Vite/TypeScript TimeLine Planner app into
+     a standalone Windows desktop application
+        - Migrate data storage from localStorage to a JSON file on disk, then later to session-only in-memory model (no
+     persistence between launches)
+        - Create a custom app icon based on a Gantt-chart style image provided by the user
+        - Fix build errors (winCodeSign symlink issue, electron-builder config errors)
+        - Make the app always start empty on each launch (session-only), requiring user to import data each session
+        - Implement unified 3-button confirmation dialogs for: new project creation, app close (Electron window
+     intercept), and import (with correct flow: dialog first, file picker second)
+        - Fix bug where "Save and reset" reset data before export completed (and even if export was cancelled)
+
+     2. Key Technical Concepts:
+        - Three-layer Electron architecture: Main Process (Node.js) ↔ IPC ↔ Preload (contextBridge) ↔
+     window.electronAPI ↔ Renderer (React/Vite)
+        - contextBridge with contextIsolation:true, nodeIntegration:false, sandbox:false
+        - IPC channels: invoke (Promise-based, request/response) vs send (fire-and-forget)
+        - Session-only data model: initGlobalAppData always starts empty in Electron, saveAppData returns early (no disk
+      write)
+        - Window close interception: event.preventDefault() + IPC WINDOW_CLOSING → renderer dialog →
+     WINDOW_CLOSE_CONFIRMED → mainWindow.close()
+        - electron-builder NSIS + portable targets, forceCodeSigning:false
+        - Vite base:'./' for file-protocol compatibility in production
+        - async bootstrap before createRoot (initGlobalAppData)
+        - exportData returning Promise<boolean> to detect if user cancelled the save dialog
+
+     3. Files and Code Sections:
+
+        - `electron/ipcChannels.ts` — shared IPC channel constants, used by both main and preload
+          ```typescript
+          export const IPC = {
+            DATA_LOAD: 'data:load', DATA_SAVE: 'data:save', DATA_CLEAR: 'data:clear',
+            VIEW_STATE_LOAD: 'viewState:load', VIEW_STATE_SAVE: 'viewState:save',
+            EXPORT_JSON: 'file:exportJson', IMPORT_JSON: 'file:importJson',
+            APP_VERSION: 'app:version',
+            WINDOW_CLOSING: 'window:closing',
+            WINDOW_CLOSE_CONFIRMED: 'window:closeConfirmed',
+          } as const;
+          ```
+
+        - `electron/main.ts` — main process; handles all IPC, window creation, close interception
+          - Module-level: `let mainWindow: BrowserWindow | null = null; let isCloseConfirmed = false;`
+          - In createWindow: `mainWindow = win; win.on('close', e => { if (!isCloseConfirmed) { e.preventDefault();
+     win.webContents.send(IPC.WINDOW_CLOSING); } })`
+          - ipcMain.on(WINDOW_CLOSE_CONFIRMED): sets isCloseConfirmed=true, calls mainWindow?.close()
+          - EXPORT_JSON handler returns `Promise<boolean>` (true=saved, false=cancelled)
+          - DATA_LOAD, DATA_SAVE (fire-and-forget), DATA_CLEAR use fs operations on userData path
+
+        - `electron/preload.ts` — contextBridge exposing 11 typed functions
+          ```typescript
+          exportJson: (json: string): Promise<boolean> => ipcRenderer.invoke(IPC.EXPORT_JSON, json),
+          onWindowClosing: (cb: () => void): (() => void) => {
+            ipcRenderer.on(IPC.WINDOW_CLOSING, cb);
+            return () => { ipcRenderer.removeListener(IPC.WINDOW_CLOSING, cb); };
+          },
+          closeConfirmed: (): void => ipcRenderer.send(IPC.WINDOW_CLOSE_CONFIRMED),
+          ```
+
+        - `frontend/src/electronApi.ts` — typed window.electronAPI declaration
+          ```typescript
+          export interface ElectronAPI {
+            isElectron: true;
+            dataLoad: () => Promise<string | null>;
+            dataSave: (json: string) => void;
+            dataClear: () => void;
+            viewStateLoad: () => Promise<string | null>;
+            viewStateSave: (json: string) => void;
+            exportJson: (json: string) => Promise<boolean>;
+            importJson: () => Promise<string | null>;
+            appVersion: () => Promise<string>;
+            onWindowClosing: (cb: () => void) => (() => void);
+            closeConfirmed: () => void;
+          }
+          ```
+
+        - `frontend/src/store.ts` — storage abstraction, session-only model in Electron
+          - `parseStoredAppData(json)` — shared JSON→AppData converter
+          - `initGlobalAppData()` — async, always starts empty in Electron (api.dataClear() + createInitialAppData()),
+     uses localStorage in browser
+          - `saveAppData()` — returns early in Electron (no disk write); writes to localStorage in browser
+          - `createInitialAppData()` — no default resources or projects (empty)
+          - `exportData` returns `Promise<boolean>`:
+            ```typescript
+            const exportData = useCallback(async (): Promise<boolean> => {
+              const json = JSON.stringify(globalAppData, null, 2);
+              const api = getElectronAPI();
+              if (api) { return await api.exportJson(json); }
+              else {
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'timeline_export.json'; a.click();
+                URL.revokeObjectURL(url); return true;
+              }
+            }, []);
+            ```
+          - `useTimelineViewState` — async-loads view state from Electron on mount via useEffect
+          - Cross-tab storage listener guarded: `if (typeof window !== 'undefined' && !isElectron())`
+          - Singleton init: `let globalAppData: AppData = createInitialAppData();` (populated by initGlobalAppData)
+
+        - `frontend/src/main.tsx` — async bootstrap
+          ```typescript
+          async function bootstrap() {
+            await initGlobalAppData();
+            createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
+          }
+          bootstrap();
+          ```
+
+        - `frontend/src/components/layout/Sidebar.tsx` — major refactor for all 3 confirmation scenarios
+          - State: `confirmImport`, `confirmClose` (removed `pendingImport` in final version)
+          - `hasDataRef = useRef(false); hasDataRef.current = store.appData.tasks.length > 0;`
+          - useEffect for window closing listener (registers once on mount)
+          - `doImport(content)` — helper that calls store.import and shows result alert
+          - `openFilePicker()` — opens native Electron dialog or browser file input (called AFTER confirmation)
+          - `handleImportClick()` — if hasData shows dialog, else directly opens file picker
+          - `handleImport` (onChange) — just calls doImport directly (dialog already shown before)
+          - confirmNewProject dialog: fixed to await export before reset, skip reset if export cancelled, no
+     window.location.reload() in Electron
+          - confirmImport dialog: onSecondary → openFilePicker(); onConfirm → await export → if saved → openFilePicker()
+          - confirmClose dialog: onSecondary → closeConfirmed(); onConfirm → await export → if saved → closeConfirmed()
+
+        - `frontend/vite.config.ts`
+          ```typescript
+          export default defineConfig(({ command }) => ({
+            plugins: [react()],
+            base: command === 'serve' ? '/' : './',
+            resolve: { alias: { "@": path.resolve(process.cwd(), "./src") } },
+          }))
+          ```
+
+        - `frontend/index.html` — title "TimeLine Planner", CSP relaxed for Vite HMR + Google Fonts
+
+        - `package.json` (root) — Electron host with scripts: dev, dev:renderer, dev:electron, build, build:renderer,
+     build:electron, dist:win, lint
+
+        - `electron-builder.yml`
+          ```yaml
+          appId: com.yourcompany.timelineplanner
+          productName: TimeLine Planner
+          forceCodeSigning: false
+          win:
+            target: [{target: nsis, arch: [x64]}, {target: portable, arch: [x64]}]
+            icon: assets/icon.ico
+          nsis: { oneClick: false, allowToChangeInstallationDirectory: true, ... language: 1049 }
+          ```
+
+        - `assets/icon.ico` — Gantt-chart style icon created via PowerShell + System.Drawing: dark navy background, blue
+      rounded square with gradient, inner card with grid, blue/green/orange rounded task bars, connector line, orange
+     diamond milestone, ruler with ticks
+
+     4. Errors and fixes:
+        - winCodeSign symlink error on Windows: `Cannot create symbolic link` when extracting winCodeSign-2.6.0.7z.
+     Fixed by adding `forceCodeSigning: false` to electron-builder.yml (earlier attempt used invalid fields `sign: null`
+      and `signingHashAlgorithms: null` which caused schema validation error).
+        - `sign`/`signingHashAlgorithms` not valid in electron-builder.yml win section: Replaced with top-level
+     `forceCodeSigning: false`.
+        - Access denied on rebuild: app exe was still running. Solution: close the app before rebuilding.
+        - App opened with default data (Иван Иванов, Мария Петрова, Project A/B): Removed defaults from
+     `createInitialAppData()`.
+        - Data persisted between launches from `%APPDATA%\timeline-planner\timeline_app_data.json`: Changed
+     `initGlobalAppData` to always call `api.dataClear()` and `createInitialAppData()` in Electron. Also changed
+     `saveAppData` to return early in Electron (no disk writes).
+        - After import success, clicking OK cleared data: `window.location.reload()` re-ran bootstrap → empty state.
+     Fixed by removing reload() in Electron context (setImportAlert(null) instead).
+        - PowerShell arithmetic in `@()` arrays failed: Pre-computed values in variables instead.
+        - `setPendingImport` not found after removing `pendingImport` state: Removed the stale reference from onCancel
+     handler in confirmImport dialog.
+        - "Save and reset" reset project even if export cancelled: Changed to `const saved = await store.export(); if
+     (saved) { store.reset(); }`.
+        - Import flow was: file picker → dialog. User wanted: dialog → file picker. Restructured entire import flow.
+
+     5. Problem Solving:
+        - Session-only data model: solved by making initGlobalAppData always start empty + saveAppData no-op in Electron
+        - Window close interception: solved via event.preventDefault() + IPC round-trip (WINDOW_CLOSING → renderer shows
+      dialog → WINDOW_CLOSE_CONFIRMED → main closes)
+        - Export cancellation safety: solved by returning boolean from exportJson/exportData indicating whether user
+     actually saved
+        - Import flow order: solved by introducing openFilePicker() helper called from within dialog action handlers,
+     handleImportClick() as the entry point that shows dialog first if data exists
+
+     6. All user messages:
+        - Implement the following plan: [Phase 4 Electron Desktop Integration full plan]
+        - работает, можно заменить иконку электрон на какую-нибудь иконку таймлайн или гант?
+        - [provided image URL] можешь создать иконку в этой же папке на основании этого фото?
+        - как получить установщик?
+        - [build output with winCodeSign symlink errors]
+        - C:\...\release проверь всё ли получилось?
+        - открылось, но с БД, по умолчанию должно открываться без БД - только импорт
+        - нет, после пересборки всё равно открывается с БД
+        - нет, нужно, чтобы каждый раз при открывании, открывалось пустое приложение, импорт каждый раз
+        - а файл где-то в системе сохраняется после закрытия?
+        - нет, открыл с БД [after rebuild failed due to yml error]
+        - пересобрал не помогло [build output showing sign/signingHashAlgorithms validation error]
+        - теперь пишет, что данные успешно импортированы, и их видно. Но при нажатии "ок" данные пропадают. При этом,
+     если просто работать в приложении, то всё вроде как работает
+        - нет, проблема сохранилась [build failed - app still running]
+        - Нужно устранить потерю данных в desktop-режиме и унифицировать подтверждение опасных действий. [detailed spec
+     for 3 confirmation dialog scenarios]
+        - замечательно, только в сценарии с "импорт" сначала выходит на файловую систему, а должен выдать окно, после
+     чего файловая система, как в логике с новым проектом. Сброс текущей сессии, только после выбора файла для импорта.
+     В случае отмены, возвращает на проект.
+        - сделай краткое описание для git текстом здесь без использования ковычек
+        - [summary request - current message]
+
+     7. Pending Tasks:
+        - No explicitly pending tasks. The last requested change (import flow: dialog first, then file picker) was
+     implemented and compiled successfully. Build command `npm run dist:win` was given to the user to run.
+
+     8. Current Work:
+        The last completed task was fixing the import flow in `frontend/src/components/layout/Sidebar.tsx`. The user
+     said: "только в сценарии с импорт сначала выходит на файловую систему, а должен выдать окно, после чего файловая
+     система". Changes made:
+        - Removed `pendingImport` state
+        - Added `openFilePicker()` helper that opens Electron native dialog OR browser file input
+        - Added `handleImportClick()` as button onClick: shows confirmImport dialog if hasData, else calls
+     openFilePicker() directly
+        - Refactored `handleImport` (onChange) to just call `doImport()` without any dialog logic
+        - Updated confirmImport dialog: onSecondary → `setConfirmImport(false); openFilePicker();` / onConfirm → `await
+     store.export(); if (saved) openFilePicker();` / onCancel → `setConfirmImport(false)`
+        - TypeScript compiled cleanly. User was given `npm run dist:win` to build.
+
+     9. Optional Next Step:
+        No pending tasks remain. The user's last explicit request was the import flow fix, which is complete and
+     compiles. The git commit message was also provided. No further steps are indicated unless the user reports new
+     issues after running `npm run dist:win`.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you
+     generated), read the full transcript at: C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--T
+     imeLineManager-4-18-02-2026\69ffb46f-eb73-4e65-bf2c-59b86e53b807.jsonl
+
+
+
+
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file src\components\layout\Sidebar.tsx
+  ⎿  Referenced file src\store.ts
+  ⎿  Read src\electronApi.ts (24 lines)
+  ⎿  Read ..\electron\preload.ts (20 lines)
+  ⎿  Read ..\electron\ipcChannels.ts (13 lines)
+  ⎿  Plan file referenced (~\.claude\plans\memoized-discovering-tower.md)
 

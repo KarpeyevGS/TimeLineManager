@@ -4,7 +4,7 @@
   "main": "dist-electron/main.js",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n VITE,ELECTRON -c cyan,yellow \"npm run dev:renderer\" \"wait-on http://localhost:5173 && npm run dev:electron\"",
+    "dev": "concurrently -n VITE,ELECTRON -c cyan,yellow \"npm run dev:renderer\" \"node scripts/wait-and-run-electron.js\"",
     "dev:renderer": "cd frontend && npm run dev",
     "dev:electron": "tsc -p electron/tsconfig.json && electron .",
     "build": "npm run build:renderer && npm run build:electron",

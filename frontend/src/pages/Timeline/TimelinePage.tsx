@@ -530,6 +530,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     scrollbarRef,
     frozenRowsCount: frozenRows.length,
     initialScrollLeft: viewState.scrollLeft,
+    updateViewState,
   });
 
   // После рендера контекстного меню корректируем позицию по фактическому размеру

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, Menu } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { IPC } from './ipcChannels';
@@ -29,7 +29,7 @@ function createWindow() {
   mainWindow = win;
 
   if (isDev) {
-    win.loadURL('http://localhost:5173');
+    win.loadURL('http://[::1]:5173');
     win.webContents.openDevTools();
   } else {
     win.loadFile(path.join(__dirname, '../frontend/dist/index.html'));
@@ -136,7 +136,10 @@ ipcMain.on(IPC.WINDOW_CLOSE_CONFIRMED, () => {
 
 // ---- App lifecycle ----
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  Menu.setApplicationMenu(null);
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

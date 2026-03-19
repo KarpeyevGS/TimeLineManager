@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useCallback } from 'react';
-import { saveTimelineViewState, loadTimelineViewState } from '../../../store';
+import type { TimelineViewState } from '../../../store';
 
 interface UseScrollSyncParams {
   sidebarRef: React.RefObject<HTMLDivElement | null>;
@@ -9,6 +9,7 @@ interface UseScrollSyncParams {
   scrollbarRef: React.RefObject<HTMLDivElement | null>;
   frozenRowsCount: number;
   initialScrollLeft: number;
+  updateViewState: (updates: Partial<TimelineViewState>) => void;
 }
 
 interface UseScrollSyncResult {
@@ -26,6 +27,7 @@ export const useScrollSync = ({
   scrollbarRef,
   frozenRowsCount,
   initialScrollLeft,
+  updateViewState,
 }: UseScrollSyncParams): UseScrollSyncResult => {
   const isSyncing = React.useRef(false);
   const scrollSaveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -72,10 +74,10 @@ export const useScrollSync = ({
     if (scrollSaveTimer.current) clearTimeout(scrollSaveTimer.current);
     scrollSaveTimer.current = setTimeout(() => {
       if (scrollbarRef.current) {
-        saveTimelineViewState({ ...loadTimelineViewState(), scrollLeft: scrollbarRef.current.scrollLeft });
+        updateViewState({ scrollLeft: scrollbarRef.current.scrollLeft });
       }
     }, 300);
-  }, [scrollbarRef, timelineRef, timeHeaderRef, frozenTimelineRef]);
+  }, [scrollbarRef, timelineRef, timeHeaderRef, frozenTimelineRef, updateViewState]);
 
   const syncFromSidebar = useCallback(() => {
     if (isSyncing.current) return;

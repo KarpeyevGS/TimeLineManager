@@ -1,0 +1,165 @@
+● fix: ctrl+z на любой раскладке, сохранение календаря timeline, упрощение таблицы задач
+
+  - e.code вместо e.key для Ctrl+Z — работает на русской раскладке
+  - Menu.setApplicationMenu(null) — убран перехват Ctrl+Z дефолтным меню Electron
+  - useScrollSync: scrollLeft сохраняется через updateViewState, а не loadTimelineViewState — устранена перезапись
+  dateRange при скролле
+  - Electron dev URL заменён на [::1]:5173 (Vite слушает на IPv6)
+  - TasksPage: убраны колонки Проект и Исполнители, статус/приоритет заменён на три состояния: Завершено / Блокер / —
+
+✻ Conversation compacted (ctrl+o for history)
+
+
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the
+     earlier portion of the conversation.
+
+     Summary:
+     1. Primary Request and Intent:
+        - Fix Ctrl+Z (undo) not working in the Electron desktop version
+        - Fix timeline date range (calendar) not being saved/persisted in Electron
+        - Fix Ctrl+Z working only on English keyboard layout (should work on Russian too)
+        - Fix Electron dev mode not launching (white screen / ERR_CONNECTION_REFUSED)
+        - Refactor TasksPage table: remove Проект and Исполнители columns, simplify Статус/Приоритет to only show
+     Завершено / Блокер / —
+
+     2. Key Technical Concepts:
+        - Electron three-layer architecture: main process, preload (contextBridge), renderer
+        - IPC channels for data/view state load/save
+        - Electron default application menu intercepting keyboard accelerators before renderer keydown
+        - e.key vs e.code for keyboard layout-independent shortcuts
+        - IPv6 vs IPv4 localhost resolution issue on Windows 11 (Vite listens on [::1], not 127.0.0.1)
+        - wait-on HEAD vs GET request issue with Vite dev server
+        - useScrollSync saving view state by reading localStorage directly (broken in Electron where state is in a file)
+        - React singleton store with global state + subscriber pattern
+        - Timeline view state persisted separately from app data (file via IPC in Electron, localStorage in browser)
+
+     3. Files and Code Sections:
+        - `electron/main.ts`
+          - Added `Menu` to imports, added `Menu.setApplicationMenu(null)` on app ready to prevent default menu from
+     intercepting Ctrl+Z
+          - Changed `win.loadURL('http://localhost:5173')` → `win.loadURL('http://[::1]:5173')` to fix IPv6 issue on
+     Windows 11
+          - Final relevant snippets:
+            ```ts
+            import { app, BrowserWindow, ipcMain, dialog, shell, Menu } from 'electron';
+            app.whenReady().then(() => {
+              Menu.setApplicationMenu(null);
+              createWindow();
+            });
+            // dev mode:
+            win.loadURL('http://[::1]:5173');
+            ```
+
+        - `frontend/src/App.tsx`
+          - Changed `e.key === 'z'` → `e.code === 'KeyZ'` so Ctrl+Z works regardless of keyboard layout
+     (Russian/English)
+          ```ts
+          if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+          ```
+
+        - `frontend/src/pages/Timeline/hooks/useScrollSync.ts`
+          - Root cause of calendar not saving: line 75 called `saveTimelineViewState({ ...loadTimelineViewState(),
+     scrollLeft: ... })` which reads from localStorage (always empty in Electron) — overwrote the saved dateRange with
+     default on every scroll
+          - Fix: added `updateViewState: (updates: Partial<TimelineViewState>) => void` parameter, replaced the broken
+     save call with `updateViewState({ scrollLeft: scrollbarRef.current.scrollLeft })`
+          - Changed import from `saveTimelineViewState, loadTimelineViewState` to `import type { TimelineViewState }`
+          ```ts
+          updateViewState({ scrollLeft: scrollbarRef.current.scrollLeft });
+          ```
+
+        - `frontend/src/pages/Timeline/TimelinePage.tsx`
+          - Added `updateViewState` to the `useScrollSync` call:
+          ```ts
+          const { syncFromTimeline, syncFromScrollbar, syncFromSidebar, syncFromFrozenTimeline } = useScrollSync({
+            ...
+            initialScrollLeft: viewState.scrollLeft,
+            updateViewState,
+          });
+          ```
+
+        - `frontend/src/pages/Tasks/TasksPage.tsx`
+          - Removed columns: Проект, Исполнители from both thead and tbody
+          - Removed unused variables: `statusLabels`, `priorityLabels`, `statusColors`, `priorityColors`, `getTagColor`,
+      `projectMap`, `resourceMap`, `getProjectName`, `getResourceNames`, `allProjects`, `allResources`
+          - Replaced Статус + Приоритет columns with single Статус column using new `getTaskTag` function:
+          ```ts
+          const getTaskTag = (task: Task): { label: string; className: string } | null => {
+            if (task.status === 'done') return { label: 'Завершено', className: 'bg-green-100 text-green-700' };
+            if (task.priority === 'blocker') return { label: 'Блокер', className: 'bg-red-200 text-red-800' };
+            return null;
+          };
+          ```
+          - Cell render: tag ? `<span className={tag.className}>{tag.label}</span>` : `<span
+     className="text-app-text-muted">—</span>`
+
+        - `package.json`
+          - Changed dev script to use `node scripts/wait-and-run-electron.js` for polling Vite readiness
+          - Removed wait-on dependency usage in dev script
+
+        - `scripts/wait-and-run-electron.js` (new file)
+          - Polls `http://127.0.0.1:5173` (later found irrelevant due to IPv6 issue) with http.get, launches electron
+     when ready
+
+     4. Errors and fixes:
+        - **Ctrl+Z not working in Electron**: Electron default menu registers Ctrl+Z accelerator at OS level,
+     intercepting before renderer keydown. Fixed by `Menu.setApplicationMenu(null)`.
+        - **Ctrl+Z only works on English layout**: `e.key === 'z'` returns 'я' on Russian layout. Fixed by using `e.code
+      === 'KeyZ'`.
+        - **Calendar date range not saving**: `useScrollSync` called `loadTimelineViewState()` (reads localStorage,
+     always empty in Electron) on every scroll, overwriting the saved file with default dateRange. Fixed by passing
+     `updateViewState` to the hook.
+        - **Electron dev white screen / ERR_CONNECTION_REFUSED**: Vite listens on IPv6 `[::1]:5173` on Windows 11, but
+     Electron tried `localhost` then `127.0.0.1` (both IPv4). Fixed by using `http://[::1]:5173`.
+        - **wait-on hanging**: wait-on sends HEAD requests, Vite doesn't respond to HEAD. Tried `http-get://` prefix —
+     still hung. Replaced with polling Node.js script. Root cause was actually the IPv6 issue, not wait-on.
+        - **Two-terminal dev workflow confusion**: User was closing the Vite terminal before running dev:electron.
+     Explained both must stay open simultaneously.
+
+     5. Problem Solving:
+        - Diagnosed Electron Ctrl+Z interception via default menu accelerators
+        - Diagnosed race condition / data overwrite in useScrollSync using stale localStorage read
+        - Diagnosed IPv6 vs IPv4 localhost resolution on Windows 11 via `netstat -ano | findstr :5173` which showed
+     `[::1]:5173 LISTENING`
+        - Simplified TasksPage to match actual TaskModal UX (only Завершено/Блокер checkboxes)
+
+     6. All user messages:
+        - "в десктопной версии не работает ctrl+z и не сохраняется календарь выстовленный в timeline"
+        - "ctrl+z работает только на английском, должен работать на русском, нужна пересборка?"
+        - [PowerShell output showing npm run dev hanging after VITE ready]
+        - "не открывает приложение" [with npm run dev log]
+        - "открыл но с белым окном" [with electron log showing ERR_CONNECTION_REFUSED]
+        - "снова белый экран!" [after 127.0.0.1 fix]
+        - "можно продолжить разработку приложения в front end браузер?"
+        - "Нужно привести таблицу задач к текущей бизнес-логике задачи..." [full spec for TasksPage refactor]
+        - "есть еще контекст в этой сессии?"
+        - "я имею ввиду, сколько% контекстного окна еще осталось?"
+        - "сделай краткое описание для git текстом сюда без ковычек"
+
+     7. Pending Tasks:
+        - None explicitly pending. All requested tasks completed.
+
+     8. Current Work:
+        The last completed task was the git commit message request. Before that, the TasksPage refactor was completed:
+        - Removed Проект and Исполнители columns
+        - Replaced Статус + Приоритет with single column showing only Завершено / Блокер / — via `getTaskTag`
+        - Build verified clean: `✓ built in 3.73s`
+
+     9. Optional Next Step:
+        No pending tasks. The user asked for a git commit message summary as the final action ("сделай краткое описание
+     для git текстом сюда без ковычек"), which was provided. No next step unless user specifies new work.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you
+     generated), read the full transcript at: C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--T
+     imeLineManager-4-18-02-2026\20040b7d-c2ab-4384-b065-40b34135c2bf.jsonl
+
+
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Read src\pages\Tasks\TasksPage.tsx (280 lines)
+  ⎿  Read ..\electron\main.ts (147 lines)
+  ⎿  Read ..\scripts\wait-and-run-electron.js (17 lines)
+  ⎿  Read ..\package.json (25 lines)
+  ⎿  Read src\App.tsx (70 lines)

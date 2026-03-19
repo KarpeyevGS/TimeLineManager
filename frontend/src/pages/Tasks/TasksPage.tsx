@@ -27,20 +27,7 @@ export const TasksPage: React.FC = () => {
 
   // Получаем все задачи и вспомогательные данные
   const allTasks = useMemo(() => store.tasks.getAll(), [store.appData.tasks]);
-  const allProjects = useMemo(() => store.projects.getAll(), [store.appData.projects]);
-  const allResources = useMemo(() => store.resources.getAll(), [store.appData.resources]);
   const customFieldTypes = useMemo(() => store.customFieldTypes.getAll(), [store.appData.customFieldTypes]);
-
-  // Карты для быстрого поиска
-  const projectMap = useMemo(
-    () => new Map(allProjects.map(p => [p.id, p])),
-    [allProjects]
-  );
-
-  const resourceMap = useMemo(
-    () => new Map(allResources.map(r => [r.id, r])),
-    [allResources]
-  );
 
   // Обработчики
   const handleSaveTask = (data: Omit<Task, 'id'> & { id?: string }) => {
@@ -99,59 +86,19 @@ export const TasksPage: React.FC = () => {
     return format(date, 'd MMM yyyy', { locale: ru });
   };
 
-  // Получение имён исполнителей
-  const getResourceNames = (resourceIds?: string[]) => {
-    if (!resourceIds || resourceIds.length === 0) return '—';
-    return resourceIds
-      .map(id => resourceMap.get(id)?.name || 'Unknown')
-      .join(', ');
-  };
-
-  // Получение имени проекта
-  const getProjectName = (projectId?: string) => {
-    if (!projectId) return '—';
-    return projectMap.get(projectId)?.name || 'Unknown';
-  };
-
-  // Статусы и приоритеты для визуализации
-  const statusLabels: Record<string, string> = {
-    'not_started': 'Не начато',
-    'in_progress': 'В процессе',
-    'done': 'Завершено',
-  };
-
-  const priorityLabels: Record<string, string> = {
-    'low': 'Низкий',
-    'medium': 'Средний',
-    'blocker': 'Блокер',
-  };
-
-  const statusColors: Record<string, string> = {
-    'not_started': 'bg-slate-100 text-slate-700',
-    'in_progress': 'bg-blue-100 text-blue-700',
-    'done': 'bg-green-100 text-green-700',
-  };
-
-  const priorityColors: Record<string, string> = {
-    'low': 'bg-gray-100 text-gray-700',
-    'medium': 'bg-yellow-100 text-yellow-700',
-    'blocker': 'bg-red-200 text-red-800',
-  };
-
-  // Получить цвет тега: если done, применить цвет done, иначе цвет приоритета
-  const getTagColor = (task: Task): string => {
-    if (task.status === 'done') {
-      return statusColors['done'];
-    }
-    return priorityColors[task.priority || 'medium'];
+  // Метка и цвет тега задачи: Завершено / Блокер / —
+  const getTaskTag = (task: Task): { label: string; className: string } | null => {
+    if (task.status === 'done') return { label: 'Завершено', className: 'bg-green-100 text-green-700' };
+    if (task.priority === 'blocker') return { label: 'Блокер', className: 'bg-red-200 text-red-800' };
+    return null;
   };
 
   // Вычисляем динамическую ширину для скроллаемой таблицы
-  const baseColumnWidth = 150; // базовая ширина колонки
-  const numFixedColumns = 2; // Название + Даты (частично фиксированные)
-  const numDynamicColumns = 2 + 2 + customFieldTypes.length; // Проект + Исполнители + Статус + Приоритет + кастомные
+  const baseColumnWidth = 150;
+  const numFixedColumns = 2; // Название + Даты
+  const numDynamicColumns = 1 + customFieldTypes.length; // Статус/Приоритет + кастомные
   const tableWidth = Math.max(
-    1200,
+    900,
     (numDynamicColumns + numFixedColumns) * baseColumnWidth
   );
 
@@ -199,16 +146,7 @@ export const TasksPage: React.FC = () => {
                     Окончание
                   </th>
                   <th className="px-4 py-3 text-left font-semibold text-app-text-head text-sm w-28 min-w-28">
-                    Проект
-                  </th>
-                  <th className="px-4 py-3 text-left font-semibold text-app-text-head text-sm w-40 min-w-40">
-                    Исполнители
-                  </th>
-                  <th className="px-4 py-3 text-left font-semibold text-app-text-head text-sm w-28 min-w-28">
                     Статус
-                  </th>
-                  <th className="px-4 py-3 text-left font-semibold text-app-text-head text-sm w-28 min-w-28">
-                    Приоритет
                   </th>
                   {customFieldTypes.map(field => (
                     <th
@@ -244,29 +182,13 @@ export const TasksPage: React.FC = () => {
                     <td className="px-4 py-3 text-app-text-main text-sm">
                       {formatDate(task.endDate)}
                     </td>
-                    <td className="px-4 py-3 text-app-text-main text-sm">
-                      {getProjectName(task.projectId)}
-                    </td>
-                    <td className="px-4 py-3 text-app-text-main text-sm">
-                      {getResourceNames(task.resourceIds)}
-                    </td>
                     <td className="px-4 py-3 text-sm">
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-semibold ${
-                          statusColors[task.status || 'not_started']
-                        }`}
-                      >
-                        {statusLabels[task.status || 'not_started']}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-semibold ${
-                          getTagColor(task)
-                        }`}
-                      >
-                        {priorityLabels[task.priority || 'medium']}
-                      </span>
+                      {(() => {
+                        const tag = getTaskTag(task);
+                        return tag
+                          ? <span className={`px-2 py-1 rounded text-xs font-semibold ${tag.className}`}>{tag.label}</span>
+                          : <span className="text-app-text-muted">—</span>;
+                      })()}
                     </td>
                     {customFieldTypes.map(field => (
                       <td key={field.id} className="px-4 py-3 text-app-text-main text-sm">
