@@ -1,0 +1,79 @@
+{
+  "collapse-filter": true,
+  "search": "",
+  "showTags": true,
+  "showAttachments": false,
+  "hideUnresolved": false,
+  "showOrphans": true,
+  "collapse-color-groups": false,
+  "colorGroups": [
+    {
+      "query": "tag:#store OR tag:#core OR tag:#entrypoint",
+      "color": {
+        "a": 1,
+        "rgb": 14777632
+      }
+    },
+    {
+      "query": "tag:#page",
+      "color": {
+        "a": 1,
+        "rgb": 16744272
+      }
+    },
+    {
+      "query": "tag:#hook",
+      "color": {
+        "a": 1,
+        "rgb": 16776960
+      }
+    },
+    {
+      "query": "tag:#modal OR tag:#form",
+      "color": {
+        "a": 1,
+        "rgb": 9699539
+      }
+    },
+    {
+      "query": "tag:#ui OR tag:#component OR tag:#layout",
+      "color": {
+        "a": 1,
+        "rgb": 4286945
+      }
+    },
+    {
+      "query": "tag:#util OR tag:#validation",
+      "color": {
+        "a": 1,
+        "rgb": 8421504
+      }
+    },
+    {
+      "query": "tag:#api OR tag:#electron OR tag:#bridge",
+      "color": {
+        "a": 1,
+        "rgb": 8947848
+      }
+    },
+    {
+      "query": "tag:#style OR tag:#theme",
+      "color": {
+        "a": 1,
+        "rgb": 3329330
+      }
+    }
+  ],
+  "collapse-display": false,
+  "showArrow": true,
+  "textFadeMultiplier": -1.4,
+  "nodeSizeMultiplier": 1.30717255717256,
+  "lineSizeMultiplier": 1.06268191268191,
+  "collapse-forces": false,
+  "centerStrength": 0.454261954261954,
+  "repelStrength": 20,
+  "linkStrength": 1,
+  "linkDistance": 500,
+  "scale": 0.18462326225857872,
+  "close": false
+}

@@ -6,7 +6,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import {
   ListTodo,
   GanttChart,
-  Users,
+  LayoutDashboard,
   ChevronLeft,
   ChevronRight,
   CalendarRange,
@@ -32,7 +32,7 @@ interface MenuItem {
 const MENU_ITEMS: MenuItem[] = [
   { icon: ListTodo, label: 'All Tasks', id: 'tasks' },
   { icon: GanttChart , label: 'Timeline', id: 'timeline' },
-  { icon: Users, label: 'Resources', id: 'resources' },
+  { icon: LayoutDashboard, label: 'Дашборды', id: 'resources' },
 ];
 
 // Типизация пропсов для Sidebar
@@ -41,6 +41,9 @@ interface SidebarProps {
   onPageChange: (id: string) => void;
   activeTimelineId?: string;
   onTimelineSelect: (id: string) => void;
+  activeDashboardId?: string;
+  onDashboardSelect: (id: string) => void;
+  onDashboardCreate: () => void;
 }
 
 // Типизация компонента как React.FC (Functional Component)
@@ -49,11 +52,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onPageChange,
   activeTimelineId,
   onTimelineSelect,
+  activeDashboardId,
+  onDashboardSelect,
+  onDashboardCreate,
 }) => {
   // Состояние для управления шириной панели
   const [isCollapsed, setIsCollapsed] = useState<boolean>(true);
   const [timelinePopupOpen, setTimelinePopupOpen] = useState(false);
   const [isDrawerCollapsed, setIsDrawerCollapsed] = useState(false);
+  const [dashboardPopupOpen, setDashboardPopupOpen] = useState(false);
+  const [isDashboardDrawerCollapsed, setIsDashboardDrawerCollapsed] = useState(false);
+  const [dashboardRenamingId, setDashboardRenamingId] = useState<string | null>(null);
+  const [dashboardRenameValue, setDashboardRenameValue] = useState('');
+  const [dashboardContextMenu, setDashboardContextMenu] = useState<{ x: number; y: number; id: string } | null>(null);
+  const [confirmDeleteDashboardId, setConfirmDeleteDashboardId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; cfgId: string } | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -81,6 +93,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [contextMenu]);
+
+  useEffect(() => {
+    if (!dashboardContextMenu) return;
+    const close = () => setDashboardContextMenu(null);
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [dashboardContextMenu]);
+
+  const commitDashboardRename = (id: string) => {
+    const trimmed = dashboardRenameValue.trim();
+    const d = store.appData.dashboards?.find(x => x.id === id);
+    if (trimmed && d && trimmed !== d.name) {
+      store.dashboards.update(id, { name: trimmed });
+    }
+    setDashboardRenamingId(null);
+  };
+
+  const confirmDeleteDashboard = () => {
+    if (!confirmDeleteDashboardId) return;
+    store.dashboards.delete(confirmDeleteDashboardId);
+    if (activeDashboardId === confirmDeleteDashboardId) {
+      const remaining = (store.appData.dashboards ?? []).filter(d => d.id !== confirmDeleteDashboardId);
+      onDashboardSelect(remaining.length > 0 ? remaining[0].id : '');
+    }
+    setConfirmDeleteDashboardId(null);
+  };
 
   useEffect(() => {
     const api = getElectronAPI();
@@ -229,6 +267,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           const isActive = activePage === item.id;
           const isTimeline = item.id === 'timeline';
 
+          const isDashboard = item.id === 'resources';
+
           return (
             <button
               key={item.id}
@@ -241,8 +281,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   } else {
                     setTimelinePopupOpen(false);
                   }
+                  setDashboardPopupOpen(false);
+                } else if (isDashboard) {
+                  const isEffectivelyHidden = !dashboardPopupOpen || isDashboardDrawerCollapsed;
+                  if (isEffectivelyHidden) {
+                    setDashboardPopupOpen(true);
+                    setIsDashboardDrawerCollapsed(false);
+                  } else {
+                    setDashboardPopupOpen(false);
+                  }
+                  setTimelinePopupOpen(false);
+                  onPageChange('resources');
                 } else {
                   setTimelinePopupOpen(false);
+                  setDashboardPopupOpen(false);
                   onPageChange(item.id);
                 }
               }}
@@ -456,6 +508,127 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
       </div>
+      {/* Dashboard Backdrop */}
+      <div
+        onClick={() => setDashboardPopupOpen(false)}
+        style={{ left: sidebarWidth }}
+        className={`fixed top-0 bottom-0 right-0 z-40 transition-opacity duration-200 ${
+          dashboardPopupOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      />
+
+      {/* Dashboard Drawer */}
+      <div
+        style={{ left: sidebarWidth }}
+        className={`fixed top-0 h-screen w-56 bg-app-surface border-r border-app-border z-50 flex flex-col shadow-xl transition-all duration-200 ease-out ${
+          dashboardPopupOpen && !isDashboardDrawerCollapsed
+            ? 'opacity-100 translate-x-0 pointer-events-auto'
+            : 'opacity-0 -translate-x-3 pointer-events-none'
+        }`}
+      >
+        <div className="h-16 flex items-center justify-between px-3 border-b border-app-border flex-shrink-0">
+          {!isDashboardDrawerCollapsed && (
+            <span className="font-bold text-app-text-head text-base">Мои дашборды</span>
+          )}
+          <button
+            onClick={() => setIsDashboardDrawerCollapsed(prev => !prev)}
+            className={`p-1.5 hover:bg-app-bg rounded-lg text-app-text-muted transition-colors ${isDashboardDrawerCollapsed ? 'mx-auto' : ''}`}
+          >
+            {isDashboardDrawerCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
+        </div>
+
+        {!isDashboardDrawerCollapsed && (
+          <div className="flex-1 overflow-y-auto py-2">
+            {(store.appData.dashboards ?? []).map(d => (
+              <div key={d.id}>
+                {dashboardRenamingId === d.id ? (
+                  <div className={`w-full px-2 py-1.5 ${activeDashboardId === d.id ? 'bg-app-primary/10' : ''}`}>
+                    <input
+                      autoFocus
+                      value={dashboardRenameValue}
+                      onChange={e => setDashboardRenameValue(e.target.value)}
+                      onBlur={() => commitDashboardRename(d.id)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') { e.preventDefault(); commitDashboardRename(d.id); }
+                        if (e.key === 'Escape') setDashboardRenamingId(null);
+                      }}
+                      className="w-full text-sm font-medium bg-app-bg border border-app-primary rounded px-1 py-0.5 text-app-text-main outline-none focus:ring-1 focus:ring-app-primary"
+                    />
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      onDashboardSelect(d.id);
+                      onPageChange('resources');
+                    }}
+                    onDoubleClick={() => {
+                      setDashboardRenameValue(d.name);
+                      setDashboardRenamingId(d.id);
+                    }}
+                    onContextMenu={e => {
+                      e.preventDefault();
+                      setDashboardContextMenu({ x: e.clientX, y: e.clientY, id: d.id });
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+                      activeDashboardId === d.id
+                        ? 'text-app-primary bg-app-primary/10'
+                        : 'text-app-text-main hover:bg-app-bg'
+                    }`}
+                  >
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-app-bg border border-app-border text-app-text-muted uppercase font-bold flex-shrink-0">
+                      {d.type === 'treemap' ? 'TM' : 'WL'}
+                    </span>
+                    <span className="truncate">{d.name}</span>
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              onClick={() => {
+                onPageChange('resources');
+                onDashboardCreate();
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-app-text-main hover:text-app-primary transition-colors sticky bottom-0 bg-app-surface"
+            >
+              + Добавить дашборд
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Dashboard Context Menu */}
+      {dashboardContextMenu && (
+        <div
+          onMouseDown={e => e.stopPropagation()}
+          style={{ top: dashboardContextMenu.y, left: dashboardContextMenu.x }}
+          className="fixed z-[200] bg-app-surface border border-app-border rounded-xl shadow-2xl py-1 min-w-[160px]"
+        >
+          <button
+            onClick={() => {
+              const d = (store.appData.dashboards ?? []).find(x => x.id === dashboardContextMenu.id);
+              if (d) { setDashboardRenameValue(d.name); setDashboardRenamingId(d.id); }
+              setDashboardContextMenu(null);
+            }}
+            className="w-full text-left flex items-center gap-2 px-4 py-2 text-xs font-semibold text-app-text-main hover:bg-app-bg transition-colors"
+          >
+            <SquarePen size={12} />
+            Переименовать
+          </button>
+          <div className="border-t border-app-border my-1" />
+          <button
+            onClick={() => {
+              setConfirmDeleteDashboardId(dashboardContextMenu.id);
+              setDashboardContextMenu(null);
+            }}
+            className="w-full text-left flex items-center gap-2 px-4 py-2 text-xs font-semibold text-app-error hover:bg-app-error/10 transition-colors"
+          >
+            <Trash2 size={12} />
+            Удалить
+          </button>
+        </div>
+      )}
+
       {/* Контекстное меню */}
       {contextMenu && (
         <div
@@ -573,6 +746,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
             })();
           }}
           onCancel={() => setConfirmImport(false)}
+        />
+      )}
+      {confirmDeleteDashboardId && (
+        <ConfirmDialog
+          title={`Удалить дашборд «${(store.appData.dashboards ?? []).find(d => d.id === confirmDeleteDashboardId)?.name}»?`}
+          message="Это действие нельзя отменить."
+          confirmLabel="Удалить"
+          confirmVariant="danger"
+          onConfirm={confirmDeleteDashboard}
+          onCancel={() => setConfirmDeleteDashboardId(null)}
         />
       )}
       {confirmClose && (

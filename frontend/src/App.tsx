@@ -11,6 +11,8 @@ function App() {
   const [activePage, setActivePage] = useState('tasks');
   const [activeTimelineId, setActiveTimelineId] = useState<string | undefined>(undefined);
   const [timelineParameterModalOpen, setTimelineParameterModalOpen] = useState(false);
+  const [activeDashboardId, setActiveDashboardId] = useState<string | undefined>(undefined);
+  const [dashboardModalOpen, setDashboardModalOpen] = useState(false);
   console.log('📄 Current page:', activePage);
 
   useEffect(() => {
@@ -39,7 +41,14 @@ function App() {
           onTimelineParameterModalChange={setTimelineParameterModalOpen}
         />;
       case 'resources':
-        return <ResourcesPage />;
+        return (
+          <ResourcesPage
+            activeDashboardId={activeDashboardId}
+            createModalOpen={dashboardModalOpen}
+            onCreateModalClose={() => setDashboardModalOpen(false)}
+            onDashboardCreated={(id) => setActiveDashboardId(id)}
+          />
+        );
       default:
         return <TasksPage />;
     }
@@ -56,6 +65,9 @@ function App() {
         onPageChange={setActivePage}
         activeTimelineId={activeTimelineId}
         onTimelineSelect={(id) => { setActiveTimelineId(id); setActivePage('timeline'); }}
+        activeDashboardId={activeDashboardId}
+        onDashboardSelect={(id) => { setActiveDashboardId(id); setActivePage('resources'); }}
+        onDashboardCreate={() => { setActivePage('resources'); setDashboardModalOpen(true); }}
       />
 
       {/* 2. Основная контентная область */}

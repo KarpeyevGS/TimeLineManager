@@ -103,6 +103,18 @@ export interface TimelineConfig {
   parameters: TimelineParameter[];
 }
 
+// Конфигурация Dashboard
+export interface DashboardConfig {
+  id: string;
+  name: string;
+  type: 'treemap' | 'workload';
+  groupByFieldId: string;        // кастомное поле для группировки/визуализации
+  filters: Record<string, string[]>; // фильтры задач (пустой объект = все задачи)
+  period: '30d' | '90d' | 'custom';
+  dateFrom?: string;             // ISO, только когда period === 'custom'
+  dateTo?: string;
+}
+
 export interface AppData {
   meta: {
     version: string;
@@ -115,6 +127,7 @@ export interface AppData {
   projects: Project[];
   tasks: Task[];
   timelineConfigs: TimelineConfig[];  // ← Конфигурации Timeline
+  dashboards: DashboardConfig[];      // ← Дашборды
 }
 
 // ============= Начальные данные =============
@@ -139,6 +152,7 @@ const createInitialAppData = (): AppData => ({
   projects: [],
   tasks: [],
   timelineConfigs: [createDefaultTimelineConfig()],
+  dashboards: [],
 });
 
 // ============= Утилиты для группировки задач =============
@@ -223,6 +237,7 @@ const parseStoredAppData = (json: string): AppData => {
           ),
         })),
     })),
+    dashboards: parsed.dashboards ?? [],
   };
 };
 
@@ -466,6 +481,43 @@ export const useAppStore = () => {
     return globalAppData.projects;
   }, []);
 
+  // ===== Операции с дашбордами =====
+  const getDashboards = useCallback((): DashboardConfig[] => {
+    return globalAppData.dashboards ?? [];
+  }, []);
+
+  const addDashboard = useCallback((dashboard: Omit<DashboardConfig, 'id'>): DashboardConfig => {
+    pushUndo();
+    const newDashboard: DashboardConfig = {
+      ...dashboard,
+      id: `dc_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    };
+    globalAppData = {
+      ...globalAppData,
+      dashboards: [...(globalAppData.dashboards ?? []), newDashboard],
+    };
+    notifySubscribers();
+    return newDashboard;
+  }, []);
+
+  const updateDashboard = useCallback((id: string, updates: Partial<Omit<DashboardConfig, 'id'>>): void => {
+    pushUndo();
+    globalAppData = {
+      ...globalAppData,
+      dashboards: (globalAppData.dashboards ?? []).map(d => d.id === id ? { ...d, ...updates } : d),
+    };
+    notifySubscribers();
+  }, []);
+
+  const deleteDashboard = useCallback((id: string): void => {
+    pushUndo();
+    globalAppData = {
+      ...globalAppData,
+      dashboards: (globalAppData.dashboards ?? []).filter(d => d.id !== id),
+    };
+    notifySubscribers();
+  }, []);
+
   // ===== Экспорт/Импорт =====
   const exportData = useCallback(async (): Promise<boolean> => {
     const json = JSON.stringify(globalAppData, null, 2);
@@ -535,6 +587,7 @@ export const useAppStore = () => {
                 })),
             }));
           })(),
+          dashboards: parsed.dashboards ?? [],
         };
         globalAppData = converted;
         notifySubscribers();
@@ -936,6 +989,13 @@ export const useAppStore = () => {
 
     projects: {
       getAll: getProjects,
+    },
+
+    dashboards: {
+      getAll: getDashboards,
+      add: addDashboard,
+      update: updateDashboard,
+      delete: deleteDashboard,
     },
     timelines: {
       getConfigs: getTimelineConfigs,

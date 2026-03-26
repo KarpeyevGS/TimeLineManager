@@ -26,7 +26,14 @@
       "Bash(Remove-Item -Recurse -Force \"$env:LOCALAPPDATA\\\\electron-builder\\\\Cache\\\\winCodeSign\" -ErrorAction SilentlyContinue && echo \"cache cleared\")",
       "Bash(powershell -Command \"Remove-Item 'C:\\\\Users\\\\Georgy\\\\AppData\\\\Roaming\\\\timeline-planner\\\\timeline_app_data.json'; Write-Host deleted\")",
       "Bash(powershell -Command \"Get-ChildItem 'C:\\\\Users\\\\Georgy\\\\AppData\\\\Roaming\\\\timeline-planner' -ErrorAction SilentlyContinue\")",
-      "Bash(powershell -Command \"\nRemove-Item 'C:\\\\Users\\\\Georgy\\\\AppData\\\\Roaming\\\\timeline-planner\\\\timeline_app_data.json' -ErrorAction SilentlyContinue\nRemove-Item 'C:\\\\Users\\\\Georgy\\\\AppData\\\\Roaming\\\\timeline-planner\\\\timeline_view_state.json' -ErrorAction SilentlyContinue\nRemove-Item 'C:\\\\Users\\\\Georgy\\\\AppData\\\\Roaming\\\\timeline-planner\\\\Local Storage' -Recurse -ErrorAction SilentlyContinue\nWrite-Host 'cleared'\n\")"
+      "Bash(powershell -Command \"\nRemove-Item 'C:\\\\Users\\\\Georgy\\\\AppData\\\\Roaming\\\\timeline-planner\\\\timeline_app_data.json' -ErrorAction SilentlyContinue\nRemove-Item 'C:\\\\Users\\\\Georgy\\\\AppData\\\\Roaming\\\\timeline-planner\\\\timeline_view_state.json' -ErrorAction SilentlyContinue\nRemove-Item 'C:\\\\Users\\\\Georgy\\\\AppData\\\\Roaming\\\\timeline-planner\\\\Local Storage' -Recurse -ErrorAction SilentlyContinue\nWrite-Host 'cleared'\n\")",
+      "WebSearch",
+      "WebFetch(domain:api.anthropic.com)",
+      "WebFetch(domain:help.figma.com)",
+      "WebFetch(domain:developers.figma.com)",
+      "Bash(mv \"15-03-2025.txt\" \"2025-03 Март 2025/\")",
+      "Bash(mv \"15-02-2026\" \"16-02-2026-task-bar\" \"16-02-2026-task-window\" \"17-02-2026.txt\" \"18-02-2026 params.txt\" \"19-02-2026.txt\" \"20-02-2026\" \"22-02-2026.txt\" \"23-02-2026.txt\" \"26-02-2026.txt\" \"28-02-2026.txt\" \"2026-02 Февраль 2026/\")",
+      "Bash(mv \"07-03-2026.txt\" \"11-03-2026.txt\" \"17-03-2026.txt\" \"19-03-2026.txt\" \"27-03-2026.txt\" \"2026-03 Март 2026/\")"
     ]
   }
 }
