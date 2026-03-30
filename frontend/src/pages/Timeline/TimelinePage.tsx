@@ -282,16 +282,20 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   const [copyToTimelineModal, setCopyToTimelineModal] = useState<{ rootIds: string[] } | null>(null);
   const tooltipTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [ganttNotification, setGanttNotification] = useState<string | null>(null);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
 
   const dayWidth = ZOOM_CONFIG[zoomIndex] || 56;
 
   // ===== Task drag/resize hook — must be declared before getDisplayTasks =====
-  const { dragState, resizeState, dragPreview, handleTaskMouseDown, handleResizeMouseDown } = useTaskDragResize({
+  const { dragState, resizeState, dragPreviews, dragMoved, suppressClickRef, handleTaskMouseDown, handleResizeMouseDown } = useTaskDragResize({
     dayWidth,
     dateRange,
     editingTaskId,
     getAllTasks: store.tasks.getAll,
     updateTask: store.tasks.update,
+    batchUpdateTasks: store.tasks.batchUpdate,
+    selectedTaskIds,
+    setSelectedTaskIds,
   });
 
   // Загружаем конфигурацию выбранной timeline
@@ -371,16 +375,11 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     return !(task1.endDate < task2.startDate || task2.endDate < task1.startDate);
   };
 
-  // Применяем dragPreview к задачам если идет перетаскивание
-  const getDisplayTasks = useCallback((paramTasks: Task[]): Task[] => {
-    if (!dragPreview) return paramTasks;
-    return paramTasks.map(t => t.id === dragPreview.id ? dragPreview : t);
-  }, [dragPreview]);
-
   // Распределение задач по слоям (для стекирования при перекрытии)
   const getTaskLayers = (paramId: string): Task[][] => {
     const paramTasks = tasksGroupedByParam.get(paramId) ?? [];
-    const displayTasks = getDisplayTasks(paramTasks);
+    // При перетаскивании используем preview-даты для расчёта слоёв
+    const displayTasks = paramTasks.map(t => dragPreviews.get(t.id) ?? t);
     const layers: Task[][] = [];
 
     displayTasks.forEach(task => {
@@ -642,12 +641,32 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     if (!ctrlKey) setSelectedParamIds(new Set());
   }, []);
 
+  // Клик по task bar — выбор / мультивыбор
+  const handleTaskBarClick = useCallback((e: React.MouseEvent, task: Task) => {
+    e.stopPropagation();
+    // Если мышь двигалась (drag) — не меняем выбор
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    if (e.ctrlKey) {
+      setSelectedTaskIds(prev => {
+        const next = new Set(prev);
+        if (next.has(task.id)) next.delete(task.id); else next.add(task.id);
+        return next;
+      });
+    } else {
+      setSelectedTaskIds(new Set([task.id]));
+    }
+  }, [suppressClickRef]);
+
   // Клик по ячейке грида: без Ctrl — снять всё, с Ctrl — выделить строку + столбец
   const handleCellClick = useCallback((e: React.MouseEvent, paramId: string) => {
     e.stopPropagation();
     if (!e.ctrlKey) {
       setSelectedParamIds(new Set());
       setSelectedColumnDates(new Set());
+      setSelectedTaskIds(new Set());
       return;
     }
     const container = timelineRef.current ?? frozenTimelineRef.current;
@@ -1318,26 +1337,30 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                       {/* Задачи по слоям */}
                       {layers.map((layerTasks, layerIndex) =>
                         layerTasks.map(task => {
-                          const position = getTaskBarPosition(task);
+                          const preview = dragPreviews.get(task.id);
+                          const displayTask = preview ?? task;
+                          const position = getTaskBarPosition(displayTask);
                           if (!position) return null;
 
                           const topOffset = layerIndex * 24 + 2;
-                          const isDragging = dragState?.taskId === task.id;
+                          const isDragging = dragMoved && (dragState?.groupIds.has(task.id) ?? false);
                           const isResizing = resizeState?.taskId === task.id;
 
                           return (
                             <TaskBar
                               key={task.id}
-                              task={task}
+                              task={displayTask}
                               position={position}
                               topOffset={topOffset}
                               isDragging={isDragging}
                               isResizing={isResizing}
                               isEditing={editingTaskId === task.id}
+                              isSelected={selectedTaskIds.has(task.id)}
                               editingTaskName={editingTaskName}
                               getTaskBarColor={getTaskBarColor}
                               getTaskBarStyle={getTaskBarStyle}
                               onMouseDown={handleTaskMouseDown}
+                              onClick={handleTaskBarClick}
                               onDoubleClick={handleTaskBarDoubleClick}
                               onContextMenu={handleTaskBarContextMenu}
                               onMouseEnter={handleTaskBarMouseEnter}
@@ -1489,26 +1512,30 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                       {/* Задачи по слоям */}
                       {layers.map((layerTasks, layerIndex) =>
                         layerTasks.map(task => {
-                          const position = getTaskBarPosition(task);
+                          const preview = dragPreviews.get(task.id);
+                          const displayTask = preview ?? task;
+                          const position = getTaskBarPosition(displayTask);
                           if (!position) return null;
 
                           const topOffset = layerIndex * 24 + 2;
-                          const isDragging = dragState?.taskId === task.id;
+                          const isDragging = dragMoved && (dragState?.groupIds.has(task.id) ?? false);
                           const isResizing = resizeState?.taskId === task.id;
 
                           return (
                             <TaskBar
                               key={task.id}
-                              task={task}
+                              task={displayTask}
                               position={position}
                               topOffset={topOffset}
                               isDragging={isDragging}
                               isResizing={isResizing}
                               isEditing={editingTaskId === task.id}
+                              isSelected={selectedTaskIds.has(task.id)}
                               editingTaskName={editingTaskName}
                               getTaskBarColor={getTaskBarColor}
                               getTaskBarStyle={getTaskBarStyle}
                               onMouseDown={handleTaskMouseDown}
+                              onClick={handleTaskBarClick}
                               onDoubleClick={handleTaskBarDoubleClick}
                               onContextMenu={handleTaskBarContextMenu}
                               onMouseEnter={handleTaskBarMouseEnter}

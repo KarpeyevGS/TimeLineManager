@@ -384,6 +384,18 @@ export const useAppStore = () => {
     notifySubscribers();
   }, []);
 
+  const batchUpdateTasks = useCallback((updates: { taskId: string; updates: Partial<Task> }[]): void => {
+    pushUndo();
+    const updatesMap = new Map(updates.map(u => [u.taskId, u.updates]));
+    globalAppData = {
+      ...globalAppData,
+      tasks: globalAppData.tasks.map(task =>
+        updatesMap.has(task.id) ? { ...task, ...updatesMap.get(task.id) } : task
+      ),
+    };
+    notifySubscribers();
+  }, []);
+
   const deleteTask = useCallback((taskId: string): void => {
     pushUndo();
     globalAppData = {
@@ -972,6 +984,7 @@ export const useAppStore = () => {
     tasks: {
       add: addTask,
       update: updateTask,
+      batchUpdate: batchUpdateTasks,
       delete: deleteTask,
       getAll: getTasks,
     },

@@ -10,10 +10,12 @@ interface TaskBarProps {
   isDragging: boolean;
   isResizing: boolean;
   isEditing: boolean;
+  isSelected: boolean;
   editingTaskName: string;
   getTaskBarColor: (task: Task) => string;
   getTaskBarStyle: (task: Task) => React.CSSProperties;
   onMouseDown: (e: React.MouseEvent<HTMLDivElement>, task: Task) => void;
+  onClick: (e: React.MouseEvent<HTMLDivElement>, task: Task) => void;
   onDoubleClick: (e: React.MouseEvent<HTMLDivElement>, task: Task) => void;
   onContextMenu: (e: React.MouseEvent<HTMLDivElement>, task: Task) => void;
   onMouseEnter: (e: React.MouseEvent<HTMLDivElement>, task: Task) => void;
@@ -31,10 +33,12 @@ export const TaskBar: React.FC<TaskBarProps> = ({
   isDragging,
   isResizing,
   isEditing,
+  isSelected,
   editingTaskName,
   getTaskBarColor,
   getTaskBarStyle,
   onMouseDown,
+  onClick,
   onDoubleClick,
   onContextMenu,
   onMouseEnter,
@@ -50,12 +54,14 @@ export const TaskBar: React.FC<TaskBarProps> = ({
     return (
       <div
         key={task.id}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => onClick(e, task)}
         onMouseDown={(e) => onMouseDown(e, task)}
         onContextMenu={(e) => onContextMenu(e, task)}
         onMouseEnter={(e) => onMouseEnter(e, task)}
         onMouseLeave={onMouseLeave}
-        className={`absolute flex items-center select-none transition-all ${isDragging ? 'opacity-75 cursor-grabbing' : 'cursor-grab hover:opacity-80'}`}
+        className={`absolute flex items-center select-none transition-all duration-150 ${
+          isDragging ? 'opacity-75 cursor-grabbing' : 'cursor-grab hover:opacity-80'
+        }`}
         style={{
           left: `${cx - size / 2}px`,
           top: `${topOffset}px`,
@@ -67,9 +73,10 @@ export const TaskBar: React.FC<TaskBarProps> = ({
             width: `${size}px`,
             height: `${size}px`,
             flexShrink: 0,
-            backgroundColor: '#1a1a1a',
+            backgroundColor: isSelected ? '#4f80f0' : '#1a1a1a',
             transform: 'rotate(45deg)',
             boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+            transition: 'background-color 0.15s',
           }}
         />
         <span className="ml-2 text-[10px] font-medium text-app-text-head whitespace-nowrap">
@@ -81,13 +88,13 @@ export const TaskBar: React.FC<TaskBarProps> = ({
 
   return (
     <div
-      onClick={(e) => e.stopPropagation()}
+      onClick={(e) => onClick(e, task)}
       onMouseDown={(e) => onMouseDown(e, task)}
       onDoubleClick={(e) => onDoubleClick(e, task)}
       onContextMenu={(e) => onContextMenu(e, task)}
       onMouseEnter={(e) => onMouseEnter(e, task)}
       onMouseLeave={onMouseLeave}
-      className={`absolute h-[20px] rounded-sm shadow-md text-[10px] flex items-center font-medium transition-all select-none overflow-hidden ${getTaskBarColor(task)} ${
+      className={`absolute h-[20px] rounded-sm shadow-md text-[10px] flex items-center font-medium select-none overflow-hidden transition-all duration-150 ${getTaskBarColor(task)} ${
         isEditing ? 'cursor-text' :
         isDragging ? 'shadow-2xl opacity-75 scale-105 cursor-grabbing' :
         isResizing ? 'shadow-2xl opacity-75 cursor-ew-resize' :
@@ -98,6 +105,7 @@ export const TaskBar: React.FC<TaskBarProps> = ({
         width: `${position.width}px`,
         top: `${topOffset}px`,
         ...getTaskBarStyle(task),
+        ...(isSelected ? { boxShadow: '0 0 0 1px rgba(120,180,160,0.75), 0 0 10px 3px rgba(100,160,140,0.3), 0 0 22px 6px rgba(100,160,140,0.12)' } : {}),
       }}
     >
       <div

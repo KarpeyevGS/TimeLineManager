@@ -33,7 +33,9 @@
       "WebFetch(domain:developers.figma.com)",
       "Bash(mv \"15-03-2025.txt\" \"2025-03 Март 2025/\")",
       "Bash(mv \"15-02-2026\" \"16-02-2026-task-bar\" \"16-02-2026-task-window\" \"17-02-2026.txt\" \"18-02-2026 params.txt\" \"19-02-2026.txt\" \"20-02-2026\" \"22-02-2026.txt\" \"23-02-2026.txt\" \"26-02-2026.txt\" \"28-02-2026.txt\" \"2026-02 Февраль 2026/\")",
-      "Bash(mv \"07-03-2026.txt\" \"11-03-2026.txt\" \"17-03-2026.txt\" \"19-03-2026.txt\" \"27-03-2026.txt\" \"2026-03 Март 2026/\")"
+      "Bash(mv \"07-03-2026.txt\" \"11-03-2026.txt\" \"17-03-2026.txt\" \"19-03-2026.txt\" \"27-03-2026.txt\" \"2026-03 Март 2026/\")",
+      "Bash(npx eslint:*)",
+      "Bash(find /c/Users/Georgy/Desktop/prog/_Projects/_TimeLineManager/4_18-02-2026 -type f \\\\\\(-name *.sql -o -name *migration* \\\\\\))"
     ]
   }
 }

@@ -1,0 +1,177 @@
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the
+     earlier portion of the conversation.
+
+     Summary:
+     1. Primary Request and Intent:
+        User requested a comprehensive timeline bar selection system:
+        - LMB click selects a task bar with animation
+        - Ctrl+LMB toggles multi-select
+        - Dragging one of multiple selected bars moves all selected together
+        - LMB click without Ctrl resets selection to newly clicked bar
+        - Click on empty field clears all selection
+        - Remove drag animation on RMB (right-click should only show context menu)
+        - Animation should appear after 100ms hold (not immediately on click)
+        - Ctrl+Z for group move should undo all at once (batch undo)
+        - Selection highlight: subtle glow around bar (gray-green, semi-transparent)
+
+     2. Key Technical Concepts:
+        - React state management with `Set<string>` for multi-selection
+        - `box-shadow` for selection glow (not clipped by `overflow-hidden`, unlike `ring`)
+        - `suppressClickRef` pattern to prevent click event from clearing selection after drag
+        - `holdTimerRef` setTimeout pattern for delayed drag animation (100ms)
+        - `dragMoved` state to gate drag animation visual (only after actual movement OR hold timer)
+        - `dragPreviews: Map<string, Task>` for group drag preview rendering
+        - `batchUpdateTasks` with single `pushUndo()` for atomic undo of group moves
+        - `e.button !== 0` guard to block RMB from initiating drag
+        - `e.ctrlKey` guard in mouseDown to defer to onClick for multi-select
+
+     3. Files and Code Sections:
+
+        - **`frontend/src/store.ts`**
+          - Added `batchUpdateTasks` function with single `pushUndo()` for atomic group undo
+          - Exported as `store.tasks.batchUpdate`
+          ```ts
+          const batchUpdateTasks = useCallback((updates: { taskId: string; updates: Partial<Task> }[]): void => {
+            pushUndo();
+            const updatesMap = new Map(updates.map(u => [u.taskId, u.updates]));
+            globalAppData = {
+              ...globalAppData,
+              tasks: globalAppData.tasks.map(task =>
+                updatesMap.has(task.id) ? { ...task, ...updatesMap.get(task.id) } : task
+              ),
+            };
+            notifySubscribers();
+          }, []);
+          ```
+
+        - **`frontend/src/pages/Timeline/hooks/useTaskDragResize.ts`**
+          - Complete rewrite. Key additions:
+          - `selectedTaskIds`, `setSelectedTaskIds`, `batchUpdateTasks` params
+          - `groupIds: Set<string>` and `groupOriginalDates: Map<string, {startDate, endDate}>` in DragState
+          - `dragPreviews: Map<string, Task>` replaces single `dragPreview`
+          - `dragMoved: boolean` state — true only after movement >3px OR hold 100ms
+          - `suppressClickRef: React.MutableRefObject<boolean>` — prevents click after drag
+          - `holdTimerRef` — 100ms timer that sets `dragMoved=true` on hold without movement
+          - `e.button !== 0` guard: blocks RMB drag
+          - `e.ctrlKey` guard: skips mouseDown for Ctrl+click (handled by onClick)
+          - `handleMouseUp`: uses `batchUpdateTasks` when group size > 1, single `updateTask` otherwise
+          ```ts
+          holdTimerRef.current = setTimeout(() => setDragMoved(true), 100);
+          // ...
+          if (Math.abs(deltaX) > 3) {
+            suppressClickRef.current = true;
+            setDragMoved(true);
+          }
+          ```
+
+        - **`frontend/src/pages/Timeline/TaskBar.tsx`**
+          - Added `isSelected: boolean` prop
+          - Added `onClick: (e, task) => void` prop
+          - Selection glow via `box-shadow` inline style (works with `overflow-hidden`):
+          ```ts
+          ...(isSelected ? { boxShadow: '0 0 0 1px rgba(120,180,160,0.75), 0 0 10px 3px rgba(100,160,140,0.3), 0 0 22px
+     6px rgba(100,160,140,0.12)' } : {}),
+          ```
+          - Milestone diamond: color changes to `#4f80f0` when selected
+          - `isDragging` animation class (`scale-105 opacity-75 cursor-grabbing`) only applied when `isDragging=true`
+
+        - **`frontend/src/pages/Timeline/TimelinePage.tsx`**
+          - Added `const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set())`
+          - Updated hook call to include `batchUpdateTasks: store.tasks.batchUpdate`
+          - Added `handleTaskBarClick`:
+          ```ts
+          const handleTaskBarClick = useCallback((e: React.MouseEvent, task: Task) => {
+            e.stopPropagation();
+            if (suppressClickRef.current) {
+              suppressClickRef.current = false;
+              return;
+            }
+            if (e.ctrlKey) {
+              setSelectedTaskIds(prev => {
+                const next = new Set(prev);
+                if (next.has(task.id)) next.delete(task.id); else next.add(task.id);
+                return next;
+              });
+            } else {
+              setSelectedTaskIds(new Set([task.id]));
+            }
+          }, [suppressClickRef]);
+          ```
+          - Added `setSelectedTaskIds(new Set())` to `handleCellClick` when no Ctrl
+          - Removed `getDisplayTasks` function; replaced inline with `dragPreviews.get(task.id) ?? task`
+          - Both TaskBar render blocks updated: `isDragging = dragMoved && (dragState?.groupIds.has(task.id) ?? false)`,
+      `isSelected={selectedTaskIds.has(task.id)}`, `onClick={handleTaskBarClick}`
+
+     4. Errors and fixes:
+        - **TS error: `dragPreview` not found** — Old `getDisplayTasks` function still referenced removed `dragPreview`.
+      Fixed by removing `getDisplayTasks` entirely and inlining `dragPreviews.get(task.id) ?? task` in render.
+        - **Multi-select Ctrl+click broken** — `handleTaskMouseDown` intercepted mousedown before onClick and reset
+     selection. Fixed by adding `if (e.ctrlKey) return;` at top of `handleTaskMouseDown`.
+        - **Selection cleared after drag** — Browser fires `click` after mouseup even after drag. Fixed with
+     `suppressClickRef` set on mouse move >3px, checked and reset in `handleTaskBarClick`.
+        - **Ring visual "серая полоска"** — `ring-2 ring-offset-1` clipped by `overflow-hidden` on task bar div. Fixed
+     by switching to `box-shadow` which renders outside element bounds and is not clipped.
+        - **White glow invisible on light background** — User rejected white glow. Switched to gray-green
+     (`rgba(120,180,160,...)`) matching project's teal palette.
+
+     5. Problem Solving:
+        - Group drag: single `dragState` tracks entire group via `groupIds` Set and `groupOriginalDates` Map. All
+     previews computed from original dates + same `daysDelta`.
+        - Batch undo: single `pushUndo()` snapshot before all `updateTask` mutations = one Ctrl+Z undoes entire group
+     move.
+        - Drag animation without instant activation: dual-trigger system — `holdTimerRef` (100ms) OR mouse movement >3px
+      both activate `dragMoved`. Timer cleared on mouseUp if no movement.
+
+     6. All user messages:
+        - "необходимо запланироавть выбор time line bar при клике лкм, добавить анимацию выбора, при зажатом ctrl можно
+     выбрать несколько time line bar, если несколько time line bar выбраны то при движении 1й происходит движение всех
+     зажатых. при клике без ctrl выбор остальных сбрасывается на новую выбранную, при клике в пустое поле сбор выбора.
+     убрать анимацию захват при использовании ПКМ. /plan"
+        - "как думаешь, стоит ли добавить правило, при зажатой шифт или ctrl движение всех задач? или проще так
+     оставить, если выбранные двигаются выбранные?"
+        - "приступай к выполнению"
+        - "1. не работает мультивыбор при зажатии ctrl 2. измени анимацию выбора серая полоска ,на лёгкую подсветку."
+        - "измени анимацию выбора, я сказал подсветка, а ты сделал сам таск бар прозрачным. нужно убрать прозрачность и
+     добавить легкую подсветку вокруг таск бара. 2я проблема, когда перетащил выбор снимается, выбор должен оставаться
+     до правила смены выбора или клик в пустое поле."
+        - "сделай подсветку светлей"
+        - "сделай чуть ярче,"
+        - "можно поменять сам цвет, сделать более светлее, не серый, более белый, добавить чуть польше свечения."
+        - "нет, белую совсем не видно, на светлом фоне, давай может изумрудно селёный, в цвет проекта"
+        - "нет этот свет ближе к серому, сделай зелёный светлее"
+        - "сделай светлее и прозрачней"
+        - "добавь чуть серого"
+        - "при клике убери намацию зажатия"
+        - "1. Нет, ты убрал анимацию при нажатии, нужно при вернуть анимацию при зажатии, например через секунду (или
+     предложи более оптимальный тайминг). 2. ctrl+z при перемещении нескольких задач, возвращает задачи поочереди, есть
+     возможность, чтобы при перемещении задач разом, отменяло тоже разом?"
+        - "отлично. сделай удежривать 150 ms для активации"
+        - "сделай 100 мс"
+
+     7. Pending Tasks:
+        - None explicitly pending. All requested features are implemented and working.
+
+     8. Current Work:
+        The last change made was reducing the hold timer for drag animation activation from 150ms to 100ms:
+        ```ts
+        holdTimerRef.current = setTimeout(() => setDragMoved(true), 100);
+        ```
+        This appears in both `handleTaskMouseDown` and `handleResizeMouseDown` in `useTaskDragResize.ts`. The
+     `replace_all: true` flag was used to update both occurrences simultaneously.
+
+     9. Optional Next Step:
+        No pending tasks. The user's last request ("сделай 100 мс") was completed. No next step unless user provides new
+      instructions.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you
+     generated), read the full transcript at: C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--T
+     imeLineManager-4-18-02-2026\6927bb44-cddb-4207-b499-aab1a46a4a3d.jsonl
+
+> /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Read src\pages\Timeline\hooks\useTaskDragResize.ts (213 lines)
+  ⎿  Referenced file src\pages\Timeline\TimelinePage.tsx
+  ⎿  Referenced file src\store.ts
+  ⎿  Read src\pages\Timeline\TaskBar.tsx (152 lines)
+  ⎿  Plan file referenced (~\.claude\plans\prancy-hatching-penguin.md)
