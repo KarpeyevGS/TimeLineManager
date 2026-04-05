@@ -4,6 +4,7 @@ import { TimelinePage } from './pages/Timeline/TimelinePage';
 import { TasksPage } from './pages/Tasks/TasksPage';
 import { ResourcesPage } from './pages/Resources/ResourcesPage';
 import { undoAppData } from './store';
+import { isElectron } from './electronApi';
 
 // 2. Главный компонент приложения
 function App() {
@@ -27,6 +28,18 @@ function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (!isElectron()) return;
+    const handleWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.1 : -0.1;
+      window.electronAPI!.zoomDelta(delta);
+    };
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => window.removeEventListener('wheel', handleWheel);
   }, []);
 
   // Функция для отрисовки активной страницы

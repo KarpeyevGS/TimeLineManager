@@ -35,7 +35,10 @@ function createWindow() {
     win.loadFile(path.join(__dirname, '../frontend/dist/index.html'));
   }
 
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => {
+    win.setMenuBarVisibility(false);
+    win.show();
+  });
 
   win.on('close', (event) => {
     if (!isCloseConfirmed) {
@@ -47,6 +50,22 @@ function createWindow() {
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('http')) shell.openExternal(url);
     return { action: 'deny' };
+  });
+
+  // ---- Zoom: Ctrl+=/-, Ctrl+0 ----
+  win.webContents.on('before-input-event', (event, input) => {
+    if (!(input.control || input.meta) || input.type !== 'keyDown') return;
+    const cur = win.webContents.getZoomFactor();
+    if (input.key === '=' || input.key === '+') {
+      event.preventDefault();
+      win.webContents.setZoomFactor(Math.min(2.0, parseFloat((cur + 0.1).toFixed(1))));
+    } else if (input.key === '-') {
+      event.preventDefault();
+      win.webContents.setZoomFactor(Math.max(0.5, parseFloat((cur - 0.1).toFixed(1))));
+    } else if (input.key === '0') {
+      event.preventDefault();
+      win.webContents.setZoomFactor(1.0);
+    }
   });
 }
 
@@ -138,6 +157,15 @@ ipcMain.on(IPC.PRINT, () => {
   );
 });
 
+// ---- IPC: Zoom ----
+
+ipcMain.on(IPC.ZOOM_DELTA, (_event, delta: number) => {
+  if (!mainWindow) return;
+  const cur = mainWindow.webContents.getZoomFactor();
+  const next = Math.max(0.5, Math.min(2.0, parseFloat((cur + delta).toFixed(1))));
+  mainWindow.webContents.setZoomFactor(next);
+});
+
 // ---- IPC: Window Close ----
 
 ipcMain.on(IPC.WINDOW_CLOSE_CONFIRMED, () => {
@@ -148,7 +176,10 @@ ipcMain.on(IPC.WINDOW_CLOSE_CONFIRMED, () => {
 // ---- App lifecycle ----
 
 app.whenReady().then(() => {
-  Menu.setApplicationMenu(null);
+  // Создаём скрытое меню с ролями редактирования, чтобы восстановить
+  // Ctrl+Z/Y/X/C/V/A в Chromium (Menu.setApplicationMenu(null) блокирует их на Windows)
+  const editMenu = Menu.buildFromTemplate([{ role: 'editMenu' }]);
+  Menu.setApplicationMenu(editMenu);
   createWindow();
 });
 

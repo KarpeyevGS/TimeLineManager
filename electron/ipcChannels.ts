@@ -10,4 +10,5 @@ export const IPC = {
   WINDOW_CLOSING:        'window:closing',
   WINDOW_CLOSE_CONFIRMED:'window:closeConfirmed',
   PRINT:                 'window:print',
+  ZOOM_DELTA:            'zoom:delta',
 } as const;

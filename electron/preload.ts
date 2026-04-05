@@ -17,4 +17,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   closeConfirmed:   (): void => ipcRenderer.send(IPC.WINDOW_CLOSE_CONFIRMED),
   print:            (): void => ipcRenderer.send(IPC.PRINT),
+  zoomDelta:        (delta: number): void => ipcRenderer.send(IPC.ZOOM_DELTA, delta),
 });

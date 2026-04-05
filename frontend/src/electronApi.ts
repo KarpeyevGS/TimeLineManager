@@ -11,6 +11,7 @@ export interface ElectronAPI {
   onWindowClosing:  (cb: () => void) => (() => void);
   closeConfirmed:   () => void;
   print:            () => void;
+  zoomDelta:        (delta: number) => void;
 }
 
 declare global {
