@@ -1,0 +1,62 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - complementary "Main Navigation" [ref=e4]:
+      - button "Expand sidebar" [ref=e6]:
+        - img [ref=e7]
+      - navigation [ref=e9]:
+        - button [ref=e10]:
+          - img [ref=e11]
+        - button [ref=e17]:
+          - img [ref=e18]
+        - button [ref=e22]:
+          - img [ref=e23]
+      - generic [ref=e28]:
+        - button [ref=e29]:
+          - img [ref=e30]
+        - button [ref=e34]:
+          - img [ref=e35]
+        - button [ref=e39]:
+          - img [ref=e40]
+        - button "Мигрировать старые данные (разово)" [ref=e45]:
+          - img [ref=e46]
+    - main [ref=e52]:
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - heading "Все задачи" [level=1] [ref=e55]
+          - button "Новая задача" [ref=e56]:
+            - img [ref=e57]
+            - text: Новая задача
+        - main [ref=e60]:
+          - table [ref=e254]:
+            - rowgroup [ref=e255]:
+              - row "Название Начало Окончание Статус Действия" [ref=e256]:
+                - columnheader "Название" [ref=e257]
+                - columnheader "Начало" [ref=e258]
+                - columnheader "Окончание" [ref=e259]
+                - columnheader "Статус" [ref=e260]
+                - columnheader "Действия" [ref=e261]
+            - rowgroup [ref=e262]:
+              - row "Дизайн главной 1 апр. 2026 12 апр. 2026 —" [ref=e263] [cursor=pointer]:
+                - cell "Дизайн главной" [ref=e264]
+                - cell "1 апр. 2026" [ref=e265]
+                - cell "12 апр. 2026" [ref=e266]
+                - cell "—" [ref=e267]
+                - cell [ref=e268]:
+                  - button "Редактировать" [ref=e269]:
+                    - img [ref=e270]
+  - generic:
+    - generic:
+      - generic: Мои Timeline
+      - button "Свернуть":
+        - img
+    - generic:
+      - generic:
+        - button "Новая Timeline"
+      - button "+ Добавить Timeline"
+  - generic:
+    - generic:
+      - generic: Мои дашборды
+      - button:
+        - img
+    - generic:
+      - button "+ Добавить дашборд"

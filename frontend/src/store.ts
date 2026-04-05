@@ -93,6 +93,7 @@ export interface TimelineParameter {
   level: number;
   parentId?: string;
   filters: Record<string, string[]>;  // ← ФИЛЬТРЫ встроены
+  capacity?: number;  // Вместимость: макс. кол-во одновременных задач (1–10, по умолчанию 1)
 }
 
 // Конфигурация Timeline

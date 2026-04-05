@@ -28,6 +28,7 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
   onClose,
 }) => {
   const [name, setName] = useState('');
+  const [capacity, setCapacity] = useState<number>(1);
   const [parentId, setParentId] = useState<string | undefined>(undefined);
   const [filterFields, setFilterFields] = useState<Record<string, string[]>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -47,6 +48,7 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
   useEffect(() => {
     if (isOpen && mode === 'edit' && editingParameter) {
       setName(editingParameter.name);
+      setCapacity(editingParameter.capacity ?? 1);
       setParentId(editingParameter.parentId);
       setFilterFields(
         Object.fromEntries(
@@ -58,6 +60,7 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
       setErrors({});
     } else if (isOpen && mode === 'add') {
       setName('');
+      setCapacity(1);
       setParentId(defaultParentId);
       setFilterFields({});
       setErrors({});
@@ -171,6 +174,7 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
       name: name.trim(),
       level: newLevel,
       parentId: parentId || undefined,
+      capacity,
       // Исключаем незаполненные строки (временные ключи-заглушки и пустые значения)
       filters: Object.fromEntries(
         Object.entries(filterFields)
@@ -255,6 +259,20 @@ export const ParameterModal: React.FC<ParameterModalProps> = ({
                 <option key={p.id} value={p.id}>
                   {p.name} (уровень {p.level})
                 </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Capacity */}
+          <div className="flex flex-col gap-1">
+            <label className={labelCls}>Допустимое количество наложений</label>
+            <select
+              value={capacity}
+              onChange={e => setCapacity(Number(e.target.value))}
+              className="w-full h-8 px-2 text-xs rounded border border-app-border bg-white text-app-text-head outline-none focus:border-app-primary transition-colors cursor-pointer"
+            >
+              {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                <option key={n} value={n}>{n}</option>
               ))}
             </select>
           </div>

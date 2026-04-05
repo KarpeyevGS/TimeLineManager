@@ -33,6 +33,7 @@ import { useTaskDragResize } from './hooks/useTaskDragResize';
 import { useParamDnD } from './hooks/useParamDnD';
 import { TaskBar } from './TaskBar';
 import { SelectionHighlightLayer } from './SelectionHighlightLayer';
+import { getOverloadedTaskIds } from '../../utils/overloadDetection';
 
 interface ContextMenuState {
   x: number;
@@ -283,6 +284,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   const tooltipTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [ganttNotification, setGanttNotification] = useState<string | null>(null);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [showOverload, setShowOverload] = useState(false);
 
   const dayWidth = ZOOM_CONFIG[zoomIndex] || 56;
 
@@ -315,6 +317,19 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     () => store.timelines.groupTasksForTimeline(selectedTimelineId),
     [store.appData.tasks, store.appData.timelineConfigs, selectedTimelineId]
   );
+
+  // IDs задач в состоянии перегруза — Map<paramId, Set<taskId>>
+  const overloadedByParam = useMemo<Map<string, Set<string>>>(() => {
+    if (!showOverload) return new Map();
+    const result = new Map<string, Set<string>>();
+    for (const param of PARAMETERS) {
+      const tasks = tasksGroupedByParam.get(param.id) ?? [];
+      const capacity = param.capacity ?? 1;
+      const ids = getOverloadedTaskIds(tasks, capacity);
+      if (ids.size > 0) result.set(param.id, ids);
+    }
+    return result;
+  }, [showOverload, PARAMETERS, tasksGroupedByParam]);
 
   // Уникальные значения кастомных полей из всех задач (для автодополнения в TaskModal)
   const customFieldOptions = useMemo(() => {
@@ -962,6 +977,20 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         </div>
 
         <div className="flex items-center gap-6">
+          {/* Тогл перегрузки */}
+          <button
+            onClick={() => setShowOverload(v => !v)}
+            className={`flex items-center gap-1.5 h-7 px-3 text-xs font-semibold rounded border transition-colors ${
+              showOverload
+                ? 'bg-red-500 border-red-600 text-white hover:bg-red-600'
+                : 'border-app-border text-app-text-head hover:border-red-400 hover:text-red-500'
+            }`}
+            title="Показать перегруз строк"
+          >
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${showOverload ? 'bg-white' : 'bg-red-400'}`} />
+            Перегруз
+          </button>
+
           {/* Календарь выбора диапазона */}
           <DateRangePicker range={dateRange} onRangeChange={setDateRange} />
 
@@ -1356,6 +1385,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                               isResizing={isResizing}
                               isEditing={editingTaskId === task.id}
                               isSelected={selectedTaskIds.has(task.id)}
+                              isOverloaded={showOverload && (overloadedByParam.get(param.id)?.has(task.id) ?? false)}
                               editingTaskName={editingTaskName}
                               getTaskBarColor={getTaskBarColor}
                               getTaskBarStyle={getTaskBarStyle}
@@ -1531,6 +1561,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                               isResizing={isResizing}
                               isEditing={editingTaskId === task.id}
                               isSelected={selectedTaskIds.has(task.id)}
+                              isOverloaded={showOverload && (overloadedByParam.get(param.id)?.has(task.id) ?? false)}
                               editingTaskName={editingTaskName}
                               getTaskBarColor={getTaskBarColor}
                               getTaskBarStyle={getTaskBarStyle}

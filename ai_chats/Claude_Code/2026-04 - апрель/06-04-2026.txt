@@ -1,0 +1,207 @@
+● feat: overload detection for timeline rows
+
+  - Add capacity field (1-10) to ParameterModal with dropdown UI, save in handleSubmit
+  - Compute overloaded task IDs per-row via Map<paramId, Set> to avoid cross-row false positives
+  - Add Overload toggle button in timeline toolbar
+  - Highlight overloaded task bars with red bg + border per row context only
+
+● feat: overload detection for timeline rows
+
+  - Add capacity field (1-10) to ParameterModal with dropdown UI, save in handleSubmit
+  - Compute overloaded task IDs per-row via Map<paramId, Set> to avoid cross-row false positives
+  - Add Overload toggle button in timeline toolbar
+  - Highlight overloaded task bars with red bg + border per row context only
+
+✻ Conversation compacted (ctrl+o for history)
+
+
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary
+     below covers the earlier portion of the conversation.
+
+     Summary:
+     1. Primary Request and Intent:
+        The user resumed an unfinished feature from a previous session that hit context limits. The
+     feature is "перегрузка по фильтру" (overload detection by filter) for the Timeline view:
+        - Add a capacity field (допустимое количество наложений, default 1, max 10) to each timeline
+     row's parameter settings (ParameterModal)
+        - Add a toggle button on the timeline toolbar (left of the calendar) to enable overload
+     visualization
+        - When the toggle is ON, highlight task bars that overlap beyond the row's capacity with bright
+      red color + red border
+        - Overload is computed per-row independently — a task is only highlighted in the specific row
+     where it causes an overload, not in other rows where it appears without overlap
+
+     2. Key Technical Concepts:
+        - React useMemo for computing overloaded task IDs per parameter row
+        - Map<paramId, Set<taskId>> keyed by row to prevent cross-row false positives
+        - getOverloadedTaskIds utility using sweep-line interval algorithm with 1-day tolerance
+        - Inline CSS style override for overload highlighting (bypasses Tailwind class conflicts)
+        - Timeline rows (TimelineParameter) with per-row capacity setting
+        - tasksGroupedByParam: Map<paramId, Task[]> used to get tasks per row
+        - frozen rows vs scrollable rows — two separate TaskBar render loops
+
+     3. Files and Code Sections:
+        - frontend/src/utils/overloadDetection.ts
+           - Pre-existing utility, already fully implemented
+           - getOverloadedTaskIds(tasks: Task[], capacity: number): Set<string>
+           - Uses sweep-line on occupancy windows [startDate+1day, endDate] to find tasks active when
+     count > capacity
+           - 1-day grace period: windowStart = task.startDate.getTime() + 86_400_000
+
+        - frontend/src/pages/Timeline/ParameterModal.tsx
+           - Had capacity state (initialized, loaded in edit mode) but NO UI element and NOT saved
+           - Added select dropdown between "Родительский параметр" and "Фильтры" sections:
+             ```tsx
+             <div className="flex flex-col gap-1">
+               <label className={labelCls}>Допустимое количество наложений</label>
+               <select
+                 value={capacity}
+                 onChange={e => setCapacity(Number(e.target.value))}
+                 className="w-full h-8 px-2 text-xs rounded border border-app-border bg-white
+     text-app-text-head outline-none focus:border-app-primary transition-colors cursor-pointer"
+               >
+                 {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                   <option key={n} value={n}>{n}</option>
+                 ))}
+               </select>
+             </div>
+             ```
+           - Added capacity to handleSubmit's parameterData:
+             ```ts
+             const parameterData = {
+               name: name.trim(),
+               level: newLevel,
+               parentId: parentId || undefined,
+               capacity,
+               filters: ...
+             };
+             ```
+
+        - frontend/src/pages/Timeline/TaskBar.tsx
+           - Added isOverloaded: boolean to interface and destructuring
+           - Added inline style override for overloaded state (after getTaskBarStyle, before
+     boxShadow):
+             ```tsx
+             style={{
+               left: `${position.left}px`,
+               width: `${position.width}px`,
+               top: `${topOffset}px`,
+               ...getTaskBarStyle(task),
+               ...(isOverloaded ? { backgroundColor: '#ef4444', outline: '2px solid #b91c1c', color:
+     '#ffffff' } : {}),
+               boxShadow: isSelected ? '0 0 0 1px rgba(120,180,160,0.75), ...' : undefined,
+             }}
+             ```
+
+        - frontend/src/pages/Timeline/TimelinePage.tsx
+           - Added import: import { getOverloadedTaskIds } from '../../utils/overloadDetection';
+           - Added state: const [showOverload, setShowOverload] = useState(false);
+           - Added useMemo for overloadedByParam (Map<paramId, Set<taskId>>):
+             ```ts
+             const overloadedByParam = useMemo<Map<string, Set<string>>>(() => {
+               if (!showOverload) return new Map();
+               const result = new Map<string, Set<string>>();
+               for (const param of PARAMETERS) {
+                 const tasks = tasksGroupedByParam.get(param.id) ?? [];
+                 const capacity = param.capacity ?? 1;
+                 const ids = getOverloadedTaskIds(tasks, capacity);
+                 if (ids.size > 0) result.set(param.id, ids);
+               }
+               return result;
+             }, [showOverload, PARAMETERS, tasksGroupedByParam]);
+             ```
+           - Added toggle button left of DateRangePicker in toolbar:
+             ```tsx
+             <button
+               onClick={() => setShowOverload(v => !v)}
+               className={`flex items-center gap-1.5 h-7 px-3 text-xs font-semibold rounded border
+     transition-colors ${
+                 showOverload
+                   ? 'bg-red-500 border-red-600 text-white hover:bg-red-600'
+                   : 'border-app-border text-app-text-head hover:border-red-400 hover:text-red-500'
+               }`}
+               title="Показать перегруз строк"
+             >
+               <span className={`w-2 h-2 rounded-full flex-shrink-0 ${showOverload ? 'bg-white' :
+     'bg-red-400'}`} />
+               Перегруз
+             </button>
+             ```
+           - Passed isOverloaded to both TaskBar instances (frozen rows + scrollable rows) using
+     replace_all:
+             ```tsx
+             isOverloaded={showOverload && (overloadedByParam.get(param.id)?.has(task.id) ?? false)}
+             ```
+
+     4. Errors and fixes:
+        - Edit with large context string for frozen rows TaskBar failed (string not found exactly due
+     to whitespace/content mismatch). Fixed by using Grep to find exact line numbers, then replace_all
+     on the smaller unique pattern isSelected={selectedTaskIds.has(task.id)}.
+        - BUG: First implementation used flat Set<string> globally. Tasks appearing in multiple rows
+     were highlighted everywhere, even in rows with no overload. User reported this via screenshot
+     showing "Сборка" row highlighting tasks that had no overlap there.
+          - Fix: Changed from Set<string> to Map<paramId, Set<taskId>>. Check changed from
+     overloadedTaskIds.has(task.id) to overloadedByParam.get(param.id)?.has(task.id) ?? false. This
+     scopes overload highlighting strictly to the row where it occurs.
+
+     5. Problem Solving:
+        - Core problem: same task can appear in multiple parameter rows (via filter matching). A flat
+     global Set of overloaded IDs caused false highlights in rows without actual overload.
+        - Solution: per-row overload map — only mark a task as overloaded in the context of the
+     specific row where the capacity is exceeded.
+        - TypeScript compilation confirmed clean (npx tsc -b --noEmit, no output = no errors) after
+     both the initial implementation and the bug fix.
+
+     6. All user messages:
+        - на прошлой сесси у нас закончился лимит, ты недоделал работу, ты помнишь это?
+        - мы хотели добавить функцию - фичу - перегрузка по фильтру. 1. Добавить в настройки строки
+     реквизит допустимое количество наложений. По умолчанию если помню 1 максимум 10 если не ошибаюсь.
+     2. На сам тайм-лайн при нажатии галочки показывает перегруз тех задач, которые наложены друг
+     надруга в зависимости от выбранного допустимого количества наложений в фильтре. Например если 3
+     станка то при наложении в 4 уже перегруз. Исключение составляло наложение на 1 день, там был
+     допустим переход, точность в часах не внедрена. Задай уточняющие вопросы чтобы продолжить
+        - 1. 3й по счёт после "родительский параметр" перед "фильтры" 2. давай всплывающий список 1-10,
+      сколько допустимо наложений задач в timeline правилах? 3. слева от календаря. 4. Да, яркокрасный
+     цвет + обводка, не потеряй цвет текста 5. Перегруз работает для каждой строки в зависимости от
+     выбранной настройки внутри каждой строки по умолчанию "1" если я нажму галочку, то во всех видимых
+      строках с задачами подсветит задачи, ТОЛЬКО ТЕ КОТОРЫЕ ЯВЛЯЮТСЯ ПЕРЕСЕКАЕМЫМИ В РАМКАХ ЭТОЙ
+     СТРОКИ. То есть функция подвечивает задачи которые наложены друг надруга в зависимости от
+     коэффициента в СТРОКЕ.
+        - [Screenshot showing bug] почти идеально, но проблема в том, что ты подсвечиваешь задачу, если
+      она находится в другой строке и не имеет наложения в этой( другой строке), см. скриншот, в строке
+      сборка есть 2 задачи, поторые подсвечиваются в этой строке, хотя там нет наложений.
+        - я тебя люблю. Сделай краткий комментарий доработки для git текстом сюда, не используй
+     ковычки.
+
+     7. Pending Tasks:
+        - None. All requested functionality has been implemented and verified.
+
+     8. Current Work:
+        The overload detection feature was fully completed. The final state:
+        - ParameterModal has capacity dropdown (1-10), saved on submit
+        - TaskBar accepts isOverloaded prop, renders red (#ef4444 bg, #b91c1c outline, #ffffff text)
+     when true
+        - TimelinePage computes overloadedByParam as Map<paramId, Set<taskId>>, has showOverload toggle
+      button, passes per-row overload check to each TaskBar
+        - Bug fixed: cross-row false positive highlights resolved by using Map keyed by paramId instead
+      of global Set
+
+     9. Optional Next Step:
+        No pending tasks. The user expressed satisfaction and only requested a git commit message,
+     which was provided. No further steps unless the user requests new work.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or
+     content you generated), read the full transcript at:
+     C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--TimeLineManager-4-18-02-2
+     026\f59e4919-b933-4530-b7b5-ab0aeaeb0870.jsonl
+
+❯ /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file src\pages\Timeline\TimelinePage.tsx
+  ⎿  Read src\pages\Timeline\TaskBar.tsx (156 lines)
+  ⎿  Read src\pages\Timeline\ParameterModal.tsx (404 lines)
+  ⎿  Read src\utils\overloadDetection.ts (51 lines)
+  ⎿  Referenced file src\store.ts
+
+─────────────────────────────────────────

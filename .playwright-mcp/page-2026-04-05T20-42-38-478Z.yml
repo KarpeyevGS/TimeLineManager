@@ -1,0 +1,204 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - complementary "Main Navigation" [ref=e4]:
+      - button "Expand sidebar" [ref=e6]:
+        - img [ref=e7]
+      - navigation [ref=e9]:
+        - button [ref=e10]:
+          - img [ref=e11]
+        - button [ref=e17]:
+          - img [ref=e18]
+        - button [ref=e22]:
+          - img [ref=e23]
+      - generic [ref=e28]:
+        - button [ref=e29]:
+          - img [ref=e30]
+        - button [ref=e34]:
+          - img [ref=e35]
+        - button [ref=e39]:
+          - img [ref=e40]
+        - button "Мигрировать старые данные (разово)" [ref=e45]:
+          - img [ref=e46]
+    - main [ref=e52]:
+      - generic [ref=e432]:
+        - generic [ref=e433]:
+          - heading "Все задачи" [level=1] [ref=e434]
+          - button "Новая задача" [ref=e435]:
+            - img [ref=e436]
+            - text: Новая задача
+        - main [ref=e439]:
+          - table [ref=e441]:
+            - rowgroup [ref=e442]:
+              - row "Название Начало Окончание Статус Действия" [ref=e443]:
+                - columnheader "Название" [ref=e444]
+                - columnheader "Начало" [ref=e445]
+                - columnheader "Окончание" [ref=e446]
+                - columnheader "Статус" [ref=e447]
+                - columnheader "Действия" [ref=e448]
+            - rowgroup [ref=e449]:
+              - row "Дизайн главной 1 апр. 2026 12 апр. 2026 —" [ref=e450] [cursor=pointer]:
+                - cell "Дизайн главной" [ref=e451]
+                - cell "1 апр. 2026" [ref=e452]
+                - cell "12 апр. 2026" [ref=e453]
+                - cell "—" [ref=e454]
+                - cell [ref=e455]:
+                  - button "Редактировать" [ref=e456]:
+                    - img [ref=e457]
+        - generic [ref=e462]:
+          - generic [ref=e463]:
+            - heading "Create New Task" [level=2] [ref=e464]
+            - button [ref=e465]:
+              - img [ref=e466]
+          - generic [ref=e469]:
+            - generic [ref=e470]:
+              - generic [ref=e471]: Task Name *
+              - textbox "Enter task name" [ref=e472]: Дизайн профиля
+            - generic [ref=e473]:
+              - generic [ref=e474]: Link
+              - textbox "https://..." [ref=e475]
+            - generic [ref=e476]:
+              - generic [ref=e477]: Period *
+              - generic [ref=e478]:
+                - generic [ref=e480]:
+                  - button "07 апр — 07 апр 2026" [ref=e619]:
+                    - img [ref=e482]
+                    - generic [ref=e487]: 07 апр — 07 апр 2026
+                  - generic [ref=e516]:
+                    - generic [ref=e517]:
+                      - button "апрель 2026" [ref=e518]
+                      - generic [ref=e519]:
+                        - button [ref=e520]:
+                          - img [ref=e521]
+                        - button [ref=e523]:
+                          - img [ref=e524]
+                    - grid "апрель 2026" [ref=e531]:
+                      - rowgroup [ref=e532]:
+                        - row [ref=e533]:
+                          - columnheader [ref=e534]: пн
+                          - columnheader [ref=e535]: вт
+                          - columnheader [ref=e536]: ср
+                          - columnheader [ref=e537]: чт
+                          - columnheader [ref=e538]: пт
+                          - columnheader [ref=e539]: сб
+                          - columnheader [ref=e540]: вс
+                      - rowgroup [ref=e541]:
+                        - row "понедельник, 30 марта 2026 г. вторник, 31 марта 2026 г. среда, 1 апреля 2026 г. четверг, 2 апреля 2026 г. пятница, 3 апреля 2026 г. суббота, 4 апреля 2026 г. Today, воскресенье, 5 апреля 2026 г." [ref=e542]:
+                          - gridcell "понедельник, 30 марта 2026 г." [ref=e543]:
+                            - button "понедельник, 30 марта 2026 г." [ref=e544] [cursor=pointer]: "30"
+                          - gridcell "вторник, 31 марта 2026 г." [ref=e545]:
+                            - button "вторник, 31 марта 2026 г." [ref=e546] [cursor=pointer]: "31"
+                          - gridcell "среда, 1 апреля 2026 г." [ref=e547]:
+                            - button "среда, 1 апреля 2026 г." [ref=e548] [cursor=pointer]: "1"
+                          - gridcell "четверг, 2 апреля 2026 г." [ref=e549]:
+                            - button "четверг, 2 апреля 2026 г." [ref=e550] [cursor=pointer]: "2"
+                          - gridcell "пятница, 3 апреля 2026 г." [ref=e551]:
+                            - button "пятница, 3 апреля 2026 г." [ref=e552] [cursor=pointer]: "3"
+                          - gridcell "суббота, 4 апреля 2026 г." [ref=e553]:
+                            - button "суббота, 4 апреля 2026 г." [ref=e554] [cursor=pointer]: "4"
+                          - gridcell "Today, воскресенье, 5 апреля 2026 г." [ref=e555]:
+                            - button "Today, воскресенье, 5 апреля 2026 г." [ref=e556] [cursor=pointer]: "5"
+                        - row "понедельник, 6 апреля 2026 г. вторник, 7 апреля 2026 г., selected среда, 8 апреля 2026 г. четверг, 9 апреля 2026 г. пятница, 10 апреля 2026 г. суббота, 11 апреля 2026 г. воскресенье, 12 апреля 2026 г." [ref=e620]:
+                          - gridcell "понедельник, 6 апреля 2026 г." [ref=e558]:
+                            - button "понедельник, 6 апреля 2026 г." [ref=e559] [cursor=pointer]: "6"
+                          - gridcell "вторник, 7 апреля 2026 г., selected" [selected] [ref=e621]:
+                            - button "вторник, 7 апреля 2026 г., selected" [active] [ref=e622] [cursor=pointer]: "7"
+                          - gridcell "среда, 8 апреля 2026 г." [ref=e562]:
+                            - button "среда, 8 апреля 2026 г." [ref=e563] [cursor=pointer]: "8"
+                          - gridcell "четверг, 9 апреля 2026 г." [ref=e564]:
+                            - button "четверг, 9 апреля 2026 г." [ref=e565] [cursor=pointer]: "9"
+                          - gridcell "пятница, 10 апреля 2026 г." [ref=e566]:
+                            - button "пятница, 10 апреля 2026 г." [ref=e567] [cursor=pointer]: "10"
+                          - gridcell "суббота, 11 апреля 2026 г." [ref=e568]:
+                            - button "суббота, 11 апреля 2026 г." [ref=e569] [cursor=pointer]: "11"
+                          - gridcell "воскресенье, 12 апреля 2026 г." [ref=e570]:
+                            - button "воскресенье, 12 апреля 2026 г." [ref=e571] [cursor=pointer]: "12"
+                        - row "понедельник, 13 апреля 2026 г. вторник, 14 апреля 2026 г. среда, 15 апреля 2026 г. четверг, 16 апреля 2026 г. пятница, 17 апреля 2026 г. суббота, 18 апреля 2026 г. воскресенье, 19 апреля 2026 г." [ref=e572]:
+                          - gridcell "понедельник, 13 апреля 2026 г." [ref=e573]:
+                            - button "понедельник, 13 апреля 2026 г." [ref=e574] [cursor=pointer]: "13"
+                          - gridcell "вторник, 14 апреля 2026 г." [ref=e575]:
+                            - button "вторник, 14 апреля 2026 г." [ref=e576] [cursor=pointer]: "14"
+                          - gridcell "среда, 15 апреля 2026 г." [ref=e577]:
+                            - button "среда, 15 апреля 2026 г." [ref=e578] [cursor=pointer]: "15"
+                          - gridcell "четверг, 16 апреля 2026 г." [ref=e579]:
+                            - button "четверг, 16 апреля 2026 г." [ref=e580] [cursor=pointer]: "16"
+                          - gridcell "пятница, 17 апреля 2026 г." [ref=e581]:
+                            - button "пятница, 17 апреля 2026 г." [ref=e582] [cursor=pointer]: "17"
+                          - gridcell "суббота, 18 апреля 2026 г." [ref=e583]:
+                            - button "суббота, 18 апреля 2026 г." [ref=e584] [cursor=pointer]: "18"
+                          - gridcell "воскресенье, 19 апреля 2026 г." [ref=e585]:
+                            - button "воскресенье, 19 апреля 2026 г." [ref=e586] [cursor=pointer]: "19"
+                        - row "понедельник, 20 апреля 2026 г. вторник, 21 апреля 2026 г. среда, 22 апреля 2026 г. четверг, 23 апреля 2026 г. пятница, 24 апреля 2026 г. суббота, 25 апреля 2026 г. воскресенье, 26 апреля 2026 г." [ref=e587]:
+                          - gridcell "понедельник, 20 апреля 2026 г." [ref=e588]:
+                            - button "понедельник, 20 апреля 2026 г." [ref=e589] [cursor=pointer]: "20"
+                          - gridcell "вторник, 21 апреля 2026 г." [ref=e590]:
+                            - button "вторник, 21 апреля 2026 г." [ref=e591] [cursor=pointer]: "21"
+                          - gridcell "среда, 22 апреля 2026 г." [ref=e592]:
+                            - button "среда, 22 апреля 2026 г." [ref=e593] [cursor=pointer]: "22"
+                          - gridcell "четверг, 23 апреля 2026 г." [ref=e594]:
+                            - button "четверг, 23 апреля 2026 г." [ref=e595] [cursor=pointer]: "23"
+                          - gridcell "пятница, 24 апреля 2026 г." [ref=e596]:
+                            - button "пятница, 24 апреля 2026 г." [ref=e597] [cursor=pointer]: "24"
+                          - gridcell "суббота, 25 апреля 2026 г." [ref=e598]:
+                            - button "суббота, 25 апреля 2026 г." [ref=e599] [cursor=pointer]: "25"
+                          - gridcell "воскресенье, 26 апреля 2026 г." [ref=e600]:
+                            - button "воскресенье, 26 апреля 2026 г." [ref=e601] [cursor=pointer]: "26"
+                        - row "понедельник, 27 апреля 2026 г. вторник, 28 апреля 2026 г. среда, 29 апреля 2026 г. четверг, 30 апреля 2026 г. пятница, 1 мая 2026 г. суббота, 2 мая 2026 г. воскресенье, 3 мая 2026 г." [ref=e602]:
+                          - gridcell "понедельник, 27 апреля 2026 г." [ref=e603]:
+                            - button "понедельник, 27 апреля 2026 г." [ref=e604] [cursor=pointer]: "27"
+                          - gridcell "вторник, 28 апреля 2026 г." [ref=e605]:
+                            - button "вторник, 28 апреля 2026 г." [ref=e606] [cursor=pointer]: "28"
+                          - gridcell "среда, 29 апреля 2026 г." [ref=e607]:
+                            - button "среда, 29 апреля 2026 г." [ref=e608] [cursor=pointer]: "29"
+                          - gridcell "четверг, 30 апреля 2026 г." [ref=e609]:
+                            - button "четверг, 30 апреля 2026 г." [ref=e610] [cursor=pointer]: "30"
+                          - gridcell "пятница, 1 мая 2026 г." [ref=e611]:
+                            - button "пятница, 1 мая 2026 г." [ref=e612] [cursor=pointer]: "1"
+                          - gridcell "суббота, 2 мая 2026 г." [ref=e613]:
+                            - button "суббота, 2 мая 2026 г." [ref=e614] [cursor=pointer]: "2"
+                          - gridcell "воскресенье, 3 мая 2026 г." [ref=e615]:
+                            - button "воскресенье, 3 мая 2026 г." [ref=e616] [cursor=pointer]: "3"
+                    - button "Закрыть" [ref=e618]
+                - generic [ref=e488]:
+                  - generic [ref=e623]: 1 дн
+                  - generic [ref=e489] [cursor=pointer]:
+                    - checkbox "Fix" [ref=e490]
+                    - generic [ref=e491]: Fix
+            - generic [ref=e492]:
+              - generic [ref=e493]:
+                - checkbox [ref=e494] [cursor=pointer]
+                - generic [ref=e495]: Веха
+              - generic [ref=e496]:
+                - generic [ref=e497]: Цвет
+                - button "Выбрать цвет" [ref=e499] [cursor=pointer]
+            - generic [ref=e500]:
+              - generic [ref=e501]:
+                - checkbox [ref=e502] [cursor=pointer]
+                - generic [ref=e503]: Блокер
+              - generic [ref=e504]:
+                - checkbox [ref=e505] [cursor=pointer]
+                - generic [ref=e506]: Закрыта
+            - generic [ref=e507]:
+              - generic [ref=e508]: Description
+              - textbox "Type here..." [ref=e509]
+            - button "Custom Fields" [ref=e510]:
+              - img [ref=e511]
+              - text: Custom Fields
+          - generic [ref=e513]:
+            - button "Cancel" [ref=e514]
+            - button "Create Task" [ref=e515]
+  - generic:
+    - generic:
+      - generic: Мои Timeline
+      - button "Свернуть":
+        - img
+    - generic:
+      - generic:
+        - button "Новая Timeline"
+      - button "+ Добавить Timeline"
+  - generic:
+    - generic:
+      - generic: Мои дашборды
+      - button:
+        - img
+    - generic:
+      - button "+ Добавить дашборд"

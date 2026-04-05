@@ -8,7 +8,7 @@ interface DragState {
   startDate: Date;
   endDate: Date;
   groupIds: Set<string>;
-  groupOriginalDates: Map<string, { startDate: Date; endDate: Date }>;
+  groupOriginalSnapshots: Map<string, Task>;
 }
 
 interface ResizeState {
@@ -17,6 +17,7 @@ interface ResizeState {
   startX: number;
   startDate: Date;
   endDate: Date;
+  taskSnapshot: Task;
 }
 
 interface UseTaskDragResizeParams {
@@ -54,21 +55,34 @@ export const useTaskDragResize = ({
   const [resizeState, setResizeState] = useState<ResizeState | null>(null);
   const [dragPreviews, setDragPreviews] = useState<Map<string, Task>>(new Map());
   const [dragMoved, setDragMoved] = useState(false);
-  // Флаг: мышь двигалась во время drag — подавляем следующий click
   const suppressClickRef = useRef(false);
-  // Таймер анимации зажатия (250ms)
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Guards against redundant re-renders when pixel delta hasn't crossed a day boundary
+  const lastDaysDeltaRef = useRef<number | null>(null);
+  // Mirrors dragPreviews so handleMouseUp doesn't re-subscribe listeners on every move
+  const dragPreviewsRef = useRef<Map<string, Task>>(new Map());
 
   const handleTaskMouseDown = useCallback((e: React.MouseEvent, task: Task) => {
     if (e.button !== 0) return;
     if (e.ctrlKey) return;
     if (editingTaskId === task.id) return;
     if (task.fix) return;
+    // Второй mousedown двойного клика — отменяем drag и даём dblclick сработать
+    if (e.detail >= 2) {
+      if (holdTimerRef.current) {
+        clearTimeout(holdTimerRef.current);
+        holdTimerRef.current = null;
+      }
+      setDragState(null);
+      setDragMoved(false);
+      setDragPreviews(new Map());
+      return;
+    }
     e.preventDefault();
     suppressClickRef.current = false;
+    lastDaysDeltaRef.current = null;
     setDragMoved(false);
 
-    // Показываем анимацию зажатия через 250ms (без движения)
     holdTimerRef.current = setTimeout(() => setDragMoved(true), 100);
 
     const allTasks = getAllTasks();
@@ -81,12 +95,10 @@ export const useTaskDragResize = ({
       setSelectedTaskIds(new Set([task.id]));
     }
 
-    const groupOriginalDates = new Map<string, { startDate: Date; endDate: Date }>();
+    const groupOriginalSnapshots = new Map<string, Task>();
     for (const id of groupIds) {
       const t = allTasks.find(t => t.id === id);
-      if (t && !t.fix) {
-        groupOriginalDates.set(id, { startDate: t.startDate, endDate: t.endDate });
-      }
+      if (t && !t.fix) groupOriginalSnapshots.set(id, t);
     }
 
     setDragState({
@@ -95,7 +107,7 @@ export const useTaskDragResize = ({
       startDate: task.startDate,
       endDate: task.endDate,
       groupIds,
-      groupOriginalDates,
+      groupOriginalSnapshots,
     });
   }, [editingTaskId, selectedTaskIds, setSelectedTaskIds, getAllTasks]);
 
@@ -105,6 +117,7 @@ export const useTaskDragResize = ({
     e.preventDefault();
     e.stopPropagation();
     suppressClickRef.current = false;
+    lastDaysDeltaRef.current = null;
     setDragMoved(false);
     holdTimerRef.current = setTimeout(() => setDragMoved(true), 100);
     setResizeState({
@@ -113,11 +126,11 @@ export const useTaskDragResize = ({
       startX: e.clientX,
       startDate: task.startDate,
       endDate: task.endDate,
+      taskSnapshot: task,
     });
   }, []);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    const allTasks = getAllTasks();
     if (dragState && dateRange?.from) {
       const deltaX = e.clientX - dragState.startX;
       const daysDelta = Math.round(deltaX / dayWidth);
@@ -126,18 +139,18 @@ export const useTaskDragResize = ({
         suppressClickRef.current = true;
         setDragMoved(true);
       }
+      if (daysDelta === lastDaysDeltaRef.current) return;
+      lastDaysDeltaRef.current = daysDelta;
 
       const previews = new Map<string, Task>();
-      for (const [id, orig] of dragState.groupOriginalDates) {
-        const t = allTasks.find(t => t.id === id);
-        if (t) {
-          const newStartDate = new Date(orig.startDate);
-          const newEndDate = new Date(orig.endDate);
-          newStartDate.setDate(newStartDate.getDate() + daysDelta);
-          newEndDate.setDate(newEndDate.getDate() + daysDelta);
-          previews.set(id, { ...t, startDate: newStartDate, endDate: newEndDate });
-        }
+      for (const [id, origTask] of dragState.groupOriginalSnapshots) {
+        const newStartDate = new Date(origTask.startDate);
+        const newEndDate = new Date(origTask.endDate);
+        newStartDate.setDate(newStartDate.getDate() + daysDelta);
+        newEndDate.setDate(newEndDate.getDate() + daysDelta);
+        previews.set(id, { ...origTask, startDate: newStartDate, endDate: newEndDate });
       }
+      dragPreviewsRef.current = previews;
       setDragPreviews(previews);
     } else if (resizeState && dateRange?.from) {
       const deltaX = e.clientX - resizeState.startX;
@@ -147,25 +160,29 @@ export const useTaskDragResize = ({
         suppressClickRef.current = true;
         setDragMoved(true);
       }
+      if (daysDelta === lastDaysDeltaRef.current) return;
+      lastDaysDeltaRef.current = daysDelta;
 
-      const taskToUpdate = allTasks.find(t => t.id === resizeState.taskId);
-      if (taskToUpdate) {
-        if (resizeState.side === 'right') {
-          const newEndDate = new Date(resizeState.endDate);
-          newEndDate.setDate(newEndDate.getDate() + daysDelta);
-          if (newEndDate >= resizeState.startDate) {
-            setDragPreviews(new Map([[resizeState.taskId, { ...taskToUpdate, endDate: newEndDate }]]));
-          }
-        } else {
-          const newStartDate = new Date(resizeState.startDate);
-          newStartDate.setDate(newStartDate.getDate() + daysDelta);
-          if (newStartDate <= resizeState.endDate) {
-            setDragPreviews(new Map([[resizeState.taskId, { ...taskToUpdate, startDate: newStartDate }]]));
-          }
+      const taskSnapshot = resizeState.taskSnapshot;
+      if (resizeState.side === 'right') {
+        const newEndDate = new Date(resizeState.endDate);
+        newEndDate.setDate(newEndDate.getDate() + daysDelta);
+        if (newEndDate >= resizeState.startDate) {
+          const previews = new Map([[resizeState.taskId, { ...taskSnapshot, endDate: newEndDate }]]);
+          dragPreviewsRef.current = previews;
+          setDragPreviews(previews);
+        }
+      } else {
+        const newStartDate = new Date(resizeState.startDate);
+        newStartDate.setDate(newStartDate.getDate() + daysDelta);
+        if (newStartDate <= resizeState.endDate) {
+          const previews = new Map([[resizeState.taskId, { ...taskSnapshot, startDate: newStartDate }]]);
+          dragPreviewsRef.current = previews;
+          setDragPreviews(previews);
         }
       }
     }
-  }, [dragState, resizeState, dateRange, dayWidth, getAllTasks]);
+  }, [dragState, resizeState, dateRange, dayWidth]);
 
   const handleMouseUp = useCallback(() => {
     if (holdTimerRef.current) {
@@ -173,28 +190,30 @@ export const useTaskDragResize = ({
       holdTimerRef.current = null;
     }
 
-    if (dragState && dragPreviews.size > 0) {
-      if (dragPreviews.size === 1) {
-        const [id, preview] = [...dragPreviews][0];
+    const previews = dragPreviewsRef.current;
+    if (dragState && previews.size > 0) {
+      if (previews.size === 1) {
+        const [id, preview] = [...previews][0];
         updateTask(id, { startDate: preview.startDate, endDate: preview.endDate });
       } else {
-        batchUpdateTasks([...dragPreviews].map(([taskId, preview]) => ({
+        batchUpdateTasks([...previews].map(([taskId, preview]) => ({
           taskId,
           updates: { startDate: preview.startDate, endDate: preview.endDate },
         })));
       }
-    } else if (resizeState && dragPreviews.size > 0) {
-      const preview = dragPreviews.get(resizeState.taskId);
+    } else if (resizeState && previews.size > 0) {
+      const preview = previews.get(resizeState.taskId);
       if (preview) {
         updateTask(resizeState.taskId, { startDate: preview.startDate, endDate: preview.endDate });
       }
     }
 
+    dragPreviewsRef.current = new Map();
     setDragState(null);
     setResizeState(null);
     setDragPreviews(new Map());
     setDragMoved(false);
-  }, [dragPreviews, dragState, resizeState, updateTask, batchUpdateTasks]);
+  }, [dragState, resizeState, updateTask, batchUpdateTasks]);
 
   useEffect(() => {
     if (!dragState && !resizeState) return;
@@ -206,7 +225,7 @@ export const useTaskDragResize = ({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [dragState, resizeState, dayWidth, dateRange, handleMouseMove, handleMouseUp]);
+  }, [dragState, resizeState, handleMouseMove, handleMouseUp]);
 
   return { dragState, resizeState, dragPreviews, dragMoved, suppressClickRef, handleTaskMouseDown, handleResizeMouseDown };
 };

@@ -11,6 +11,7 @@ interface TaskBarProps {
   isResizing: boolean;
   isEditing: boolean;
   isSelected: boolean;
+  isOverloaded: boolean;
   editingTaskName: string;
   getTaskBarColor: (task: Task) => string;
   getTaskBarStyle: (task: Task) => React.CSSProperties;
@@ -34,6 +35,7 @@ export const TaskBar: React.FC<TaskBarProps> = ({
   isResizing,
   isEditing,
   isSelected,
+  isOverloaded,
   editingTaskName,
   getTaskBarColor,
   getTaskBarStyle,
@@ -56,6 +58,7 @@ export const TaskBar: React.FC<TaskBarProps> = ({
         key={task.id}
         onClick={(e) => onClick(e, task)}
         onMouseDown={(e) => onMouseDown(e, task)}
+        onDoubleClick={(e) => onDoubleClick(e, task)}
         onContextMenu={(e) => onContextMenu(e, task)}
         onMouseEnter={(e) => onMouseEnter(e, task)}
         onMouseLeave={onMouseLeave}
@@ -105,7 +108,8 @@ export const TaskBar: React.FC<TaskBarProps> = ({
         width: `${position.width}px`,
         top: `${topOffset}px`,
         ...getTaskBarStyle(task),
-        ...(isSelected ? { boxShadow: '0 0 0 1px rgba(120,180,160,0.75), 0 0 10px 3px rgba(100,160,140,0.3), 0 0 22px 6px rgba(100,160,140,0.12)' } : {}),
+        ...(isOverloaded ? { backgroundColor: '#ef4444', outline: '2px solid #b91c1c', color: '#ffffff' } : {}),
+        boxShadow: isSelected ? '0 0 0 1px rgba(120,180,160,0.75), 0 0 10px 3px rgba(100,160,140,0.3), 0 0 22px 6px rgba(100,160,140,0.12)' : undefined,
       }}
     >
       <div
