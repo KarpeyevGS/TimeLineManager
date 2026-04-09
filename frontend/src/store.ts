@@ -8,6 +8,7 @@ export interface TimelineViewState {
   dateRange: { from: string; to: string } | null; // ISO-строки
   zoomIndex: number;
   scrollLeft: number;
+  expandedRows?: boolean;
 }
 
 const TIMELINE_VIEW_KEY = 'timeline_view_state';
@@ -109,7 +110,7 @@ export interface TimelineConfig {
 export interface DashboardConfig {
   id: string;
   name: string;
-  type: 'treemap' | 'workload';
+  type: 'treemap';
   groupByFieldId: string;        // кастомное поле для группировки/визуализации
   filters: Record<string, string[]>; // фильтры задач (пустой объект = все задачи)
   period: '30d' | '90d' | 'custom';

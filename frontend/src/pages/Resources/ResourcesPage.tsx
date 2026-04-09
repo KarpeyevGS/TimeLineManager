@@ -4,7 +4,6 @@ import { useAppStore } from '../../store';
 import type { DashboardConfig } from '../../store';
 import { DashboardModal } from '../Dashboard/DashboardModal';
 import { TreemapChart } from '../Dashboard/TreemapChart';
-import { WorkloadChart } from '../Dashboard/WorkloadChart';
 
 interface DashboardPageProps {
   activeDashboardId?: string;
@@ -51,11 +50,6 @@ export const ResourcesPage: React.FC<DashboardPageProps> = ({
           <h1 className="text-xl font-bold text-app-text-head">
             {dashboard ? dashboard.name : 'Дашборды'}
           </h1>
-          {dashboard && (
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-app-bg text-app-text-muted border border-app-border">
-              {dashboard.type === 'treemap' ? 'Treemap' : 'Загрузка'}
-            </span>
-          )}
         </div>
         {dashboard && (
           <button
@@ -72,19 +66,11 @@ export const ResourcesPage: React.FC<DashboardPageProps> = ({
       <main className="flex-1 overflow-hidden">
         {dashboard ? (
           <div className="h-full p-4">
-            {dashboard.type === 'treemap' ? (
-              <TreemapChart
-                dashboard={dashboard}
-                tasks={tasks}
-                customFieldTypes={customFieldTypes}
-              />
-            ) : (
-              <WorkloadChart
-                dashboard={dashboard}
-                tasks={tasks}
-                customFieldTypes={customFieldTypes}
-              />
-            )}
+            <TreemapChart
+              dashboard={dashboard}
+              tasks={tasks}
+              customFieldTypes={customFieldTypes}
+            />
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-app-text-muted gap-3">

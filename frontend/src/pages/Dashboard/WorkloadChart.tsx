@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, LabelList,
 } from 'recharts';
 import type { DashboardConfig, Task, CustomFieldType } from '../../store';
@@ -71,7 +71,7 @@ export const WorkloadChart: React.FC<WorkloadChartProps> = ({ dashboard, tasks, 
         </span>
       </div>
       <div className="flex-1 overflow-y-auto min-h-0">
-        <div style={{ height: chartHeight, minHeight: 200 }}>
+        <div style={{ height: chartHeight, minHeight: 200, pointerEvents: 'none' }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               layout="vertical"
@@ -92,19 +92,7 @@ export const WorkloadChart: React.FC<WorkloadChartProps> = ({ dashboard, tasks, 
                 tick={{ fontSize: 12, fill: 'var(--color-app-text-head, #1e293b)', fontWeight: 600 }}
                 tickLine={false}
               />
-              <Tooltip
-                content={({ payload }) => {
-                  if (!payload?.length) return null;
-                  const item = payload[0].payload as BarItem;
-                  return (
-                    <div className="bg-white border border-app-border rounded-lg px-3 py-2 shadow-lg text-xs">
-                      <p className="font-bold text-app-text-head">{item.name}</p>
-                      <p className="text-app-text-muted">{item.count} задач</p>
-                    </div>
-                  );
-                }}
-              />
-              <Bar dataKey="count" fill="var(--color-app-primary, #3b82f6)" radius={[0, 4, 4, 0]} maxBarSize={52} isAnimationActive={false} activeBar={false}>
+              <Bar dataKey="count" fill="var(--color-app-primary, #3b82f6)" radius={[0, 4, 4, 0]} maxBarSize={52} isAnimationActive={false} activeBar={false} style={{ pointerEvents: 'none' }}>
                 <LabelList
                   dataKey="count"
                   position="right"

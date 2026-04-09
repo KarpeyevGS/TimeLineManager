@@ -207,3 +207,167 @@
   ⎿  Referenced file frontend\src\components\layout\Sidebar.tsx
   ⎿  Referenced file frontend\src\pages\Timeline\TimelinePage.tsx
   ⎿  Referenced file frontend\src\store.ts
+
+● feat: row expansion toggle, remove workload dashboard type
+
+  - add Rows2/Rows3 toggle button in sidebar header to expand/collapse all timeline rows and task bars
+  - persist expanded state in viewState/localStorage
+  - remove workload dashboard type, selector, WorkloadChart usage and import
+
+✻ Conversation compacted (ctrl+o for history)
+
+
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the
+     earlier portion of the conversation.
+
+     Summary:
+     1. Primary Request and Intent:
+        - Add a row expansion toggle button to the Timeline page sidebar header that expands all rows and task bars for better
+      visibility (2 states: compact/expanded). Font size should not change. State should persist across sessions.
+        - After implementation, replace the initial icon (AlignJustify) with a 2-icon pair showing distinct states — user
+     chose Rows2 (compact) / Rows3 (expanded) from Lucide.
+        - Remove the workload dashboard type entirely — delete the type selector from the create/edit modal, remove the
+     WorkloadChart render and import, fix the type in store.ts.
+        - Fix white screen that appeared when opening dashboard settings or create modal after the workload removal.
+
+     2. Key Technical Concepts:
+        - React 19 + TypeScript + Tailwind CSS v4
+        - Recharts (BarChart used in WorkloadChart)
+        - Lucide React icons (Rows2, Rows3)
+        - Row height formula: `Math.max(layerHeight, layers.length * layerHeight)` — dynamic based on overlapping task layers
+        - Task layering system: tasks distributed into non-overlapping layers, each layer 24px (compact) / 44px (expanded)
+        - topOffset formula: `layerIndex * layerHeight + barOffset`
+        - viewState persistence to localStorage via `useTimelineViewState` hook and `saveTimelineViewState`
+        - TimelineViewState in store.ts — persisted across sessions via localStorage and Electron API
+        - DashboardConfig type in store.ts with `type` field
+
+     3. Files and Code Sections:
+        - frontend/src/store.ts
+          - Added `expandedRows?: boolean` to `TimelineViewState` interface
+          - Changed `type: 'treemap' | 'workload'` to `type: 'treemap'` in DashboardConfig interface
+          ```typescript
+          export interface TimelineViewState {
+            dateRange: { from: string; to: string } | null;
+            zoomIndex: number;
+            scrollLeft: number;
+            expandedRows?: boolean;
+          }
+          ```
+
+        - frontend/src/pages/Timeline/TimelinePage.tsx
+          - Added `ROW_HEIGHTS` constants after `ZOOM_CONFIG`:
+          ```typescript
+          const ROW_HEIGHTS = {
+            compact:  { layerHeight: 24, barHeight: 20, barOffset: 2 },
+            expanded: { layerHeight: 44, barHeight: 36, barOffset: 4 },
+          };
+          ```
+          - Added `Rows2, Rows3` to Lucide imports (replaced AlignJustify)
+          - Added state and derived config after `showOverload`:
+          ```typescript
+          const expandedRows = viewState.expandedRows ?? false;
+          const setExpandedRows = (val: boolean) => updateViewState({ expandedRows: val });
+          const rowHeights = expandedRows ? ROW_HEIGHTS.expanded : ROW_HEIGHTS.compact;
+          ```
+          - Replaced all 4 rowHeight calculations:
+          ```typescript
+          const rowHeight = Math.max(rowHeights.layerHeight, layers.length * rowHeights.layerHeight);
+          ```
+          - Replaced both topOffset calculations:
+          ```typescript
+          const topOffset = layerIndex * rowHeights.layerHeight + rowHeights.barOffset;
+          ```
+          - Added `barHeight={rowHeights.barHeight}` to both TaskBar instances
+          - Added toggle button in sidebar header next to Параметры:
+          ```tsx
+          <button
+            onClick={() => setExpandedRows(!expandedRows)}
+            title={expandedRows ? 'Свернуть строки' : 'Развернуть строки'}
+            className={`w-5 h-5 flex items-center justify-center rounded transition-colors hover:bg-app-border ${expandedRows
+     ? 'text-app-primary' : 'text-app-text-muted'}`}
+          >
+            {expandedRows ? <Rows3 size={13} /> : <Rows2 size={13} />}
+          </button>
+          ```
+
+        - frontend/src/pages/Timeline/TaskBar.tsx
+          - Added `barHeight?: number` to props interface, default value 20 in destructure
+          - Removed `h-[20px]` Tailwind class from regular bar, added `height: \`${barHeight}px\`` to inline style
+          - Changed milestone bar height from `height: '20px'` to `height: \`${barHeight}px\``
+
+        - frontend/src/pages/Dashboard/DashboardModal.tsx
+          - Changed `useState<'treemap' | 'workload'>('treemap')` to `const [type] = useState<'treemap'>('treemap')` (no
+     setter)
+          - Removed entire Type selector UI block (the div with Тип дашборда label and treemap/workload buttons)
+          - Removed `setType(editingDashboard.type)` from edit branch of useEffect
+          - Removed `setType('treemap')` from reset branch of useEffect
+
+        - frontend/src/pages/Resources/ResourcesPage.tsx
+          - Removed `import { WorkloadChart } from '../Dashboard/WorkloadChart'`
+          - Replaced conditional `{dashboard.type === 'treemap' ? <TreemapChart/> : <WorkloadChart/>}` with just
+     `<TreemapChart/>`
+          - Removed type badge span from header (`{dashboard.type === 'treemap' ? 'Treemap' : 'Загрузка'}`)
+
+        - frontend/src/pages/Dashboard/WorkloadChart.tsx
+          - Earlier in session: removed Tooltip import and component, added `pointerEvents: 'none'` to disable all hover
+     reactions
+          - File is now unused (no longer imported anywhere)
+
+     4. Errors and fixes:
+        - Edit tool ambiguity on TaskBar replacement: two identical TaskBar blocks found. Fixed by using a shorter unique
+     string (`topOffset={topOffset}\n  isDragging={isDragging}`) with `replace_all: true`.
+        - ResourcesPage Edit string mismatch: the exact whitespace in the conditional render didn't match. Fixed by reading
+     the file first to get exact indentation, then editing.
+        - White screen on dashboard modal open: after removing workload type, `setType` was removed from useState destructure
+     but `setType(editingDashboard.type)` and `setType('treemap')` were still called in useEffect, causing a runtime crash.
+     Fixed by removing both `setType(...)` calls from DashboardModal.tsx useEffect.
+
+     5. Problem Solving:
+        - Row expansion: parameterized all hardcoded 24px/20px/2px values through ROW_HEIGHTS constants, wired to persisted
+     viewState toggle.
+        - Workload removal: traced all references across 4 files and cleaned them all up. The crash from stale setType calls
+     was diagnosed by reading the full DashboardModal component and spotting the useEffect still referencing the removed
+     setter.
+
+     6. All user messages:
+        - хочу сделать очень важную доработку. Добавить кнопку - расширение строк при нажатии, все строки и timeline bar -
+     относительно расширяются для лучшей видимости. Задай уточняющие вопросы
+        - (answered clarifying questions: Toggle 2 states, row height + task bar height change without font size, button in
+     sidebar header)
+        - (approved plan)
+        - отлично, предложи другую иконку для этой кнопки и чтобы было 2 состояния
+        - (selected Rows2/Rows3 pair)
+        - убери тип дашборда загрузка не хочу такой.
+        - теперь при выборе настройки в dashbord или создать новый - белый экран, исправь
+        - Сделай краткий комментарий доработки для git текстом сюда, не используй ковычки
+        - (this summary request)
+
+     7. Pending Tasks:
+        - None. All requested tasks have been completed.
+
+     8. Current Work:
+        The last substantive work was fixing the white screen crash in DashboardModal.tsx caused by stale `setType()` calls
+     remaining in the useEffect after the setter was removed. The fix was removing two lines:
+        - `setType(editingDashboard.type)` from the edit branch
+        - `setType('treemap')` from the reset branch
+
+        Before that, the workload dashboard type was fully removed across store.ts, DashboardModal.tsx, and ResourcesPage.tsx.
+      The user then requested a git commit message which was provided as plain text without quotes.
+
+     9. Optional Next Step:
+        No pending tasks remain. The user has not indicated any further work. The WorkloadChart.tsx file is now unused and
+     could be deleted, but the user has not explicitly requested this.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you generated),
+      read the full transcript at: C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--TimeLineManager-4-
+     18-02-2026\e56829ed-d42b-440e-949c-8acd37001e8d.jsonl
+
+❯ /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Read frontend\src\pages\Dashboard\DashboardModal.tsx (351 lines)
+  ⎿  Read frontend\src\pages\Resources\ResourcesPage.tsx (110 lines)
+  ⎿  Referenced file frontend\src\store.ts
+  ⎿  Read frontend\src\pages\Dashboard\WorkloadChart.tsx (109 lines)
+  ⎿  Referenced file frontend\src\pages\Timeline\TimelinePage.tsx
+  ⎿  Plan file referenced (~\.claude\plans\linear-skipping-haven.md)

@@ -10,7 +10,7 @@ import {
   isToday
 } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { Plus, Minus, Pencil, Trash2, Copy, GripVertical, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Printer, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Plus, Minus, Pencil, Trash2, Copy, GripVertical, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Printer, AlertTriangle, CheckCircle, Rows2, Rows3 } from 'lucide-react';
 
 const PinIcon: React.FC<{ size?: number; className?: string }> = ({ size = 12, className }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className={className} xmlns="http://www.w3.org/2000/svg">
@@ -88,6 +88,11 @@ const ZOOM_CONFIG: Record<number, number> = {
   4: 9,   // 2Q
   5: 6,   // 3Q
   6: 4,   // Y
+};
+
+const ROW_HEIGHTS = {
+  compact:  { layerHeight: 24, barHeight: 20, barOffset: 2 },
+  expanded: { layerHeight: 44, barHeight: 36, barOffset: 4 },
 };
 
 interface TimelinePageProps {
@@ -325,6 +330,10 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   const [ganttNotification, setGanttNotification] = useState<string | null>(null);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const [showOverload, setShowOverload] = useState(false);
+
+  const expandedRows = viewState.expandedRows ?? false;
+  const setExpandedRows = (val: boolean) => updateViewState({ expandedRows: val });
+  const rowHeights = expandedRows ? ROW_HEIGHTS.expanded : ROW_HEIGHTS.compact;
 
   const dayWidth = ZOOM_CONFIG[zoomIndex] || 56;
 
@@ -1129,6 +1138,13 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         <div className="flex-shrink-0 border-r border-app-border h-[72px] flex flex-col justify-between pl-2 font-semibold text-app-text-main py-2" style={{ width: sidebarWidth, minWidth: sidebarWidth }}>
           <div className="flex items-center gap-1">
             <span>Параметры</span>
+            <button
+              onClick={() => setExpandedRows(!expandedRows)}
+              title={expandedRows ? 'Свернуть строки' : 'Развернуть строки'}
+              className={`w-5 h-5 flex items-center justify-center rounded transition-colors hover:bg-app-border ${expandedRows ? 'text-app-primary' : 'text-app-text-muted'}`}
+            >
+              {expandedRows ? <Rows3 size={13} /> : <Rows2 size={13} />}
+            </button>
             {selectedParamIds.size === 1 && (() => {
               const selectedId = Array.from(selectedParamIds)[0];
               const selectedParam = PARAMETERS.find(p => p.id === selectedId);
@@ -1371,7 +1387,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
           <div className="flex-shrink-0 border-r border-app-border bg-app-surface" style={{ width: sidebarWidth, minWidth: sidebarWidth }}>
             {frozenRows.map((param) => {
               const layers = getTaskLayers(param.id);
-              const rowHeight = Math.max(24, layers.length * 24);
+              const rowHeight = Math.max(rowHeights.layerHeight, layers.length * rowHeights.layerHeight);
 
               return (
                 <div
@@ -1446,7 +1462,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
               <div className="relative z-10">
                 {frozenRows.map((param) => {
                   const layers = getTaskLayers(param.id);
-                  const rowHeight = Math.max(24, layers.length * 24);
+                  const rowHeight = Math.max(rowHeights.layerHeight, layers.length * rowHeights.layerHeight);
                   const isRowSelected = selectedParamIds.has(param.id);
 
                   return (
@@ -1467,7 +1483,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                           const position = getTaskBarPosition(displayTask);
                           if (!position) return null;
 
-                          const topOffset = layerIndex * 24 + 2;
+                          const topOffset = layerIndex * rowHeights.layerHeight + rowHeights.barOffset;
                           const isDragging = dragMoved && (dragState?.groupIds.has(task.id) ?? false);
                           const isResizing = resizeState?.taskId === task.id;
 
@@ -1477,6 +1493,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                               task={displayTask}
                               position={position}
                               topOffset={topOffset}
+                              barHeight={rowHeights.barHeight}
                               isDragging={isDragging}
                               isResizing={isResizing}
                               isEditing={editingTaskId === task.id}
@@ -1537,7 +1554,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
               <SortableContext items={scrollableRows.map(r => r.id)} strategy={dndSortingStrategy}>
                 {scrollableRows.map((param) => {
                   const layers = getTaskLayers(param.id);
-                  const rowHeight = Math.max(24, layers.length * 24);
+                  const rowHeight = Math.max(rowHeights.layerHeight, layers.length * rowHeights.layerHeight);
                   const isTarget = dropTargetId === param.id;
                   return (
                     <SortableParamRow
@@ -1624,7 +1641,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
               <div className="relative z-10">
                 {scrollableRows.map((param) => {
                   const layers = getTaskLayers(param.id);
-                  const rowHeight = Math.max(24, layers.length * 24);
+                  const rowHeight = Math.max(rowHeights.layerHeight, layers.length * rowHeights.layerHeight);
                   const isRowSelected = selectedParamIds.has(param.id);
 
                   return (
@@ -1645,7 +1662,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                           const position = getTaskBarPosition(displayTask);
                           if (!position) return null;
 
-                          const topOffset = layerIndex * 24 + 2;
+                          const topOffset = layerIndex * rowHeights.layerHeight + rowHeights.barOffset;
                           const isDragging = dragMoved && (dragState?.groupIds.has(task.id) ?? false);
                           const isResizing = resizeState?.taskId === task.id;
 
@@ -1655,6 +1672,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                               task={displayTask}
                               position={position}
                               topOffset={topOffset}
+                              barHeight={rowHeights.barHeight}
                               isDragging={isDragging}
                               isResizing={isResizing}
                               isEditing={editingTaskId === task.id}

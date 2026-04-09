@@ -25,7 +25,7 @@ export const DashboardModal: React.FC<DashboardModalProps> = ({
   onClose,
 }) => {
   const [name, setName] = useState('');
-  const [type, setType] = useState<'treemap' | 'workload'>('treemap');
+  const [type] = useState<'treemap'>('treemap');
   const [groupByFieldId, setGroupByFieldId] = useState('');
   const [period, setPeriod] = useState<'30d' | '90d' | 'custom'>('30d');
   const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
@@ -44,7 +44,6 @@ export const DashboardModal: React.FC<DashboardModalProps> = ({
     if (!isOpen) return;
     if (mode === 'edit' && editingDashboard) {
       setName(editingDashboard.name);
-      setType(editingDashboard.type);
       setGroupByFieldId(editingDashboard.groupByFieldId);
       setPeriod(editingDashboard.period);
       setCustomRange(
@@ -60,7 +59,6 @@ export const DashboardModal: React.FC<DashboardModalProps> = ({
       setErrors({});
     } else {
       setName('');
-      setType('treemap');
       setGroupByFieldId('');
       setPeriod('30d');
       setCustomRange(undefined);
@@ -211,27 +209,6 @@ export const DashboardModal: React.FC<DashboardModalProps> = ({
               className={inputCls('name')}
             />
             {errors.name && <p className="text-[10px] text-app-error">{errors.name}</p>}
-          </div>
-
-          {/* Type */}
-          <div className="flex flex-col gap-1">
-            <label className={labelCls}>Тип дашборда</label>
-            <div className="flex gap-2">
-              {(['treemap', 'workload'] as const).map(t => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setType(t)}
-                  className={`flex-1 h-8 text-xs font-semibold rounded border transition-colors ${
-                    type === t
-                      ? 'bg-app-primary text-white border-app-primary'
-                      : 'border-app-border text-app-text-head hover:border-app-primary hover:text-app-primary'
-                  }`}
-                >
-                  {t === 'treemap' ? 'Treemap' : 'Загрузка (бар)'}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* GroupBy */}

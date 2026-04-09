@@ -7,6 +7,7 @@ interface TaskBarProps {
   task: Task;
   position: { left: number; width: number };
   topOffset: number;
+  barHeight?: number;
   isDragging: boolean;
   isResizing: boolean;
   isEditing: boolean;
@@ -31,6 +32,7 @@ export const TaskBar: React.FC<TaskBarProps> = ({
   task,
   position,
   topOffset,
+  barHeight = 20,
   isDragging,
   isResizing,
   isEditing,
@@ -68,7 +70,7 @@ export const TaskBar: React.FC<TaskBarProps> = ({
         style={{
           left: `${cx - size / 2}px`,
           top: `${topOffset}px`,
-          height: '20px',
+          height: `${barHeight}px`,
         }}
       >
         <div
@@ -97,7 +99,7 @@ export const TaskBar: React.FC<TaskBarProps> = ({
       onContextMenu={(e) => onContextMenu(e, task)}
       onMouseEnter={(e) => onMouseEnter(e, task)}
       onMouseLeave={onMouseLeave}
-      className={`absolute h-[20px] rounded-sm shadow-md text-[10px] flex items-center font-medium select-none overflow-hidden transition-all duration-150 ${getTaskBarColor(task)} ${
+      className={`absolute rounded-sm shadow-md text-[10px] flex items-center font-medium select-none overflow-hidden transition-all duration-150 ${getTaskBarColor(task)} ${
         isEditing ? 'cursor-text' :
         isDragging ? 'shadow-2xl opacity-75 scale-105 cursor-grabbing' :
         isResizing ? 'shadow-2xl opacity-75 cursor-ew-resize' :
@@ -107,6 +109,7 @@ export const TaskBar: React.FC<TaskBarProps> = ({
         left: `${position.left}px`,
         width: `${position.width}px`,
         top: `${topOffset}px`,
+        height: `${barHeight}px`,
         ...getTaskBarStyle(task),
         ...(isOverloaded ? { backgroundColor: '#ef4444', outline: '2px solid #b91c1c', color: '#ffffff' } : {}),
         boxShadow: isSelected ? '0 0 0 1px rgba(120,180,160,0.75), 0 0 10px 3px rgba(100,160,140,0.3), 0 0 22px 6px rgba(100,160,140,0.12)' : undefined,
