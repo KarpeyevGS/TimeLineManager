@@ -1,0 +1,209 @@
+● feat: persist timeline collapsed state, inline row rename, task context menu blocker/close actions, custom fields
+  collapse for empty values, middle-mouse pan on timeline, fix child rows deletion, sidebar cleanup
+
+✻ Conversation compacted (ctrl+o for history)
+
+
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary below covers the
+     earlier portion of the conversation.
+
+     Summary:
+     1. Primary Request and Intent:
+        The user made multiple feature/bugfix requests for a React-based Gantt/Timeline project manager app:
+        - Fix bug: deleting a timeline row with hidden (collapsed) children only deleted the parent; after reload
+     children reappeared
+        - Add middle-mouse-button drag to pan the timeline grid horizontally and vertically
+        - Add "Блокер" and "Закрыть" actions to the right-click context menu on task bars, with toggle behavior on
+     repeated clicks
+        - Add double-click inline rename for timeline row names in the sidebar
+        - Persist collapsed/expanded row state in the database so it survives reload and import
+        - Sidebar cleanup: remove "Мигрировать данные" button, change Import icon to match Export (Download), change
+     Export icon to Save (floppy disk)
+        - Add per-field collapse for empty custom fields in the task edit modal, collapsed by default on open, with
+     individual toggle chevrons
+
+     2. Key Technical Concepts:
+        - React functional components with hooks (useState, useEffect, useCallback, useMemo, useRef)
+        - Global singleton store pattern with subscriber system (store.ts)
+        - TimelineParameter hierarchy with parentId for nested rows
+        - Recursive descendant collection for deletion
+        - Middle mouse button (button===1) pan via mousedown/mousemove/mouseup events on document
+        - scrollbarRef for horizontal scroll, timelineRef for vertical scroll
+        - SortableParamRow component with DnD (dnd-kit) for row reordering
+        - SortableFieldRow component with DnD for custom field reordering
+        - Inline editing pattern: local isEditing state + input ref with autoFocus
+        - Collapsed state persisted in TimelineConfig.collapsedIds (string array) in store without undo history
+        - Lucide React icons (AlertTriangle, CheckCircle, Save, Download, ChevronRight, ChevronDown)
+        - Tailwind CSS v4 with custom app-* color tokens
+
+     3. Files and Code Sections:
+        - frontend/src/store.ts
+          - Fixed deleteParameterFromTimeline to recursively collect and delete all descendants:
+            ```ts
+            const collectDescendants = (pid: string) => {
+              toDelete.add(pid);
+              cfg.parameters.forEach(p => {
+                if (p.parentId === pid) collectDescendants(p.id);
+              });
+            };
+            collectDescendants(paramId);
+            return { ...cfg, parameters: cfg.parameters.filter(p => !toDelete.has(p.id)) };
+            ```
+          - Added collapsedIds?: string[] to TimelineConfig interface
+          - Added updateTimelineCollapsedIds (no pushUndo):
+            ```ts
+            const updateTimelineCollapsedIds = useCallback((configId: string, collapsedIds: string[]): void => {
+              globalAppData = {
+                ...globalAppData,
+                timelineConfigs: globalAppData.timelineConfigs.map(cfg =>
+                  cfg.id === configId ? { ...cfg, collapsedIds } : cfg
+                ),
+              };
+              notifySubscribers();
+            }, []);
+            ```
+          - Exported as store.timelines.updateCollapsedIds
+
+        - frontend/src/pages/Timeline/TimelinePage.tsx
+          - Middle-mouse pan useEffect (after line ~961):
+            ```ts
+            useEffect(() => {
+              const el = timelineRef.current;
+              if (!el) return;
+              let dragging = false, startX = 0, startY = 0, startScrollLeft = 0, startScrollTop = 0;
+              const onMouseDown = (e: MouseEvent) => {
+                if (e.button !== 1) return;
+                e.preventDefault(); dragging = true;
+                startX = e.clientX; startY = e.clientY;
+                startScrollLeft = scrollbarRef.current?.scrollLeft ?? 0;
+                startScrollTop = el.scrollTop;
+                el.style.cursor = 'grabbing';
+              };
+              const onMouseMove = (e: MouseEvent) => {
+                if (!dragging) return;
+                const dx = e.clientX - startX; const dy = e.clientY - startY;
+                if (scrollbarRef.current) scrollbarRef.current.scrollLeft = startScrollLeft - dx;
+                el.scrollTop = startScrollTop - dy;
+              };
+              const onMouseUp = (e: MouseEvent) => { if (e.button !== 1 && !dragging) return; dragging = false;
+     el.style.cursor = ''; };
+              el.addEventListener('mousedown', onMouseDown);
+              document.addEventListener('mousemove', onMouseMove);
+              document.addEventListener('mouseup', onMouseUp);
+              return () => { el.removeEventListener('mousedown', onMouseDown); document.removeEventListener('mousemove',
+      onMouseMove); document.removeEventListener('mouseup', onMouseUp); };
+            }, []);
+            ```
+          - Timeline grid div gets onMouseDown={e => { if (e.button === 1) e.preventDefault(); }} to block browser
+     autoscroll
+          - Task context menu added Блокер/Закрыть with toggle:
+            ```tsx
+            onClick={() => {
+              const isBlocker = taskContextMenu.task.priority === 'blocker';
+              store.tasks.update(taskContextMenu.task.id, { priority: isBlocker ? 'medium' : 'blocker' });
+              setTaskContextMenu(null);
+            }}
+            // label: taskContextMenu.task.priority === 'blocker' ? '✓ Блокер' : 'Блокер'
+            onClick={() => {
+              const isDone = taskContextMenu.task.status === 'done';
+              store.tasks.update(taskContextMenu.task.id, { status: isDone ? 'not_started' : 'done' });
+              setTaskContextMenu(null);
+            }}
+            ```
+          - SortableParamRow: added onRename prop, local isEditing/editValue/inputRef state,
+     startEditing/confirmEdit/cancelEdit functions, double-click on name span triggers startEditing, renders input when
+     isEditing
+          - collapsedIds useState initialized from store config:
+            ```ts
+            const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set(
+              store.appData.timelineConfigs.find(c => c.id === selectedTimelineId)?.collapsedIds ?? []
+            ));
+            ```
+          - useEffect to sync on timeline switch:
+            ```ts
+            useEffect(() => {
+              const cfg = store.appData.timelineConfigs.find(c => c.id === selectedTimelineId);
+              setCollapsedIds(new Set(cfg?.collapsedIds ?? []));
+            }, [selectedTimelineId]);
+            ```
+          - toggleCollapse now calls store.timelines.updateCollapsedIds after updating Set
+          - Level-toggle button also calls updateCollapsedIds
+
+        - frontend/src/pages/Timeline/TaskModal.tsx
+          - SortableFieldRow: added collapsed local state initialized by isEmpty check:
+            ```ts
+            const isEmpty = values.every(v => !v.trim());
+            const [collapsed, setCollapsed] = useState(() => isEmpty);
+            ```
+          - Added chevron toggle button between drag handle and name
+          - handleAddValue wrapper: setCollapsed(false) then onAddValue()
+          - Value inputs wrapped in {!collapsed && ...}
+          - Name span gets muted color class when collapsed && isEmpty
+
+        - frontend/src/components/layout/Sidebar.tsx
+          - Removed DatabaseZap import, Upload import; added Save import
+          - Import button: Upload icon → Download icon
+          - Export button: Download icon → Save icon
+          - Removed entire "Мигрировать данные" button block
+
+     4. Errors and fixes:
+        - No runtime errors encountered. All changes were straightforward edits.
+        - The collapsed state persistence required careful initialization: using the store data directly in useState
+     initializer AND a useEffect for timeline switching to avoid stale state.
+
+     5. Problem Solving:
+        - Child row deletion bug: root cause was filter(p => p.id !== paramId) only matching one node. Fixed with
+     recursive Set-based collection.
+        - Collapsed state not surviving reload: root cause was useState(new Set()) always starting empty. Fixed by
+     reading from TimelineConfig.collapsedIds in store.
+        - Custom fields showing even when empty: added per-row collapse initialized from value emptiness check at mount
+     time.
+
+     6. All user messages:
+        - странный баг. Когда удаляешь строку на одной из timeline. Если она с вложениями, если они скрыты, сначала она
+     удаляется вместе с вложенными. Но после перезапуска (обновления в браузере) или в electron, восстанавливаются
+     вложенные строки, верхнеуровневая строка не возвращается. Должны удаляться в том числе вложенные строки и не
+     возвращаться после перезагрузки.
+        - нужно добавить в timeline при зажатии колёсика во временном поле timeline возможность двигать это поле, чтобы
+     не искать ползунок
+        - при нажатии пкм на taskbar в сплывающее окно, необходимо добавить 2 строки блокер или закрыть, соответственно
+     при нажатии на одну из этих команд, включается блокер true или задача закрыта true
+        - при повторном нажатии, эти чекбоксы отжимаются
+        - при двойном нажатии на название строки, она должна переходить в режим переименовывания
+        - строки имеют свойство скрываться и раскрываться в зависимости от вложенности. Почему-то при перезагрузке все
+     строки открыты. Необходимо, чтобы БД запоминала состояние открытости. Например только одна вложенная строка
+     открыта. Я сохранил БД, после импорта, эти состояния сохранились. Сейчас все строки открыты после импорта БД - это
+     не правильно.
+        - необходимо убрать кнопку в sidebar "мигрировать данные", она больше не нужна. Необходимо заменить иконку
+     импорт, сделать значёк как от "экспорт". Кнопку "экспорт" заменить на значёк "дискетки" (сохранить)
+        - Хочу добавить фичу. Имеются "Custom Fields" в edit task menu. Часто эти поля пустые, используются только
+     некоторые по назначению. Если поля пустые, после сохранения задачи, необходимо придумать функционал, чтобы поля
+     этих кастомных параметром были скрыты ("схлопнуты") если они не заполнены. Но сами названия кастомных полей должны
+     оставаться. Нужно добавить функционал скрытия/раскрытия. Задай пару уточняющих вопросов
+        - 1 каждое поле схлопывается, порядок полей не меняется для всего проекта. 2. каждый раз пустые поля схлопнуты.
+        - ты лучший в мире.
+        - Сделай краткий комментарий доработки для git текстом сюда, не используй ковычки.
+
+     7. Pending Tasks:
+        - None. All requested tasks have been completed.
+
+     8. Current Work:
+        The last substantive work was implementing per-field collapse in custom fields (SortableFieldRow in
+     TaskModal.tsx). Before that, the user asked for a git commit message which was provided as plain text. The
+     conversation concluded with the user expressing satisfaction.
+
+     9. Optional Next Step:
+        No pending tasks. The user's last explicit requests have all been fulfilled. The git commit message was provided
+      as the final deliverable. No next step is required unless the user initiates a new request.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or content you
+     generated), read the full transcript at: C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--T
+     imeLineManager-4-18-02-2026\df8a6cd2-8967-481c-a56b-26c365646970.jsonl
+
+❯ /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file frontend\src\pages\Timeline\TaskModal.tsx
+  ⎿  Referenced file frontend\src\components\layout\Sidebar.tsx
+  ⎿  Referenced file frontend\src\pages\Timeline\TimelinePage.tsx
+  ⎿  Referenced file frontend\src\store.ts

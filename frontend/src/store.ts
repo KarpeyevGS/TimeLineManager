@@ -102,6 +102,7 @@ export interface TimelineConfig {
   name: string;
   description?: string;
   parameters: TimelineParameter[];
+  collapsedIds?: string[];
 }
 
 // Конфигурация Dashboard
@@ -667,11 +668,19 @@ export const useAppStore = () => {
       pushUndo();
       globalAppData = {
         ...globalAppData,
-        timelineConfigs: globalAppData.timelineConfigs.map(cfg =>
-          cfg.id === configId
-            ? { ...cfg, parameters: cfg.parameters.filter(p => p.id !== paramId) }
-            : cfg
-        ),
+        timelineConfigs: globalAppData.timelineConfigs.map(cfg => {
+          if (cfg.id !== configId) return cfg;
+          // Собираем все id потомков рекурсивно
+          const toDelete = new Set<string>();
+          const collectDescendants = (pid: string) => {
+            toDelete.add(pid);
+            cfg.parameters.forEach(p => {
+              if (p.parentId === pid) collectDescendants(p.id);
+            });
+          };
+          collectDescendants(paramId);
+          return { ...cfg, parameters: cfg.parameters.filter(p => !toDelete.has(p.id)) };
+        }),
       };
       notifySubscribers();
     },
@@ -962,6 +971,16 @@ export const useAppStore = () => {
     notifySubscribers();
   }, []);
 
+  const updateTimelineCollapsedIds = useCallback((configId: string, collapsedIds: string[]): void => {
+    globalAppData = {
+      ...globalAppData,
+      timelineConfigs: globalAppData.timelineConfigs.map(cfg =>
+        cfg.id === configId ? { ...cfg, collapsedIds } : cfg
+      ),
+    };
+    notifySubscribers();
+  }, []);
+
   const duplicateTimelineConfig = useCallback((id: string): TimelineConfig | undefined => {
     pushUndo();
     const original = globalAppData.timelineConfigs.find(cfg => cfg.id === id);
@@ -1027,6 +1046,7 @@ export const useAppStore = () => {
       insertAfter: insertAfterParameter,
       liftAboveParent: liftAboveParentParameter,
       reparentUnder: reparentUnderParameter,
+      updateCollapsedIds: updateTimelineCollapsedIds,
     },
     export: exportData,
     import: importData,

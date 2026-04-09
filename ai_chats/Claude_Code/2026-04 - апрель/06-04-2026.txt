@@ -5,13 +5,6 @@
   - Add Overload toggle button in timeline toolbar
   - Highlight overloaded task bars with red bg + border per row context only
 
-● feat: overload detection for timeline rows
-
-  - Add capacity field (1-10) to ParameterModal with dropdown UI, save in handleSubmit
-  - Compute overloaded task IDs per-row via Map<paramId, Set> to avoid cross-row false positives
-  - Add Overload toggle button in timeline toolbar
-  - Highlight overloaded task bars with red bg + border per row context only
-
 ✻ Conversation compacted (ctrl+o for history)
 
 
@@ -203,5 +196,205 @@
   ⎿  Read src\pages\Timeline\ParameterModal.tsx (404 lines)
   ⎿  Read src\utils\overloadDetection.ts (51 lines)
   ⎿  Referenced file src\store.ts
+
+● feat: fix Ctrl+Z in Electron desktop and add UI zoom
+
+  Restore edit menu shortcuts (hidden menu bar) to fix Ctrl+Z being blocked by
+  Menu.setApplicationMenu(null) on Windows. Add Ctrl+=/−/0 zoom via before-input-event in main process
+  and Ctrl+Scroll zoom via IPC from renderer. Zoom range 50%–200%, resets on restart.
+
+✻ Conversation compacted (ctrl+o for history)
+
+
+● Compact summary
+  ⎿  This session is being continued from a previous conversation that ran out of context. The summary
+     below covers the earlier portion of the conversation.
+
+     Summary:
+     1. Primary Request and Intent:
+        The user reported two broken features in the Electron desktop version of TimeLine Planner:
+        - **Ctrl+Z (undo) not working anywhere** in the desktop app (works in browser dev mode)
+        - **No browser-like zoom** (Ctrl+=/-, Ctrl+0, Ctrl+Scroll to scale the entire UI)
+
+        The user activated /plan mode first to plan and clarify before implementing. After plan
+     approval, full implementation was done. User then asked how to build for Windows to test, and
+     finally asked for a git commit message as plain text without quotes.
+
+        Clarifications gathered via AskUserQuestion:
+        - Ctrl+Z fails everywhere (not just in inputs)
+        - Zoom: both Ctrl+=/−/0 AND Ctrl+Scroll
+        - Zoom persistence: reset on restart (no saving), with a note that adding to exported DB is an
+     option
+
+     2. Key Technical Concepts:
+        - **Electron `Menu.setApplicationMenu(null)`**: On Windows, this completely disables Chromium's
+      built-in keyboard accelerators, blocking Ctrl+Z from reaching DOM `keydown` events — root cause
+     of the undo bug
+        - **`Menu.buildFromTemplate([{ role: 'editMenu' }])` + `win.setMenuBarVisibility(false)`**:
+     Creates a hidden edit menu that restores Chromium shortcuts without showing the menu bar
+        - **`win.webContents.on('before-input-event')`**: Intercepts keyboard input in main process
+     before it reaches DOM — used for Ctrl+=/−/0 zoom
+        - **`win.webContents.setZoomFactor(factor)`**: Electron API to scale the entire webContents UI
+        - **IPC pattern**: Renderer-side Ctrl+Scroll → `ipcRenderer.send(ZOOM_DELTA, delta)` →
+     `ipcMain.on(ZOOM_DELTA)` → `setZoomFactor()`
+        - **`contextBridge.exposeInMainWorld`**: Preload script pattern for safe IPC exposure
+        - **React `useEffect` with passive:false wheel listener**: Required to call `preventDefault()`
+     on wheel events
+        - **Store undo stack**: Already implemented in `store.ts` with `undoStack: string[]` (JSON
+     snapshots), max 50 entries
+        - **Electron 36.9.5**, React 19, TypeScript, Tailwind CSS v4, Vite
+
+     3. Files and Code Sections:
+
+        - **`electron/ipcChannels.ts`** — Added new IPC channel constant for zoom
+          ```ts
+          export const IPC = {
+            // ...existing channels...
+            PRINT:                 'window:print',
+            ZOOM_DELTA:            'zoom:delta',  // NEW
+          } as const;
+          ```
+
+        - **`electron/main.ts`** — Three changes:
+          1. Replace null menu with hidden edit menu (in `app.whenReady()`):
+          ```ts
+          app.whenReady().then(() => {
+            const editMenu = Menu.buildFromTemplate([{ role: 'editMenu' }]);
+            Menu.setApplicationMenu(editMenu);
+            createWindow();
+          });
+          ```
+          2. Hide menu bar on window ready-to-show:
+          ```ts
+          win.once('ready-to-show', () => {
+            win.setMenuBarVisibility(false);
+            win.show();
+          });
+          ```
+          3. Add zoom handlers in `createWindow()` after window creation:
+          ```ts
+          // Ctrl+=/-, Ctrl+0 zoom
+          win.webContents.on('before-input-event', (event, input) => {
+            if (!(input.control || input.meta) || input.type !== 'keyDown') return;
+            const cur = win.webContents.getZoomFactor();
+            if (input.key === '=' || input.key === '+') {
+              event.preventDefault();
+              win.webContents.setZoomFactor(Math.min(2.0, parseFloat((cur + 0.1).toFixed(1))));
+            } else if (input.key === '-') {
+              event.preventDefault();
+              win.webContents.setZoomFactor(Math.max(0.5, parseFloat((cur - 0.1).toFixed(1))));
+            } else if (input.key === '0') {
+              event.preventDefault();
+              win.webContents.setZoomFactor(1.0);
+            }
+          });
+          ```
+          And IPC handler for Ctrl+Scroll zoom from renderer:
+          ```ts
+          ipcMain.on(IPC.ZOOM_DELTA, (_event, delta: number) => {
+            if (!mainWindow) return;
+            const cur = mainWindow.webContents.getZoomFactor();
+            const next = Math.max(0.5, Math.min(2.0, parseFloat((cur + delta).toFixed(1))));
+            mainWindow.webContents.setZoomFactor(next);
+          });
+          ```
+
+        - **`electron/preload.ts`** — Exposed `zoomDelta` to renderer:
+          ```ts
+          zoomDelta: (delta: number): void => ipcRenderer.send(IPC.ZOOM_DELTA, delta),
+          ```
+
+        - **`frontend/src/electronApi.ts`** — Added `zoomDelta` to TypeScript interface:
+          ```ts
+          export interface ElectronAPI {
+            // ...existing...
+            print:         () => void;
+            zoomDelta:     (delta: number) => void;  // NEW
+          }
+          ```
+
+        - **`frontend/src/App.tsx`** — Added import and Ctrl+Scroll wheel handler:
+          ```ts
+          import { isElectron } from './electronApi';
+
+          // New useEffect alongside existing Ctrl+Z handler:
+          useEffect(() => {
+            if (!isElectron()) return;
+            const handleWheel = (e: WheelEvent) => {
+              if (!e.ctrlKey) return;
+              e.preventDefault();
+              const delta = e.deltaY < 0 ? 0.1 : -0.1;
+              window.electronAPI!.zoomDelta(delta);
+            };
+            window.addEventListener('wheel', handleWheel, { passive: false });
+            return () => window.removeEventListener('wheel', handleWheel);
+          }, []);
+          ```
+
+     4. Errors and fixes:
+        - **"File has not been read yet" error**: When attempting to edit `electron/ipcChannels.ts`
+     immediately after editing `electron/main.ts` without reading it first. Fixed by reading
+     `ipcChannels.ts` before the edit. Same issue occurred with `electron/preload.ts` and
+     `frontend/src/electronApi.ts` — all fixed by reading each file before editing.
+
+     5. Problem Solving:
+        - **Root cause identified**: `Menu.setApplicationMenu(null)` in `app.whenReady()` blocks
+     Chromium keyboard event pipeline on Windows before DOM events. The existing App.tsx `keydown`
+     handler was correct but never received events.
+        - **Solution**: A hidden edit menu restores Chromium shortcuts.
+     `win.setMenuBarVisibility(false)` keeps the UI clean.
+        - **Zoom architecture**: Keyboard zoom (Ctrl+=/−/0) handled entirely in main process via
+     `before-input-event` — no IPC or renderer changes needed. Scroll zoom (Ctrl+Wheel) must be handled
+      in renderer since scroll events only fire there, so IPC is used to delegate to main.
+
+     6. All user messages:
+        - "в десктоп версии не работает ctrl+z - отмена, и не работает zoom как в браузере, чтобы весь
+     UI увеличивался. Запланируй изменения задай уточняющие вопросы."
+        - Answered clarifying questions: Ctrl+Z "Не работает нигде", Zoom "Оба варианта", Persistence
+     "нет, сбрасывать, или рассмотри вариант добавления в БД, которая экспортируется"
+        - (Approved plan via ExitPlanMode)
+        - "как сделать сборку на windows чтобы проверить доработку?"
+        - "Сделай краткий комментарий доработки для git текстом сюда, не используй ковычки."
+        - (This summary request)
+
+     7. Pending Tasks:
+        - No pending tasks. All requested features have been implemented and committed message was
+     provided. The user may want to run `npm run dev` or `npm run dist:win` to test the changes, but
+     that is user action, not a pending code task.
+
+     8. Current Work:
+        Implementation of two features for Electron desktop app was completed across 5 files:
+        1. `electron/ipcChannels.ts` — added ZOOM_DELTA channel
+        2. `electron/main.ts` — hidden edit menu for Ctrl+Z fix + before-input-event zoom + IPC zoom
+     delta handler
+        3. `electron/preload.ts` — exposed zoomDelta
+        4. `frontend/src/electronApi.ts` — typed zoomDelta in interface
+        5. `frontend/src/App.tsx` — added isElectron import + Ctrl+Scroll wheel useEffect
+
+        The user then asked for build instructions (answered: `npm run dev` for quick test, `npm run
+     dist:win` for full installer) and a git commit message (provided as plain text).
+
+     9. Optional Next Step:
+        No explicit next step. The user's most recent request was for a git commit message text:
+     "Сделай краткий комментарий доработки для git текстом сюда, не используй ковычки" — which was
+     fulfilled. The natural next action for the user would be to run `npm run dev` to test the changes,
+      but no further code tasks are pending.
+
+     If you need specific details from before compaction (like exact code snippets, error messages, or
+     content you generated), read the full transcript at:
+     C:\Users\Georgy\.claude\projects\C--Users-Georgy-Desktop-prog--Projects--TimeLineManager-4-18-02-2
+     026\2dd6ee2a-fd8e-4ace-82c3-cf6f375fb041.jsonl
+
+❯ /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Read frontend\src\App.tsx (95 lines)
+  ⎿  Read frontend\src\electronApi.ts (26 lines)
+  ⎿  Read electron\preload.ts (22 lines)
+  ⎿  Read electron\main.ts (189 lines)
+  ⎿  Read electron\ipcChannels.ts (15 lines)
+  ⎿  Plan file referenced (~\.claude\plans\reflective-greeting-emerson.md)
+
+───────────────────────────────────────────────────────────────────────────────────────────────────────
+  Showing detailed transcript · ctrl+o to toggle · ctrl+e to show all
 
 ─────────────────────────────────────────

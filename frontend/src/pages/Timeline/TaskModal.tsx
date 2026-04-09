@@ -67,14 +67,22 @@ const SortableFieldRow: React.FC<SortableFieldRowProps> = ({
   onCancelRename, onAddValue, onDeleteType, onChangeValue, onRemoveValue,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const isEmpty = values.every(v => !v.trim());
+  const [collapsed, setCollapsed] = useState(() => isEmpty);
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+
+  const handleAddValue = () => {
+    setCollapsed(false);
+    onAddValue();
+  };
+
   return (
     <div ref={setNodeRef} style={style} className="flex flex-col gap-1">
-      {/* Header: drag + name + add-value button */}
+      {/* Header: drag + collapse + name + add-value button */}
       <div className="flex items-center gap-1">
         <button
           type="button"
@@ -84,6 +92,15 @@ const SortableFieldRow: React.FC<SortableFieldRowProps> = ({
           tabIndex={-1}
         >
           <GripVertical size={12} />
+        </button>
+        <button
+          type="button"
+          onClick={() => setCollapsed(v => !v)}
+          className="flex-shrink-0 text-app-text-muted hover:text-app-primary transition-colors"
+          tabIndex={-1}
+          title={collapsed ? 'Развернуть' : 'Свернуть'}
+        >
+          {collapsed ? <ChevronRight size={11} /> : <ChevronDown size={11} />}
         </button>
         {isEditing ? (
           <input
@@ -101,7 +118,7 @@ const SortableFieldRow: React.FC<SortableFieldRowProps> = ({
           />
         ) : (
           <span
-            className={`${labelCls} text-[10px] flex-1 cursor-text hover:text-app-primary transition-colors select-none`}
+            className={`${labelCls} text-[10px] flex-1 cursor-text hover:text-app-primary transition-colors select-none ${collapsed && isEmpty ? 'text-app-text-muted' : ''}`}
             onClick={onStartRename}
           >
             {name}
@@ -117,7 +134,7 @@ const SortableFieldRow: React.FC<SortableFieldRowProps> = ({
         </button>
         <button
           type="button"
-          onClick={onAddValue}
+          onClick={handleAddValue}
           className="flex-shrink-0 w-4 h-4 flex items-center justify-center text-app-text-muted hover:text-app-primary transition-colors"
           title="Добавить значение"
         >
@@ -125,7 +142,7 @@ const SortableFieldRow: React.FC<SortableFieldRowProps> = ({
         </button>
       </div>
       {/* Value inputs */}
-      {values.map((val, idx) => (
+      {!collapsed && values.map((val, idx) => (
         <div key={idx} className="flex items-center gap-1 pl-4">
           <Autocomplete
             options={options}

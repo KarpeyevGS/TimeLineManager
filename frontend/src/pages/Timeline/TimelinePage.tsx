@@ -10,7 +10,7 @@ import {
   isToday
 } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { Plus, Minus, Pencil, Trash2, Copy, GripVertical, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Printer } from 'lucide-react';
+import { Plus, Minus, Pencil, Trash2, Copy, GripVertical, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Printer, AlertTriangle, CheckCircle } from 'lucide-react';
 
 const PinIcon: React.FC<{ size?: number; className?: string }> = ({ size = 12, className }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className={className} xmlns="http://www.w3.org/2000/svg">
@@ -135,6 +135,7 @@ interface SortableParamRowProps {
   onToggleCollapse: () => void;
   onToggleFreeze: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
+  onRename: (newName: string) => void;
 }
 
 const SortableParamRow: React.FC<SortableParamRowProps> = ({
@@ -142,8 +143,26 @@ const SortableParamRow: React.FC<SortableParamRowProps> = ({
   previewLevel,
   isDropTarget,
   dropZone,
-  onRowClick, onToggleCollapse, onToggleFreeze, onContextMenu,
+  onRowClick, onToggleCollapse, onToggleFreeze, onContextMenu, onRename,
 }) => {
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editValue, setEditValue] = React.useState('');
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  const startEditing = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditValue(param.name);
+    setIsEditing(true);
+    setTimeout(() => { inputRef.current?.select(); }, 0);
+  };
+
+  const confirmEdit = () => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== param.name) onRename(trimmed);
+    setIsEditing(false);
+  };
+
+  const cancelEdit = () => setIsEditing(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: param.id });
 
@@ -204,9 +223,28 @@ const SortableParamRow: React.FC<SortableParamRowProps> = ({
       )}
 
       {/* Name */}
-      <span className={`text-xs flex-1 min-w-0 ${param.level === 0 ? 'font-bold text-app-text-head' : 'font-semibold text-app-text-main'}`}>
-        {param.name}
-      </span>
+      {isEditing ? (
+        <input
+          ref={inputRef}
+          value={editValue}
+          onChange={e => setEditValue(e.target.value)}
+          onBlur={confirmEdit}
+          onKeyDown={e => {
+            if (e.key === 'Enter') { e.preventDefault(); confirmEdit(); }
+            if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+            e.stopPropagation();
+          }}
+          onClick={e => e.stopPropagation()}
+          className={`text-xs flex-1 min-w-0 bg-app-surface border border-app-primary rounded px-1 outline-none ${param.level === 0 ? 'font-bold text-app-text-head' : 'font-semibold text-app-text-main'}`}
+        />
+      ) : (
+        <span
+          onDoubleClick={startEditing}
+          className={`text-xs flex-1 min-w-0 truncate ${param.level === 0 ? 'font-bold text-app-text-head' : 'font-semibold text-app-text-main'}`}
+        >
+          {param.name}
+        </span>
+      )}
 
       {/* Pin button */}
       <button
@@ -263,7 +301,9 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     });
   // Выбранная конфигурация timeline — из пропса или первая из store
   const selectedTimelineId = activeTimelineId ?? store.appData.timelineConfigs?.[0]?.id ?? 'timeline_default';
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set(
+    store.appData.timelineConfigs.find(c => c.id === (activeTimelineId ?? store.appData.timelineConfigs?.[0]?.id ?? 'timeline_default'))?.collapsedIds ?? []
+  ));
   const [frozenIds, setFrozenIds] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [timelineRowMenu, setTimelineRowMenu] = useState<TimelineRowMenuState | null>(null);
@@ -578,6 +618,13 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     return () => ro.disconnect();
   }, []);
 
+  // Синхронизация collapsedIds при смене timeline (например, при переключении вкладок)
+  useEffect(() => {
+    const cfg = store.appData.timelineConfigs.find(c => c.id === selectedTimelineId);
+    setCollapsedIds(new Set(cfg?.collapsedIds ?? []));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTimelineId]);
+
   // Управление состоянием иерархии
   const toggleCollapse = (id: string) => {
     setCollapsedIds(prev => {
@@ -587,6 +634,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
       } else {
         next.add(id);
       }
+      store.timelines.updateCollapsedIds(selectedTimelineId, Array.from(next));
       return next;
     });
   };
@@ -960,6 +1008,53 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Middle-mouse drag to pan timeline horizontally and vertically
+  useEffect(() => {
+    const el = timelineRef.current;
+    if (!el) return;
+    let dragging = false;
+    let startX = 0;
+    let startY = 0;
+    let startScrollLeft = 0;
+    let startScrollTop = 0;
+
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 1) return;
+      e.preventDefault();
+      dragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      startScrollLeft = scrollbarRef.current?.scrollLeft ?? 0;
+      startScrollTop = el.scrollTop;
+      el.style.cursor = 'grabbing';
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragging) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (scrollbarRef.current) {
+        scrollbarRef.current.scrollLeft = startScrollLeft - dx;
+      }
+      el.scrollTop = startScrollTop - dy;
+    };
+
+    const onMouseUp = (e: MouseEvent) => {
+      if (e.button !== 1 && dragging === false) return;
+      dragging = false;
+      el.style.cursor = '';
+    };
+
+    el.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    return () => {
+      el.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
   const handlePrint = () => {
     if (window.electronAPI) {
       window.electronAPI.print();
@@ -1100,6 +1195,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                             } else {
                               levelParents.forEach(id => next.add(id));
                             }
+                            store.timelines.updateCollapsedIds(selectedTimelineId, Array.from(next));
                             return next;
                           });
                         }}
@@ -1466,6 +1562,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                       onToggleCollapse={() => toggleCollapse(param.id)}
                       onToggleFreeze={() => toggleFreeze(param.id)}
                       onContextMenu={(e) => handleContextMenu(e, param.id)}
+                      onRename={(newName) => store.timelines.updateParameter(selectedTimelineId, param.id, { name: newName })}
                     />
                   );
                 })}
@@ -1498,6 +1595,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         <div
           ref={timelineRef}
           onScroll={syncFromTimeline}
+          onMouseDown={e => { if (e.button === 1) e.preventDefault(); }}
           className="flex-1 overflow-y-auto overflow-x-hidden bg-app-surface relative print-overflow"
         >
           <div
@@ -1748,6 +1846,30 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
             <Copy size={12} />
             Копировать
           </button>
+          <div className="border-t border-app-border my-1" />
+          <button
+            onClick={() => {
+              const isBlocker = taskContextMenu.task.priority === 'blocker';
+              store.tasks.update(taskContextMenu.task.id, { priority: isBlocker ? 'medium' : 'blocker' });
+              setTaskContextMenu(null);
+            }}
+            className="w-full text-left px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50/50 transition-colors flex items-center gap-2"
+          >
+            <AlertTriangle size={12} />
+            {taskContextMenu.task.priority === 'blocker' ? '✓ Блокер' : 'Блокер'}
+          </button>
+          <button
+            onClick={() => {
+              const isDone = taskContextMenu.task.status === 'done';
+              store.tasks.update(taskContextMenu.task.id, { status: isDone ? 'not_started' : 'done' });
+              setTaskContextMenu(null);
+            }}
+            className="w-full text-left px-4 py-2 text-xs font-semibold text-green-600 hover:bg-green-50/50 transition-colors flex items-center gap-2"
+          >
+            <CheckCircle size={12} />
+            {taskContextMenu.task.status === 'done' ? '✓ Закрыть' : 'Закрыть'}
+          </button>
+          <div className="border-t border-app-border my-1" />
           <button
             onClick={() => handleDeleteTaskFromMenu(taskContextMenu.task)}
             className="w-full text-left px-4 py-2 text-xs font-semibold text-app-error hover:bg-app-error/10 transition-colors flex items-center gap-2"
